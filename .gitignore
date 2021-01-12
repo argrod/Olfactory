@@ -1,13 +1,16 @@
+### MAC general
+**/*.DS_Store
+
 ### R
 # History files
-.Rhistory
-.Rapp.history
+**/*.Rhistory
+**/*.Rapp.history
 
 # Session Data files
-.RData
+**/*.RData
 
 # User-specific files
-.Ruserdata
+*.Ruserdata
 
 # Example code in package build process
 *-Ex.R
@@ -47,27 +50,27 @@ po/*~
 
 ### TeX
 ## Core latex/pdflatex auxiliary files:
-*.aux
-*.lof
-*.log
-*.lot
-*.fls
-*.out
-*.toc
-*.fmt
-*.fot
-*.cb
-*.cb2
+**/*.aux
+**/*.lof
+**/*.log
+**/*.lot
+**/*.fls
+**/*.out
+**/*.toc
+**/*.fmt
+**/*.fot
+**/*.cb
+**/*.cb2
 .*.lb
 
 ## Intermediate documents:
-*.dvi
-*.xdv
+**/*.dvi
+**/*.xdv
 *-converted-to.*
 # these rules might exclude image files for figures etc.
-# *.ps
-# *.eps
-# *.pdf
+# **/*.ps
+**/*.eps
+**/*.pdf
 
 ## Generated if empty string is given at "Please type another file name for output:"
 .pdf
@@ -363,6 +366,4 @@ docs/site/
 Manifest.toml
 
 ### MATLAB
-.mat
-### Remove folder names
-*/
+**/*.mat
