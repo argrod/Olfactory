@@ -96,7 +96,7 @@ plot(CompDat$compSpeed,CompDat$estSpeed)
 res<-cor.test(CompDat$estSpeed, CompDat$compSpeed, method = "pearson")
 res
 res2 <- cor.circular(CompDat$estHead, CompDat$compHead, test = T)
-
+plot(CompDat$estHead, CompDat$compHead)
 
 buffer(sel)
 
