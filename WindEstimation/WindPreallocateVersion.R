@@ -149,14 +149,22 @@ for(a in 1:length(files)){
     recaldt <- temp[[2]]
     recalSp <- temp[[3]]
 	
+	sampling_interval <- median(dt)     #  sampling interval [sec]
+	time_window <- 51     #  time length of time window [min] *Give an odd number!
+	cutlength <- ceiling((45/51)*(time_window*(60/sampling_interval)))     # minimum number of data points (track vectors) included in a time window [points]         
+	cutv <- 4.1667 # minimum ground speed [m/sec]
+
+	###         Condition 3: give mean air speed value      #####
+	constv <- 34.7/3.6 # mean air speed [m/sec]
+	#We gave the mean ground speed of streaked shearwater (Shiomi #et. al. 2012) as the mean air speed
+
 	
-	
-	sampling_interval <- median(dt)
-	time_window <- 51
-	cutlength <- round(.8*(time_window*(60/sampling_interval)))
-	cutv <- 4.1667
-	constv <- 34.7/3.6
-	error_of_sampling_interval <- 5
+	# sampling_interval <- median(dt)
+	# time_window <- 51
+	# cutlength <- round(.8*(time_window*(60/sampling_interval)))
+	# cutv <- 4.1667
+	# constv <- 34.7/3.6
+	# error_of_sampling_interval <- 5
 	cutt<- sampling_interval + error_of_sampling_interval  
 # upper value of sampling interval [sec]
 	windwidth <- time_window - 1                             
