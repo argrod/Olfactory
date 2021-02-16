@@ -93,6 +93,7 @@ CompDat$compHead <- atan2(CompDat$compV,CompDat$compU)
 CompDat$compSpeed <- sqrt(CompDat$compU^2 + CompDat$compV^2)
 
 plot(CompDat$compSpeed,CompDat$estSpeed)
+plot(CompDat$compHead,CompDat$estHead)
 res<-cor.test(CompDat$estSpeed, CompDat$compSpeed, method = "pearson")
 res
 res2 <- cor.circular(CompDat$estHead, CompDat$compHead, test = T)
