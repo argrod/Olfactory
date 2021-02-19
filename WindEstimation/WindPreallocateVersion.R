@@ -114,6 +114,8 @@ files <- list.files(fileloc, pattern = '.txt', recursive = T)
 tags <- unique(sub('.*/','',files))
 tags <- unique(sub('*.txt','',tags))
 
+s_intervals <- c(5,30,30,30,30,30,30,30,30,30,5)
+
 for(a in 1:length(files)){
 	AxDat <- read.delim(paste(fileloc,files[a], sep = ''), sep = '\t', header = F)
 	timepoint <- as.POSIXct(as.character(AxDat[,1]), format = '%d/%m/%Y,%H:%M:%OS') + (9*3600)
@@ -142,14 +144,12 @@ for(a in 1:length(files)){
 	track_direction <- atan2(diff(Y),diff(X))
 	track_speed <- distances/dt
 	
-	
-	
 	temp <- movSpd(timepoint, X, Y, 5)
     recalDist <- temp[[1]]
     recaldt <- temp[[2]]
     recalSp <- temp[[3]]
 	
-	sampling_interval <- median(dt)     #  sampling interval [sec]
+	sampling_interval <-  s_intervals[a]   #  sampling interval [sec]
 	time_window <- 51     #  time length of time window [min] *Give an odd number!
 	cutlength <- ceiling((45/51)*(time_window*(60/sampling_interval)))     # minimum number of data points (track vectors) included in a time window [points]         
 	cutv <- 4.1667 # minimum ground speed [m/sec]
