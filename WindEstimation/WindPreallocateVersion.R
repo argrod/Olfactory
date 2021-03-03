@@ -120,7 +120,7 @@ for(a in 1:length(files)){
 	AxDat <- read.delim(paste(fileloc,files[a], sep = ''), sep = '\t', header = F)
 	AxDat$DT <- as.POSIXct(as.character(AxDat[,1]), format = '%d/%m/%Y,%H:%M:%OS', tz = "")
 	timepoint <- 1:nrow(AxDat)
-	tsel <- seq(timepoint[1], timepoint[length(timepoint)], by = 60)
+	# tsel <- seq(timepoint[1], timepoint[length(timepoint)], by = 60)
 	dt <- as.numeric(difftime(AxDat$DT[2:length(AxDat$DT)], AxDat$DT[1:(length(AxDat$DT) - 1)], units = "secs"))
 	lat <- AxDat[,2]
 	long <- AxDat[,3]
@@ -130,11 +130,14 @@ for(a in 1:length(files)){
 
 	AxDat$X <- cord.UTM$long
 	AxDat$Y <- cord.UTM$lat
-	AxDat$Dist <- c(NA, sqrt(diff(AxDat$X)^2 + diff(AxDat$Y)^2))
-	AxDat$Sp <- c(NA, AxDat$Dist[2:nrow(AxDat)]/dt)
 
-	X <- diff(AxDat$X)
-	Y <- diff(AxDat$X)
+	X <- coordinates(cord.UTM)[,1]
+	Y <- coordinates(cord.UTM)[,2]
+	vg_x_obs <- X[2:length(X)] - X[1:(length(X) - 1)]
+	vg_y_obs <- Y[2:length(Y)] - Y[1:(length(Y) - 1)]
+
+	g_speed <- sqrt(vg_y_obs^2 + vg_x_obs^2)/dt
+	g_direction <- atan2(vg_y_obs, vg_x_obs)
 
 	FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
 	FkOshi.dec <- SpatialPoints(cbind(FkOshi$Long,FkOshi$Lat),proj4string=CRS('+proj=longlat'))
@@ -235,8 +238,8 @@ for(a in 1:length(files)){
 	# }
 	
 	# TestSel <- ToUse
-	rrow <- track_speed
-	drow <- track_direction
+	rrow <- g_speed
+	drow <- g_direction
 	tp <- timepoint
 	# dt <- as.numeric(diff(tp))
 	X <- X
@@ -434,6 +437,7 @@ for(a in 1:length(files)){
 		# output estimation result
 			#STEP 10
 			if(max_like!="NaN"){
+				break
 				outwa<-list(tp[center],atan2(ans_best$par[3],ans_best$par[2]),ans_best$par[4],ans_best$par[5])
 				write.table(outwa,paste(outfile,tags[a],'.csv', sep = ''),quote=F,col.name=F,row.name=F,append=T,sep=", ")
 			}#  else {print('Failed step 10')}

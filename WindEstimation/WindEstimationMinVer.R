@@ -104,7 +104,8 @@ for(a in 1:length(files)){
     }
     AxDat <- AxDatFull[na.omit(select),]
     timepoint <- as.POSIXct(as.character(AxDat[,1]), format = '%d/%m/%Y,%H:%M:%OS') + (9*3600)
-	dt <- as.numeric(diff(timepoint))
+	# dt <- as.numeric(diff(timepoint))
+	dt <- as.numeric(difftime(timepoint[2:length(timepoint)], timepoint[1:(length(timepoint) - 1)], units = "secs"))
     lat <- AxDat[,2]
 	long <- AxDat[,3]
 
@@ -113,7 +114,11 @@ for(a in 1:length(files)){
 
 	X <- coordinates(cord.UTM)[,1]
 	Y <- coordinates(cord.UTM)[,2]
+	vg_x_obs <- X[2:length(X)] - X[1:(length(X) - 1)]
+	vg_y_obs <- Y[2:length(Y)] - Y[1:(length(Y) - 1)]
 
+	g_speed <- sqrt(vg_y_obs^2 + vg_x_obs^2)/dt
+	g_direction <- atan2(vg_y_obs, vg_x_obs)
 	FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
 	FkOshi.dec <- SpatialPoints(cbind(FkOshi$Long,FkOshi$Lat),proj4string=CRS('+proj=longlat'))
 	FkOshi.UTM <- spTransform(FkOshi.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
@@ -123,7 +128,6 @@ for(a in 1:length(files)){
 	DistFromFk <- (sqrt((X-FkUTME)^2 + (Y-FkUTMN)^2))*10^-3
 
 	close <- which(DistFromFk > 5)
-
 	distances <- sqrt(diff(X)^2 + diff(Y)^2)
 	track_direction <- atan2(diff(Y),diff(X))
 	track_speed <- distances/dt
@@ -198,10 +202,10 @@ for(a in 1:length(files)){
 	# }
 	
 	# TestSel <- ToUse
-	rrow <- track_speed
-	drow <- track_direction
+	rrow <- g_speed
+	drow <- g_direction
 	tp <- timepoint
-	dt <- as.numeric(diff(tp))
+	# dt <- as.numeric(diff(tp))
 	X <- X
 	Y <- Y
 
@@ -397,7 +401,8 @@ for(a in 1:length(files)){
 		# output estimation result
 			#STEP 10
 			if(max_like!="NaN"){
-				outwa<-list(tp[center],atan2(ans_best$par[3],ans_best$par[2]),ans_best$par[4],ans_best$par[5])
+				outwa<-list(tp[center],lat[center], long[center], atan2(ans_best$par[3],ans_best$par[2]),
+					ans_best$par[4],ans_best$par[5])
 				write.table(outwa,paste(outfile,tags[a],'.csv', sep = ''),quote=F,col.name=F,row.name=F,append=T,sep=", ")
 			}#  else {print('Failed step 10')}
 	}#  else {print('Failed step 2')}
