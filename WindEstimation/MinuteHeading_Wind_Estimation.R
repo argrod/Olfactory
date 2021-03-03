@@ -3,6 +3,7 @@
 #Please install 'circular' package
 install.packages("circular", dependencies = TRUE, repos = 'https://cloud.r-project.org/')
 library(circular)
+library(sp)
 #Please install 'circular' package
 
 #*******************************************************
@@ -27,6 +28,59 @@ library(circular)
 # $flow_y_est        : estimated y component of flow
 #  
 #*******************************************************
+
+### Functions   
+
+###############################################
+# Log-likelihood of the model #################
+###############################################
+Likelihoodww<-function(data1,data2,cv){
+	return(function(par){
+		a  <-par[1]
+		b  <-cv/gamma(1+1/a)
+		mx <-par[2]
+		my <-par[3]
+		wx <-par[4]
+		wy <-par[5]
+		L    <- 0
+		for(i in 1:length(data1)){ 
+			rr<-sqrt((data1[i]*cos(data2[i])-wx)^2+(data1[i]*sin(data2[i])-wy)^2)
+			rx<- (data1[i]*cos(data2[i])-wx)/rr
+			ry<- (data1[i]*sin(data2[i])-wy)/rr
+			lp<- (a-2)*log(rr)-(rr/b)^a+mx*rx+my*ry+log(a)-log(b)+(1-a)*log(b)-log(besselI(sqrt(mx^2+my^2),0,))
+			L<- L+lp					} 
+			return(L)
+		})}		
+
+
+
+###############################################
+# Standard deviation of Weibull distribution ##     
+###############################################                                 
+	Weibull_sd<-function(a,b){
+		w_sd<-b*sqrt(gamma(1+2/a)-gamma(1+1/a)*gamma(1+1/a)) 
+		return(w_sd)
+	}
+
+
+
+###############################################
+# Mean of Weibull distribution ################
+###############################################
+	Weibull_mean<-function(a,b){
+		w_m<-b*gamma(1+1/a) 
+		return(w_m)
+	}
+
+
+
+###############################################
+# Standard deviation of von-Mises distribution (approximated #to Gaussian) 
+###############################################
+	Von_Mises_sd<-function(kappa){
+		vm_sd<-1/sqrt(kappa)
+		return(vm_sd)
+	}
 
 
 ########################################################
@@ -53,8 +107,22 @@ files <- list.files(infile, pattern = '.txt', recursive = T)
 tags <- unique(sub('.*/','',files))
 tags <- unique(sub('*.txt','',tags))
 
+sampling_interval <- 60     #  sampling interval [sec]
+time_window <- 51     #  time length of time window [min] *Give an odd number!
+cutlength <- 45     # minimum number of data points (track vectors) included in a time window [points]         
+cutv <- 4.1667 # minimum ground speed [m/sec]
+
+###         Condition 3: give mean air speed value      #####
+constv <- 34.7/3.6 # mean air speed [m/sec]
+#We gave the mean ground speed of streaked shearwater (Shiomi #et. al. 2012) as the mean air speed
+error_of_sampling_interval <-5
+cutt<- sampling_interval+error_of_sampling_interval  
+# upper value of sampling interval [sec]
+windwidth<-time_window-1                             
+# length of time window(velocity)  [min]
+
 for(a in 1:length(files)){
-    AxDat <- read.delim(paste(fileloc,files[a], sep = ''), sep = '\t', header = F)
+    AxDat <- read.delim(paste(infile,files[a], sep = ''), sep = '\t', header = F)
     AxDat[, 1] <- as.POSIXct(as.character(AxDat[, 1]), format = '%d/%m/%Y,%H:%M:%OS') + (9*3600)
     tsel <- seq(AxDat[1, 1], AxDat[nrow(AxDat), 1], by = 60)
     dtFull <- as.numeric(diff(AxDat[, 1]))
@@ -75,7 +143,7 @@ for(a in 1:length(files)){
     AxDat <- AxDat[, 1:3]
     colnames(AxDat) <- c("DT", "lat", "lon")
     AxDat$DT <- as.POSIXct(as.character(AxDat$DT), format = '%Y-%m-%d %H:%M:%OS') + (9*3600)
-    dt <- as.numeric(seconds(diff(AxDat$DT)))
+    dt <- as.numeric(difftime(AxDat$DT[2:nrow(AxDat)], AxDat$DT[1:(nrow(AxDat) - 1)]), units = "secs")
     lat <- AxDat[,2]
 	long <- AxDat[,3]
 	cord.dec <- SpatialPoints(cbind(long, lat), proj4string=CRS("+proj=longlat"))
@@ -85,7 +153,7 @@ for(a in 1:length(files)){
     n <- nrow(AxDat) - 1
     vg_x_obs <- X[2:(n+1)] - X[1:n]
     vg_y_obs <- Y[2:(n+1)] - Y[1:n]
-    g_speed_obs <- sqrt(vg_x_obs^2 + vg_y_obs^2)
+    g_speed_obs <- sqrt(vg_x_obs^2 + vg_y_obs^2)/dt
     g_direction_obs <- atan2(vg_y_obs, vg_x_obs)
     tp <- AxDat$DT
     rrow <- g_speed_obs
@@ -269,28 +337,28 @@ for(a in 1:length(files)){
 
 # output estimation result
 				if(max_like!="NaN"){
-					outwa<-list(tp[center],atan2(ans_best$par[3],ans_best$par[2]),ans_best$par[4],ans_best$par[5])
-					write.table(outwa,outfile,quote=F,col.name=F,row.name=F,append=T,sep=", ")
+					outwa<-list(tp[center],atan2(ans_best$par[3],ans_best$par[2]),ans_best$par[4],ans_best$par[5], lat[center], long[center])
+					write.table(outwa,paste(outfile,sub(".*/","", files[a]), sep = ''),quote=F,col.name=F,row.name=F,append=T,sep=", ")
 				}
 			}
 		}
 
-		est<-read.csv(outfile)
-		true<-read.csv(infile)
-		dev.new()
-		par(mfrow=c(3,1))
-		if((length(true$mean_flow_x)!=0)&&(length(true$mean_flow_y)!=0)&&(length(true$mean_head_direction)!=0)){
-			flow_x_est <- est$flow_x_est
-			flow_y_est <- est$flow_y_est
-			heading_est <- 180/pi*(est$heading)
-			flow_x_true <- mean(true$mean_flow_x)
-			flow_y_true <- mean(true$mean_flow_y)
-			heading_true <- 180/pi*mean(true$mean_head_direction)
+		# est<-read.csv(outfile)
+		# true<-read.csv(infile)
+		# dev.new()
+		# par(mfrow=c(3,1))
+		# if((length(true$mean_flow_x)!=0)&&(length(true$mean_flow_y)!=0)&&(length(true$mean_head_direction)!=0)){
+		# 	flow_x_est <- est$flow_x_est
+		# 	flow_y_est <- est$flow_y_est
+		# 	heading_est <- 180/pi*(est$heading)
+		# 	flow_x_true <- mean(true$mean_flow_x)
+		# 	flow_y_true <- mean(true$mean_flow_y)
+		# 	heading_true <- 180/pi*mean(true$mean_head_direction)
 
-			hist(heading_est-heading_true, main="Difference between estimated and true headings [in degrees]")
-			hist(flow_x_est-flow_x_true, main="Difference between estimated and true flows (x components) [m/sec]")
-			hist(flow_y_est-flow_y_true, main="Difference between estimated and true flows (y components) [m/sec]")
-		}
+		# 	hist(heading_est-heading_true, main="Difference between estimated and true headings [in degrees]")
+		# 	hist(flow_x_est-flow_x_true, main="Difference between estimated and true flows (x components) [m/sec]")
+		# 	hist(flow_y_est-flow_y_true, main="Difference between estimated and true flows (y components) [m/sec]")
+		# }
 }
 
 

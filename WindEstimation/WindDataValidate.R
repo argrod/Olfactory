@@ -4,10 +4,10 @@ library(raster)
 library(circular)
 
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
+    windLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinuteGotoVersion/'
 	estLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/Comparison/'
 } else {
-    windLoc <- 'F:/UTokyoDrive/PhD/Data/WindEstTest/2018/'
+    windLoc <- 'F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinuteGotoVersion/'
 	estLoc <- 'F:/UTokyoDrive/PhD/Data/WindEstTest/Comparison/'
 }
 windFiles <- dir(windLoc)
@@ -15,15 +15,17 @@ estFiles <- dir(estLoc, pattern = 'Z.*.csv')
 
 for(b in 1:length(windFiles)){
     if(b == 1){
-        WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = T)
-        WindDat$ID <- sub("*LatLon.txt", "", windFiles[b])
+        WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
+		colnames(WindDat) <- c("DT", "BHead", "X", "Y", "Lat", "Lon")
+        WindDat$ID <- windFiles[b]
 		Wind.dec <- SpatialPoints(cbind(WindDat$Lon,WindDat$Lat), proj4string = CRS("+proj=longlat"))
 		UTMdat <- spTransform(Wind.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
 		WindDat$UTME <- coordinates(UTMdat)[, 1]
 		WindDat$UTMN <- coordinates(UTMdat)[, 2] 
     } else {
-        toAdd <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = T)
-        toAdd$ID <- sub("*LatLon.txt", "", windFiles[b])
+        toAdd <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
+		colnames(toAdd) <- c("DT", "BHead", "X", "Y", "Lat", "Lon")
+        toAdd$ID <- windFiles[b]
 		Add.dec <- SpatialPoints(cbind(toAdd$Lon,toAdd$Lat), proj4string = CRS("+proj=longlat"))
 		UTMdat <- spTransform(Add.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
 		toAdd$UTME <- coordinates(UTMdat)[, 1]
@@ -31,7 +33,7 @@ for(b in 1:length(windFiles)){
         WindDat <- rbind(WindDat, toAdd)
     }
 }
-WindDat$DT <- as.POSIXct(WindDat$DT, format = "%Y-%m-%d %H:%M:%OS")
+WindDat$DT <- as.POSIXct(WindDat$DT, format = "%Y-%m-%d %H:%M:%OS", ts = "")
 
 EstDat <- list(NA)
 for(b in 1:length(estFiles)){
@@ -96,6 +98,7 @@ plot(CompDat$compSpeed,CompDat$estSpeed)
 res<-cor.test(CompDat$estSpeed, CompDat$compSpeed, method = "pearson")
 res
 res2 <- cor.circular(CompDat$estHead, CompDat$compHead, test = T)
+res2
 plot(CompDat$estHead, CompDat$compHead)
 
 buffer(sel)

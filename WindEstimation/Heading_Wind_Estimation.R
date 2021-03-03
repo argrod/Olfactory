@@ -37,7 +37,7 @@ infile <- paste("/Users/arang/OneDrive - The University of Tokyo/PhD/Data/Simula
 # sample data named "Simulation_Track.csv" can be generated #using "Sample_Track_Simulation.R"
 
 ### Specify the place and name of output data 
-outfile<-paste("~/Desktop/AmendedV.csv",sep=", ")
+outfile<-paste("C:/Users/arang/Desktop/AmendedV.csv",sep=", ")
 
 
 sampling_interval <- 60     #  sampling interval [sec]
@@ -131,12 +131,11 @@ Likelihoodww<-function(data1,data2,cv){
 	windwidth<-time_window-1                             
 # length of time window(velocity)  [min]
 
-allD <- allD[!is.na(allD),]
-#	raw <- read.csv(infile)
-	tp <- allD$timepoint        # time point of data
-	dt <- allD$dt               # elapsed time from  the fix recorded at previous time point [sec]
-	rrow <- allD$track_speed      # speed of track vector [m/sec]
-	drow <- allD$track_direction  # direction of track vector [rad]  
+	raw <- read.csv(infile)
+	tp <- raw$timepoint        # time point of data
+	dt <- raw$dt               # elapsed time from  the fix recorded at previous time point [sec]
+	rrow <- raw$track_speed      # speed of track vector [m/sec]
+	drow <- raw$track_direction  # direction of track vector [rad]  
  # (East:0 radian,  North:pi/2 radian, West:pi radian, #South:pi*3/2 radian,When direction can't be calcurated for #track speed =0[m/sec]: 100)
 
 	startpoint<-floor(windwidth/2)
@@ -322,7 +321,7 @@ allD <- allD[!is.na(allD),]
 				}
 			}
 		}
-		
+
 		est<-read.csv(outfile)
 		true<-read.csv(infile)
 		dev.new()

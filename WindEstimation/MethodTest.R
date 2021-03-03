@@ -1,4 +1,9 @@
-testDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Papers/Goto2017/1700097_Real_Track_Data.csv", sep = ',', header = T)
+if(Sys.info()['sysname'] == "Darwin"){
+    testDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Papers/Goto2017/1700097_Real_Track_Data.csv", sep = ',', header = T)
+} else {
+    testDat <- read.delim("F:/UTokyoDrive/PhD/Papers/Goto2017/1700097_Real_Track_Data.csv", sep = ',', header = T)
+}
+
 cord.dec <- SpatialPoints(cbind(testDat$long, testDat$lat), proj4string=CRS("+proj=longlat"))
 cord.UTM <- spTransform(cord.dec, CRS("+proj=utm +zone=55 +datum=WGS84"))
 

@@ -118,17 +118,23 @@ s_intervals <- c(5,30,30,30,30,30,30,30,30,30,5)
 
 for(a in 1:length(files)){
 	AxDat <- read.delim(paste(fileloc,files[a], sep = ''), sep = '\t', header = F)
-	timepoint <- as.POSIXct(as.character(AxDat[,1]), format = '%d/%m/%Y,%H:%M:%OS') + (9*3600)
+	AxDat$DT <- as.POSIXct(as.character(AxDat[,1]), format = '%d/%m/%Y,%H:%M:%OS', tz = "")
+	timepoint <- 1:nrow(AxDat)
 	tsel <- seq(timepoint[1], timepoint[length(timepoint)], by = 60)
-	dt <- as.numeric(difftime(timepoint[2:length(timepoint)], timepoint[1:(length(timepoint) - 1)], units = "secs"))
+	dt <- as.numeric(difftime(AxDat$DT[2:length(AxDat$DT)], AxDat$DT[1:(length(AxDat$DT) - 1)], units = "secs"))
 	lat <- AxDat[,2]
 	long <- AxDat[,3]
 
 	cord.dec <- SpatialPoints(cbind(long, lat), proj4string=CRS("+proj=longlat"))
 	cord.UTM <- spTransform(cord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
 
-	X <- cord.UTM$long
-	Y <- cord.UTM$lat
+	AxDat$X <- cord.UTM$long
+	AxDat$Y <- cord.UTM$lat
+	AxDat$Dist <- c(NA, sqrt(diff(AxDat$X)^2 + diff(AxDat$Y)^2))
+	AxDat$Sp <- c(NA, AxDat$Dist[2:nrow(AxDat)]/dt)
+
+	X <- diff(AxDat$X)
+	Y <- diff(AxDat$X)
 
 	FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
 	FkOshi.dec <- SpatialPoints(cbind(FkOshi$Long,FkOshi$Lat),proj4string=CRS('+proj=longlat'))
@@ -140,15 +146,15 @@ for(a in 1:length(files)){
 
 	close <- which(DistFromFk > 5)
 
-	distances <- sqrt(diff(X)^2 + diff(Y)^2)
+	# distances <- sqrt(diff(X)^2 + diff(Y)^2)
 	track_direction <- atan2(diff(Y),diff(X))
-	track_speed <- distances/dt
+	track_speed <- AxDat$Sp[2:nrow(AxDat)]#distances/dt
 	
-	temp <- movSpd(timepoint, X, Y, 5)
+	temp <- movSpd(AxDat$DT, AxDat$X, AxDat$Y, 5)
     recalDist <- temp[[1]]
     recaldt <- temp[[2]]
     recalSp <- temp[[3]]
-	
+
 	sampling_interval <-  s_intervals[a]   #  sampling interval [sec]
 	time_window <- 51     #  time length of time window [min] *Give an odd number!
 	cutlength <- ceiling((45/51)*(time_window*(60/sampling_interval)))     # minimum number of data points (track vectors) included in a time window [points]         
@@ -160,11 +166,11 @@ for(a in 1:length(files)){
 
 	
 	# sampling_interval <- median(dt)
-	# time_window <- 51
+	time_window <- 51
 	# cutlength <- round(.8*(time_window*(60/sampling_interval)))
 	# cutv <- 4.1667
 	# constv <- 34.7/3.6
-	# error_of_sampling_interval <- 5
+	error_of_sampling_interval <- 5
 	cutt<- sampling_interval + error_of_sampling_interval  
 # upper value of sampling interval [sec]
 	windwidth <- time_window - 1                             
@@ -232,7 +238,7 @@ for(a in 1:length(files)){
 	rrow <- track_speed
 	drow <- track_direction
 	tp <- timepoint
-	dt <- as.numeric(diff(tp))
+	# dt <- as.numeric(diff(tp))
 	X <- X
 	Y <- Y
 
