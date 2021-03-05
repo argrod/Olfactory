@@ -1,0 +1,6 @@
+[deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+GRIB = "b16dfd50-4035-11e9-28d4-9dfe17e6779b"
+Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
+RCall = "6f49c342-dc21-5d91-9882-a32aef131414"

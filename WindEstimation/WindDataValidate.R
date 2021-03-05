@@ -4,11 +4,13 @@ library(raster)
 library(circular)
 
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinuteGotoVersion/'
+    windLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
 	estLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/Comparison/'
+	dloadLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/'
 } else {
-    windLoc <- 'F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinuteGotoVersion/'
+    windLoc <- 'F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinDat/'
 	estLoc <- 'F:/UTokyoDrive/PhD/Data/WindEstTest/Comparison/'
+	dloadLoc <- 'F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/WindValidate/'
 }
 windFiles <- dir(windLoc)
 estFiles <- dir(estLoc, pattern = 'Z.*.csv')
@@ -59,12 +61,13 @@ EstCompDT <- unique(EstComp$DT)
 # download relevant wind datafiles
 for(b in 1:length(EstCompDT)){
 	download.file(paste("http://database.rish.kyoto-u.ac.jp/arch/jmadata/data/gpv/original/",
-		format(EstCompDT[b], format = "%Y"), "/", format(EstCompDT[b], format = "%m"), "/", format(EstCompDT[b], format = "%d"), "/",
-		"Z__C_RJTD_",format(EstCompDT[b], format = "%Y"), format(EstCompDT[b], format = "%m"), format(EstCompDT[b], format = "%d"),
-		format(EstCompDT[b], format = "%H"),"0000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin", sep = ""), 
-		destfile = paste("F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/WindValidate/","Z__C_RJTD_",format(EstCompDT[b], format = "%Y"),
-		format(EstCompDT[b], format = "%m"), format(EstCompDT[b], format = "%d"), format(EstCompDT[b], format = "%H"),
-		"0000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin", sep = ""))
+			format(EstCompDT[b], format = "%Y"), "/", format(EstCompDT[b], format = "%m"), "/", format(EstCompDT[b], format = "%d"), "/",
+			"Z__C_RJTD_",format(EstCompDT[b], format = "%Y"), format(EstCompDT[b], format = "%m"), format(EstCompDT[b], format = "%d"),
+			format(EstCompDT[b], format = "%H"),"0000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin", sep = ""), 
+		destfile = paste(dloadLoc,"Z__C_RJTD_", format(EstCompDT[b], format = "%Y"),
+			format(EstCompDT[b], format = "%m"), format(EstCompDT[b], format = "%d"),
+			format(EstCompDT[b], format = "%H"),"0000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin", sep = "")
+		)
 }
 
 #EstCompare <- WindDat[format(WindDat$DT, format = "%M") == c(59,0),]
