@@ -51,8 +51,11 @@ for(b in 1:length(estFiles)){
 EstTimes <- as.POSIXct(paste(substr(estFiles,11,14),substr(estFiles,15,16),
 		substr(estFiles,17,18), substr(estFiles,19,20), sep = "/"), format = "%Y/%m/%d/%H")
 
-EstCompare <- WindDat[format(WindDat$DT, format = "%H") %in% c(0,3,6,9,12,15,18,21) & format(WindDat$DT, format = "%M") == "0" |
-	format(WindDat$DT, format = "%H") %in% c(2,5,8,11,14,17,20,23) & format(WindDat$DT, format = "%M") == "59",]
+EstCompare <- WindDat[format(WindDat$DT, format = "%H") %in% c(0,3,6,9,12,15,18,21) & as.numeric(format(WindDat$DT, format = "%M")) < 4 |
+	format(WindDat$DT, format = "%H") %in% c(2,5,8,11,14,17,20,23) & as.numeric(format(WindDat$DT, format = "%M")) > "56",]
+
+EstCompare <- WindDat[as.numeric(format(round(WindDat$DT, units = "hours"), format = "%H")) %% 3 == 0 & (as.numeric(format(WindDat$DT, format = "%M")) < 4 | as.numeric(format(WindDat$DT, format = "%M")) > 56),]
+
 
 EstComp <- unique(EstCompare[c("DT","ID")])
 EstComp$DT <- round(EstComp$DT, units = "hours")
