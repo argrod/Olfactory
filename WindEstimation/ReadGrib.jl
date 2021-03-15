@@ -6,8 +6,21 @@ using RCall
 DatSum = DataFrame(ToL = String[], sNam = String[], nam = String[], levels = Int[], units = String[], dataTime = Int[])
 
 ##
+WLoc = "F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/WindValidate/"
+WFiles = readdir(WLoc)
+cd(WLoc)
+##
 msg = []
-GribFile("flob.bin") do f
+GribFile(WFiles[1]) do f
+    for message in f
+        msg = Message(f)
+    end
+end
+
+##
+
+msg = []
+GribFile(WFiles[1]) do f
     for message in f
         msg = Message(f)
     end
