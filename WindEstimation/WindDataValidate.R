@@ -17,16 +17,16 @@ estFiles <- dir(estLoc, pattern = 'Z.*.csv')
 
 for(b in 1:length(windFiles)){
     if(b == 1){
-        WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
-		colnames(WindDat) <- c("DT", "BHead", "X", "Y", "Lat", "Lon")
+        WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = T)
+		# colnames(WindDat) <- c("DT", "BHead", "X", "Y", "Lat", "Lon")
         WindDat$ID <- windFiles[b]
 		Wind.dec <- SpatialPoints(cbind(WindDat$Lon,WindDat$Lat), proj4string = CRS("+proj=longlat"))
 		UTMdat <- spTransform(Wind.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
 		WindDat$UTME <- coordinates(UTMdat)[, 1]
 		WindDat$UTMN <- coordinates(UTMdat)[, 2] 
     } else {
-        toAdd <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
-		colnames(toAdd) <- c("DT", "BHead", "X", "Y", "Lat", "Lon")
+        toAdd <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = T)
+		# colnames(toAdd) <- c("DT", "BHead", "X", "Y", "Lat", "Lon")
         toAdd$ID <- windFiles[b]
 		Add.dec <- SpatialPoints(cbind(toAdd$Lon,toAdd$Lat), proj4string = CRS("+proj=longlat"))
 		UTMdat <- spTransform(Add.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
@@ -212,3 +212,20 @@ minLon <- min(Dat$Lon)
 maxLon <- max(Dat$Lon)
 
 write.table(Dat,paste(PredLoc,'AllLatLon.txt',sep=''),row.names=F,col.names=T)
+
+sel <- read.delim("F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", header = T, sep = ',')
+plot(sel$WSpd,sel$ESpd)
+res<-cor.test(sel$ESpd, sel$WSpd, method = "pearson")
+res
+res2 <- cor.circular(sel$WindHead*-1, atan2(sel$X,sel$Y), test = T)
+res2
+plot(atan2(sel$X,sel$Y), sel$WindHead*-1)
+lines(-3:3,-3:3)
+
+cor.circular(atan2(sel$V,sel$U), atan2(sel$X,sel$Y), test = T)
+
+cor.test(sqrt(sel$X^2+sel$Y^2), sqrt(sel$V^2+sel$U^2))
+plot(atan2(sel$U,sel$V), atan2(sel$X,sel$Y))
+lines(-3:3,3:-3)
+plot(sqrt(sel$X^2+sel$Y^2), sqrt(sel$V^2+sel$U^2))
+lines(0:10,0:10)
