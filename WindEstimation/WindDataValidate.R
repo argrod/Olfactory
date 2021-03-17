@@ -6,11 +6,11 @@ library(circular)
 if(Sys.info()['sysname'] == "Darwin"){
     windLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
 	estLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/Comparison/'
-	dloadLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/'
+	dloadLoc <- '/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/gribs/'
 } else {
     windLoc <- 'F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinDat/'
 	estLoc <- 'F:/UTokyoDrive/PhD/Data/WindEstTest/Comparison/'
-	dloadLoc <- 'F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/WindValidate/'
+	dloadLoc <- 'F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/gribs/'
 }
 windFiles <- dir(windLoc)
 estFiles <- dir(estLoc, pattern = 'Z.*.csv')
