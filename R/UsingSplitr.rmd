@@ -6,6 +6,48 @@ Further details on the HYSPLIT model can be found on it's [NOAA site](https://ww
 
 ```{r echo=TRUE}
 library(splitr)
+if(Sys.info()['sysname'] == "Darwin"){
+    exec_loc <- "/Users/aran/hysplit/"
+} else {
+    exec_loc <- "C:/hysplit/"
+}
+```
+
+## Application to testing seabird olfaction
+
+HYSPLIT allows modelling of air 
+
+```{r echo = TRUE}
+trajectory <- 
+  hysplit_trajectory(
+    lat = 39,
+    lon = 143,
+    height = 10,
+    duration = 4,
+    days = "2018-09-01",
+    daily_hours = c(14),
+    direction = "backward",
+    met_type = "reanalysis",
+    extended_met = FALSE,
+    # met_dir = here::here("met"),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+  )
+
+trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = 39,
+    lon = 143,
+    height = 10,
+    duration = 6,
+    days = "2018-09-01",
+    daily_hours = c(14),
+    direction = "backward",
+    met_type = "reanalysis",
+    # met_dir = here::here("met"),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+  ) %>%
+  run_model()
 
 trajectory_model <-
   create_trajectory_model() %>%
@@ -19,7 +61,7 @@ trajectory_model <-
     direction = "backward",
     met_type = "reanalysis",
     # met_dir = here::here("met"),
-    exec_dir = "/Users/aran/hysplit/exec/") %>%
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
   run_model()
 
 ```
@@ -36,3 +78,36 @@ The above function hysplit_trajectory generates trajectories. The following argu
 | vertical_motion_option                                | Method for vertical motion. 0 - input model data <b /> 1 - isobaric <b /> 2 - isentropic <b /> 3 - constant density <b /> 4 - isosigma <b /> 5 - divergence <b /> 6 - remap MSL to AGL <b /> 7 - average data <b /> 8 - dampted magnitude  |
 | top_of_model_domain_m                                 | Max height of model domain                                                    |
 
+```{R}
+dispersion_model <-
+  create_dispersion_model() %>%
+  add_source(
+    name = "particle",
+    lat = 41.0, lon = 143.0, height = 10,
+    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
+    release_start = lubridate::ymd_hm("2018-09-01 14:31"),
+    release_end = lubridate::ymd_hm("2018-09-01 14:31") + lubridate::hours(2)
+  ) %>%
+  add_dispersion_params(
+    start_time = lubridate::ymd_hm("2018-09-01 14:31"),
+    end_time = lubridate::ymd_hm("2018-09-01 14:31") + lubridate::hours(6),
+    direction = "backward", 
+    met_type = "reanalysis",
+    # met_dir = here::here("met"),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+  ) %>%
+    run_model()
+
+dispersion_tbl <- dispersion_model %>% get_output_tbl()
+dispersion_model %>% dispersion_plot()
+
+
+find_hull <- function(df) df[chull(df$lon, df$lat), ]
+hulls <- ddply(dispersion_tbl, "hour", find_hull)
+
+plot <- ggplot(data = dispersion_tbl, aes(x = lon, y = lat, colour=as.factor(hour), fill = as.factor(hour), group = as.factor(hour))) +
+# geom_point() + 
+geom_polygon(data = hulls, alpha = 0.5) +
+labs(x = "Lon", y = "Lat")
+plot
+```

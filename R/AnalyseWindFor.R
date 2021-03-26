@@ -391,11 +391,13 @@ cor.test(sel$ESpd, sel$WSpd)
 ###################################################################################################
 
 library(devtools)
-devtools::install_github("rich-iannone/SplitR")
-library(SplitR)
+devtools::install_github("rich-iannone/splitr")
+library(splitr)
 install.packages("here",,"https://mac.R-project.org")
 library(here)
 library(dplyr)
+library(ggplot2)
+library(plyr)
 
 setwd("~/Documents/SplitR_wd")
 
@@ -410,6 +412,12 @@ trajectory <-
     met_type = "gdas1",
     extended_met = TRUE)
 
+if(Sys.info()['sysname'] == "Darwin"){
+    exec_loc <- "/Users/aran/hysplit/"
+} else {
+    exec_loc <- "C:/hysplit/"
+}
+
 trajectory <- 
   hysplit_trajectory(
     lat = 39,
@@ -419,10 +427,10 @@ trajectory <-
     days = "2018-09-01",
     daily_hours = c(14),
     direction = "backward",
-    met_type = "gdas1",
-    extended_met = FALSE
+    met_type = "reanalysis",
+    extended_met = FALSE,
     # met_dir = here::here("met"),
-    # exec_dir = here::here("out")
+    exec_dir = paste(exec_loc, "exec", sep = "")
   )
 
 trajectory_model <-
@@ -435,9 +443,9 @@ trajectory_model <-
     days = "2018-09-01",
     daily_hours = c(14),
     direction = "backward",
-    met_type = "reanalysis"
+    met_type = "reanalysis",
     # met_dir = here::here("met"),
-    # exec_dir = here::here("out")
+    exec_dir = paste(exec_loc, "exec", sep = "")
   ) %>%
   run_model()
 
@@ -461,11 +469,21 @@ dispersion_model <-
     start_time = lubridate::ymd_hm("2018-09-01 14:31"),
     end_time = lubridate::ymd_hm("2018-09-01 14:31") + lubridate::hours(6),
     direction = "backward", 
-    met_type = "reanalysis"
+    met_type = "reanalysis",
     # met_dir = here::here("met"),
-    # exec_dir = here::here("out")
+    exec_dir = paste(exec_loc, "exec", sep = "")
   ) %>%
     run_model()
 
 dispersion_tbl <- dispersion_model %>% get_output_tbl()
 dispersion_model %>% dispersion_plot()
+
+
+find_hull <- function(df) df[chull(df$lon, df$lat), ]
+hulls <- ddply(dispersion_tbl, "hour", find_hull)
+
+plot <- ggplot(data = dispersion_tbl, aes(x = lon, y = lat, colour=as.factor(hour), fill = as.factor(hour), group = as.factor(hour))) +
+# geom_point() + 
+geom_polygon(data = hulls, alpha = 0.5) +
+labs(x = "Lon", y = "Lat")
+plot
