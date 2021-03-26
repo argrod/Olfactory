@@ -1,0 +1,38 @@
+# Using splitr
+
+**splitr** is an R package that run HYSPLIT models easily. The output can be made as a dataframe and so used further within R to generate plots or ecological models. Specifically, the package can generate trajectory and dispersion models both forwards and backwards in time. Models can also be built to run multiple timings. HYSPLIT itself must first be installed (via the **Air Resources Laboratory of NOAA** [**website**](https://www.ready.noaa.gov/HYSPLIT.php)).
+
+Further details on the HYSPLIT model can be found on it's [NOAA site](https://www.arl.noaa.gov/hysplit/hysplit/), inluding a list of [limiations](https://www.ready.noaa.gov/hypub/limitations.html).
+
+```{r echo=TRUE}
+library(splitr)
+
+trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = 43.45,
+    lon = -79.70,
+    height = 50,
+    duration = 6,
+    days = "2015-07-01",
+    daily_hours = c(0, 12),
+    direction = "backward",
+    met_type = "reanalysis",
+    # met_dir = here::here("met"),
+    exec_dir = "/Users/aran/hysplit/exec/") %>%
+  run_model()
+
+```
+
+The above function hysplit_trajectory generates trajectories. The following arguments are used:
+
+|   Argument name                                       |   Description                                                                 |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| days                                                  | Array of days to be tested                                                    |
+| backtrajectory                                        | Run the model forward (FALSE) or backward (TRUE)                              |
+| simluation_duration_h                                 | Duration of runs (hours)                                                      |
+| start_lat_deg, start_long_deg, start_height_m_AGL     | Starting point of runs (height in m)                                          |
+| met_type                                              | Type of met data files to use. "reanalysis" - NCAR/NCEP global reanalysis data <b /> "gdas1" and "gdas0.5" - Global Data Assimilartion System 1- and 0.5-degree resolution data <b /> "narr" - North American Regional reanalysis <b /> "gfs0.25" - Global Forecast System 0.25 degree data <b /> "nam12" - North American Mesoscale Forecast System |
+| vertical_motion_option                                | Method for vertical motion. 0 - input model data <b /> 1 - isobaric <b /> 2 - isentropic <b /> 3 - constant density <b /> 4 - isosigma <b /> 5 - divergence <b /> 6 - remap MSL to AGL <b /> 7 - average data <b /> 8 - dampted magnitude  |
+| top_of_model_domain_m                                 | Max height of model domain                                                    |
+

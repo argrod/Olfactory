@@ -187,14 +187,44 @@ for(tg in 1:length(Dat)){
         WFor <- rbind(WFor, toAdd)
     }
 }
+WFor$dir <- NA
+WFor$dir[(WFor$head - WFor$WHead) > (-pi/4) & (WFor$head - WFor$WHead) < (pi/4)] = "Same direction"
+WFor$dir[(WFor$head - WFor$WHead) < (-pi/4) & (WFor$head - WFor$WHead) > (-3*pi/4)] = "L-Side"
+WFor$dir[(WFor$head - WFor$WHead) < (-3*(pi/4)) | (WFor$head - WFor$WHead) > (3*(pi/4))] = "Toward"
+WFor$dir[(WFor$head - WFor$WHead) < (3*pi/4) & (WFor$head - WFor$WHead) > (pi/4)] = "R-Side"
 # plot the difference between the two
 ggplot(WFor) +
-    geom_point(aes(x = (WHead - head)*(180/pi), y = WSpeed)) +
+    geom_point(aes(x = (head - WHead)*(180/pi), y = WSpeed)) +
     coord_polar() + scale_x_continuous(limits = c(0,180))
+
+ggplot(WFor) +
+    geom_point(aes(x = ((head+3) - (WHead+3))*(180/pi), y = WSpeed)) +
+    coord_polar() + scale_x_continuous(limits = c(0,360))
+
+ggplot() +
+    geom_point(data = WFor[(WFor$head - WFor$WHead) < pi/2 & (WFor$head - WFor$WHead) >(-pi/2),],
+        mapping=aes(x = (head - WHead), y = WSpeed), colour = "green") +
+        geom_point(data = WFor[(WFor$head - WFor$WHead) < (-pi/2) | (WFor$head - WFor$WHead) >pi/2,],
+        mapping=aes(x = (head - WHead), y = WSpeed), colour = "red") +
+    coord_polar() + scale_x_continuous(limits = c(-pi,pi))
+
+
+
+ggplot() +
+    geom_point(data = WFor[((WFor$head+3) - (WFor$WHead + 3))*(180/pi) < 90,],
+        mapping=aes(x = ((head+3) - (WHead+3))*(180/pi), y = WSpeed), colour = "green") +
+        geom_point(data = WFor[((WFor$head+3) - (WFor$WHead + 3))*(180/pi) > 90,],
+        mapping=aes(x = ((head+3) - (WHead+3))*(180/pi), y = WSpeed), colour = "red") +
+    coord_polar() + scale_x_continuous(limits = c(0, 360))
+
+ggplot() +
+    geom_point(data = WFor,
+        mapping=aes(x = head - WHead, y = WSpeed, fill = dir), pch = 21) +
+    coord_polar() + scale_x_continuous(limits = c(-pi, pi))
 
 Wplot <- ggplot(WFor) +
     geom_point(aes(x = (WHead), y = WSpeed), pch = 2) +
-    coord_polar() + scale_x_continuous(limits = c(-3,3))
+    coord_polar() + scale_x_continuous(limits = c(-pi,pi))
 
 Bplot <- ggplot(WFor) +
     geom_point(aes(x = head, y = BSpd), pch = 4)+
@@ -294,3 +324,148 @@ ggplot(WindDat, aes(x = WHead, y = BSpd)) +
 # geom_point(data = DatSel[DatSel$turnNear == 1, ], aes(x = Lon, y = Lat))
 # geom_point(aes(x = Lon, y = Lat, col = tFromFor)) +
 # geom_point(data = DatSel[DatSel$Forage == 1,], aes(x = Lon, y = Lat), col = 'red')
+
+sel <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",", header = T)
+sel$EHead <- atan2(sel$X,sel$Y)
+sel$WHead <- atan2(sel$U,sel$V)
+ggplot() +
+    geom_point(aes(y = EHead, x = WHead), data = sel, pch = 21, fill = "deepskyblue1") +
+    geom_line(aes(x = (-pi:pi), y = (-pi:pi))) +
+    theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 14,
+        family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
+    scale_y_continuous("Estimated headings") +
+    scale_x_continuous("JMA headings")
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/WindCorr.png", , dpi = 300, height = 6,
+    width = 6, units = "in", family = "Arial")
+dev.off()
+library(circular)
+res <- cor.circular(sel$WHead, sel$EHead, test = T)
+res
+ggplot() +
+    geom_point(aes(x = WSpd, y = ESpd), data= sel, pch = 21, fill = "orangered2") +
+    geom_line(aes(x = (0:12), y =(0:12))) +
+    theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 14,
+        family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
+    scale_y_continuous("Estimated wind speed (m/s)") +
+    scale_x_continuous("JMA wind speed (m/s)")
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/SpeedCorr.png", , dpi = 300, height = 6,
+    width = 6, units = "in", family = "Arial")
+dev.off()
+
+ggplot() +
+    geom_point(data = WFor,
+        mapping=aes(x = head - WHead, y = WSpeed, fill = dir), pch = 21, size = 2) +
+    coord_polar() + scale_x_continuous("Wind heading relative to bird (rad)",limits = c(-pi, pi)) +
+    scale_fill_discrete("Wind heading") +
+    theme_bw() + 
+    theme(panel.border = element_blank(), text = element_text(size = 14,
+        family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
+    scale_y_continuous("Estimated wind speed (m/s)")
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindCol.png", , dpi = 300, height = 6,
+    width = 6, units = "in", family = "Arial")
+dev.off()
+
+ggplot() +
+    geom_point(data = WFor,
+        mapping=aes(x = head - WHead, y = WSpeed), pch = 21, fill = "black", size = 1) +
+    coord_polar() + scale_x_continuous("Wind heading relative to bird (rad)",limits = c(-pi, pi)) +
+    theme_bw() + 
+    theme(panel.border = element_blank(), text = element_text(size = 14,
+        family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
+    scale_y_continuous("Estimated wind speed (m/s)")
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindBW.png", , dpi = 300, height = 6,
+    width = 6, units = "in", family = "Arial")
+dev.off()
+
+cor.test(sel$ESpd, sel$WSpd)
+
+
+    scale_fill_viridis_d(option="magma")
+    scale_fill_manual(values=c("#ffffbf","#ffffbf","#2c7bb6","#d7191c"))
+
+
+###################################################################################################
+####################################### HYPLIT ####################################################
+###################################################################################################
+
+library(devtools)
+devtools::install_github("rich-iannone/SplitR")
+library(SplitR)
+install.packages("here",,"https://mac.R-project.org")
+library(here)
+library(dplyr)
+
+setwd("~/Documents/SplitR_wd")
+
+trajectory <- 
+  hysplit_trajectory(
+    lat = 42.83752,
+    lon = -80.30364,
+    height = 10,
+    duration = 24,
+    daily_hours = c(0, 6, 12, 18),
+    direction = "forward",
+    met_type = "gdas1",
+    extended_met = TRUE)
+
+trajectory <- 
+  hysplit_trajectory(
+    lat = 39,
+    lon = 143,
+    height = 10,
+    duration = 4,
+    days = "2018-09-01",
+    daily_hours = c(14),
+    direction = "backward",
+    met_type = "gdas1",
+    extended_met = FALSE
+    # met_dir = here::here("met"),
+    # exec_dir = here::here("out")
+  )
+
+trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = 39,
+    lon = 143,
+    height = 10,
+    duration = 6,
+    days = "2018-09-01",
+    daily_hours = c(14),
+    direction = "backward",
+    met_type = "reanalysis"
+    # met_dir = here::here("met"),
+    # exec_dir = here::here("out")
+  ) %>%
+  run_model()
+
+trajectory_tbl <- trajectory_model %>% get_output_tbl()
+
+trajectory_tbl
+trajectory_tbl %>% trajectory_plot()
+trajectory_model %>% trajectory_plot()
+
+
+dispersion_model <-
+  create_dispersion_model() %>%
+  add_source(
+    name = "particle",
+    lat = 41.0, lon = 143.0, height = 10,
+    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
+    release_start = lubridate::ymd_hm("2018-09-01 14:31"),
+    release_end = lubridate::ymd_hm("2018-09-01 14:31") + lubridate::hours(2)
+  ) %>%
+  add_dispersion_params(
+    start_time = lubridate::ymd_hm("2018-09-01 14:31"),
+    end_time = lubridate::ymd_hm("2018-09-01 14:31") + lubridate::hours(6),
+    direction = "backward", 
+    met_type = "reanalysis"
+    # met_dir = here::here("met"),
+    # exec_dir = here::here("out")
+  ) %>%
+    run_model()
+
+dispersion_tbl <- dispersion_model %>% get_output_tbl()
+dispersion_model %>% dispersion_plot()
