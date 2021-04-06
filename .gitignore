@@ -1,6 +1,9 @@
 ### MAC general
 **/*.DS_Store
 
+### HYSPLIT files
+**/*.gbl
+
 ### R
 # History files
 **/*.Rhistory
