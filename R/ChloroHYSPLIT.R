@@ -92,19 +92,34 @@ max(D18$Lon)
 
 StLCalc <- function(disp){
   # find the changes in sign of the data
-  chgs <- diff(disp)
-  cross <- which(diff(chgs))
+  chgs <- disp > 0
+  swtch <- which(diff(chgs)!=0) + 2
 }
+
 
 # calculate step lengths as per Humphries et al. 2013
 sel <- as.data.frame(allD[allD$tagID == allD$tagID[1] & allD$Year == allD$Year[1],])
 sel$deltaT <- c(NA, difftime(sel$DT[2:nrow(sel)], sel$DT[1:(nrow(sel)-1)], units = "secs"))
 # point out where the time difference exceeds the median value
 cutoff <- median(sel$deltaT, na.rm = T) + 10
-stepAreas <- c(1,which(sel$deltaT > cutoff),length(sel))
+stepAreas <- c(0,which(sel$deltaT > cutoff),length(sel))
 stepLsN <- vector(mode = "list", length = length(stepAreas))
 stepLsE <- vector(mode = "list", length = length(stepAreas))
 
+
+sel$DT[81:120]
+
+sel$deltaT[stepAreas]
+
+for(c in 1:(length(stepAreas) - 1)){
+  isol <- diff(sel$UTMN[(stepAreas[c]+1):stepAreas[c+1]])
+  if(length(isol) == 0){
+    next
+  } else {
+    zcs <- c(1, StLCalc(isol), length(isol))
+    stepLsN[[c]] <- sapply(c(1:(length(zcs) - 1)), function(x) sum(abs(isol[zcs[x]:(zcs[x+1]-1)])))
+  }
+}
 
 
 for(b in 1:(length(stepAreas)-1)){
