@@ -6,6 +6,7 @@ library(ggplot2)
 library(rnaturalearth)
 library(sp)
 library(plotdap)
+library(scales)
 options(timeout = 200)
 # load in data 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -90,12 +91,70 @@ max(D18$Lat)
 min(D18$Lon)
 max(D18$Lon)
 
-StLCalc <- function(disp){
-  # find the changes in sign of the data
-  chgs <- disp > 0
-  swtch <- which(diff(chgs)!=0) + 2
+StLDisp <- function(utm){
+  chgs <- diff(utm) >= 0
+  swtch <- which(diff(chgs)!=0) + 1
 }
+StLCalc <- function(DT,UTMN,UTME){
+  deltaT <- c(NA, difftime(DT[2:length(DT)], DT[1:(length(DT)-1)], units = "secs"))
+  # find the cutoff points from the time difference
+  cutoff <- median(deltaT, na.rm = T) + 10
+  # find the start and end times based on time differences over the cutoff value
+  strts <- which(deltaT > cutoff)+1
+  strts <- c(1,strts[!deltaT[strts] > cutoff])
+  ends <- c(which(deltaT > cutoff)-1,length(DT))
+  ends <- ends[!deltaT[ends] > cutoff]
+  # find the changes in sign of the data
+  stepLsN <- NA
+  for(g in 1:length(strts)){
+    iso <- UTMN[strts[g]:ends[g]]
+    stepLsN[g] <- sum(abs(diff(iso)))
+  }
+  stepLsE <- NA
+  for(g in 1:length(strts)){
+    iso <- UTME[strts[g]:ends[g]]
+    stepLsE[g] <- sum(abs(diff(iso)))
+  }
+  data.frame(start=DT[strts], end=DT[ends], dispN = stepLsN, dispE = stepLsE)
+}
+levy <- function(x,mu){
+  x^-mu
+}
+selTest <- StLCalc(sel$DT, sel$UTMN, sel$UTME)
+rank(selTest$dispN)/max(rank(selTest$dispN))
+Nls <- data.frame(disp = sort(selTest$dispN, decreasing = T)*10^-3, rank = rev(rank(sort(selTest$dispN, decreasing = T)*10^-3)/max(rank(sort(selTest$dispN, decreasing = T)*10^-3))))
+plot(log10(Nls$disp*10), log10(levy(Nls$disp*10^-3,2)))
+plot(log10(Nls$disp),log10(levy(sort(selTest$dispN, decreasing = T),2)))
+p1<-ggplot(Nls, aes(x = (disp), y = (rank))) +
+  geom_point(pch=21) + scale_x_log10() + scale_y_log10()
+p1 + geom_line(Nls, mapping=aes(x = (disp), y = (levy(disp,3))), colour = "red")
 
+plot(sort(levy(1:1000,2),decreasing=F),type='l')
+
+
+
+plot(1:1000,levy(1:1000,1.5),log="xy")
+  geom_line(aes(x = log10(disp), y = log10(levy((1:nrow(Nls)),-1))))
+  
+  
+  +
+  geom_line(aes(x = (levy(log10(disp),2)), y = log10(disp), colour = "red"))
+  geom_line(aes(x = log10(as.numeric(Var1)), y = (levy(as.numeric(Var1),2)),colour = "red"))
+levy(as.numeric(Nls$Var1),2)
+
+plot(log10(Nls$lengths),log10(Nls$rank))
+lines(log10(Nls$lengths),levy(log10(Nls$lengths),3))
+ggplot(Nls) + 
+  geom_point(aes(x = (log10(rank)), y = (log10(disp)))) +
+  geom_line(aes(x = log10(1:nrow(Nls))), y = levy((1:nrow(Nls)),-2))
+  scale_x_continuous() +
+  geom_function(fun = ~ log10((1:nrow(Nls))^2), aes(colour = "red"))
+
+plot(selTest$dispN[order(rank(selTest$dispN))])
+
+plot(log10(order(selTest$dispN)),log10(selTest$dispN[order((selTest$dispN))]))
+lines(log10(c(1:length(selTest$dispN))^(2)))
+lines(log10(selTest$dispN[order(selTest$dispN)]^(1)))
 
 # calculate step lengths as per Humphries et al. 2013
 sel <- as.data.frame(allD[allD$tagID == allD$tagID[1] & allD$Year == allD$Year[1],])
@@ -107,12 +166,36 @@ stepLsN <- vector(mode = "list", length = length(stepAreas))
 stepLsE <- vector(mode = "list", length = length(stepAreas))
 
 
+tstr<-data.frame(dat=c(0,4,5,9,7,2,-4,-6,-2,3,6,5,2,4,6,9,3,0,-4,-8,-2,6,8,10,5,3,1,2,2),swtch=NA,
+  dt=c(NA,30,30,30,30,30,51,30,30,30,30,30,30,30,62,182,30,30,30,30,30,30,30,30,30,651,30,30,30))
+plot(tstr,type="l")
+points(which(diff(diff(tstr$dat) >= 0)!=0) + 1,tstr$dat[which(diff(diff(tstr$dat) >= 0)!=0) + 1])
+tstr$swtch<-0
+tstr$swtch[which(diff(diff(tstr$dat) >= 0)!=0) + 1]=1
+swtch<-which(diff(diff(tstr) >= 0)!=0) + 1
+strts <- which(tstr$dt > cutoff)+1
+strts <- c(1,strts[!tstr$dt[strts] > cutoff])
+ends <- c(which(tstr$dt > cutoff)-1,nrow(tstr))
+ends <- ends[!tstr$dt[ends] > cutoff]
+tstr$DT <- c(0,cumsum(tstr$dt[2:nrow(tstr)]))
+plot(tstr$DT, tstr$dt,type="l")
+points(tstr$DT[strts],tstr$dt[strts])
+points(tstr$DT[ends],tstr$dt[ends],pch=2)
+points(which(tstr$dt > cutoff),tstr$dt[which(tstr$dt > cutoff)])
+points(which(tstr$dt > cutoff)-1,tstr$dt[which(tstr$dt > cutoff)-1],pch=2)
 sel$DT[81:120]
 
+ggplot() +
+  geom_point(aes(x=log10(levy(1:10000,2)), y = log10(1:10000)))
+   +
+  scale_y_log10() + scale_x_log10()
 sel$deltaT[stepAreas]
 
+df <- data.frame(raw=1:10000,lev=levy(1:10000,2))
+ggplot(df) + geom_line(aes(y = log10(rank(desc(lev))), x =(lev)))
+plot(log10(df$lev))
 for(c in 1:(length(stepAreas) - 1)){
-  isol <- diff(sel$UTMN[(stepAreas[c]+1):stepAreas[c+1]])
+  isol <- diff(sel$UTMN[(stepAreas[c]0):stepAreas[c+1]])
   if(length(isol) == 0){
     next
   } else {

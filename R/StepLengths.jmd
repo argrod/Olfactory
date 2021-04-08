@@ -1,0 +1,61 @@
+# Splitting trajectories
+
+The function of splitting trajectories is taken from a relatively simple method which now appears to be the norm derived from [Humphries et al., 2013](https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/2041-210X.12096). This concept takes 2 or 3D data, and splits it into component parts. In our case, we take GPS tracks and split into northing and easting signals. Changes in direction of these signals then allow us to split the data accordingly, and this makes up the basis for our steps. 
+
+```julia; echo = false
+    using Weave
+    using Plots
+    using Dates
+    using Geodesy
+    using Distributions
+    using CSV
+    # generate some sample 1-D data
+    x = rand(Int(1):Int(60), 50) * -1;
+    function ChgSign(a)
+        for b = 2:length(a)
+            if a[b - 1] > a[b] < a[b + 1]
+                Out[b] = -1;
+            elseif a[b - 1] < a[b] > a[b + 1]
+                Out[b] = 1;
+            end
+        end
+    end
+    diff(x)
+    plot(x)
+```
+
+```julia
+    function Levy(x, mu)
+        x^(-mu)
+    end
+    rge = 0.1:0.01:1
+    plot(Levy.(rge,2.0),rge,xaxis=:log)
+```
+
+
+StLDisp <- function(utm){
+  chgs <- diff(utm) >= 0
+  swtch <- which(diff(chgs)!=0) + 1
+}
+StLCalc <- function(DT,UTMN,UTME){
+  deltaT <- c(NA, difftime(DT[2:length(DT)], DT[1:(length(DT)-1)], units = "secs"))
+  # find the cutoff points from the time difference
+  cutoff <- median(deltaT, na.rm = T) + 10
+  # find the start and end times based on time differences over the cutoff value
+  strts <- which(deltaT > cutoff)+1
+  strts <- c(1,strts[!deltaT[strts] > cutoff])
+  ends <- c(which(deltaT > cutoff)-1,length(DT))
+  ends <- ends[!deltaT[ends] > cutoff]
+  # find the changes in sign of the data
+  stepLsN <- NA
+  for(g in 1:length(strts)){
+    iso <- UTMN[strts[g]:ends[g]]
+    stepLsN[g] <- sum(abs(diff(iso)))
+  }
+  stepLsE <- NA
+  for(g in 1:length(strts)){
+    iso <- UTME[strts[g]:ends[g]]
+    stepLsE[g] <- sum(abs(diff(iso)))
+  }
+  data.frame(start=DT[strts], end=DT[ends], dispN = stepLsN, dispE = stepLsE)
+}
