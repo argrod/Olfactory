@@ -7,6 +7,8 @@ library(rnaturalearth)
 library(sp)
 library(plotdap)
 library(scales)
+install.packages("poweRlaw")
+library(poweRlaw)
 options(timeout = 200)
 # load in data 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -120,18 +122,41 @@ StLCalc <- function(DT,UTMN,UTME){
 levy <- function(x,mu){
   x^-mu
 }
+sel <- as.data.frame(allD[allD$tagID == allD$tagID[1] & allD$Year == allD$Year[1],])
 selTest <- StLCalc(sel$DT, sel$UTMN, sel$UTME)
 rank(selTest$dispN)/max(rank(selTest$dispN))
 Nls <- data.frame(disp = sort(selTest$dispN, decreasing = T)*10^-3, rank = rev(rank(sort(selTest$dispN, decreasing = T)*10^-3)/max(rank(sort(selTest$dispN, decreasing = T)*10^-3))))
-plot(log10(Nls$disp*10), log10(levy(Nls$disp*10^-3,2)))
+plot(log10(Nls$disp*10^-3), log10(levy(Nls$disp*10^-3,2)))
 plot(log10(Nls$disp),log10(levy(sort(selTest$dispN, decreasing = T),2)))
 p1<-ggplot(Nls, aes(x = (disp), y = (rank))) +
   geom_point(pch=21) + scale_x_log10() + scale_y_log10()
-p1 + geom_line(Nls, mapping=aes(x = (disp), y = (levy(disp,3))), colour = "red")
+p1 + geom_line(Nls, mapping=aes(x = (disp), y = (levy(disp,1.5))), colour = "red")
+
+p1 + geom_smooth(method="lm", formula = y~x)
+
+# working with poweRlaw
+m_bl <- conpl$new(Nls$disp[Nls$disp>0])
+est <- estimate_xmin(m_bl)
+m_bl$setXmin(17)
+m_bl_ln <- conlnorm$new(Nls$disp[Nls$disp>0])
+est <- estimate_xmin(m_bl_ln)
+m_bl_ln$setXmin(est)
+lines(m_bl_ln, col = 3, lwd = 2)
+bs <- bootstrap(m_bl, xmins = seq(5,50,1))
+plot(bs, trim = 0.1)
+
+bs_p <- bootstrap_p(m_bl, no_of_sims = 1000, threads = 2)
+bs_p$p
+
+plot(bs_p)
+
+plot(m_bl)
+lines(m_bl, col = 2, lwd = 2)
 
 plot(sort(levy(1:1000,2),decreasing=F),type='l')
 
-
+plot(Nls$disp[Nls$disp>5],Nls$rank[Nls$disp>5],log="xy")
+lines(Nls$disp[Nls$disp>5], Nls$disp[Nls$disp>5]^(-1.45))
 
 plot(1:1000,levy(1:1000,1.5),log="xy")
   geom_line(aes(x = log10(disp), y = log10(levy((1:nrow(Nls)),-1))))
