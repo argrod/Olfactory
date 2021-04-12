@@ -32,6 +32,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     Day = c(D18$Day, D19$Day),
     Sex = c(D18$Sex, D19$Sex),
     distTrav = c(D18$recalDist, D19$recalDist),
+    spTrav = c(D18$spTrav, D19$spTrav),
     recalSp = c(D18$recalSp, D19$recalSp),
     distFk = c(D18$distFromFk, D19$distFromFk),
     tripL = c(D18$tripL, D19$tripL),
@@ -76,7 +77,7 @@ TrackTraj <- function(DT, lat, lon, hrs){
   add_trajectory_params(
     lat = lat,
     lon = lon,
-    height = 50,
+    height = 10,
     duration = hrs,
     days = time,
     daily_hours = hr,
@@ -87,6 +88,7 @@ TrackTraj <- function(DT, lat, lon, hrs){
   run_model()
   return(trajectory_model %>% get_output_tbl())
 }
+ListD <- c(Dat,Dat19)
 
 min(D18$Lat)
 max(D18$Lat)
@@ -98,14 +100,19 @@ StLDisp <- function(utm){
   swtch <- which(diff(chgs)!=0) + 1
 }
 StLCalc <- function(DT,UTMN,UTME){
-  deltaT <- c(NA, difftime(DT[2:length(DT)], DT[1:(length(DT)-1)], units = "secs"))
+  deltaT <- difftime(DT[2:length(DT)], DT[1:(length(DT)-1)], units = "secs")
   # find the cutoff points from the time difference
   cutoff <- median(deltaT, na.rm = T) + 10
   # find the start and end times based on time differences over the cutoff value
-  strts <- which(deltaT > cutoff)+1
-  strts <- c(1,strts[!deltaT[strts] > cutoff])
-  ends <- c(which(deltaT > cutoff)-1,length(DT))
-  ends <- ends[!deltaT[ends] > cutoff]
+  low<-(deltaT <= cutoff)
+  strts <- which(diff(low) == 1) + 1
+  if(deltaT[1] <= cutoff){
+    strts <- c(1,strts)
+  }
+  ends <- which(diff(low) == -1) + 1
+  if(strts[length(strts)] > ends[length(ends)]){
+    ends <- c(ends, max(which(deltaT <= cutoff)) + 1)
+  }
   # find the changes in sign of the data
   stepLsN <- NA
   for(g in 1:length(strts)){
@@ -117,15 +124,183 @@ StLCalc <- function(DT,UTMN,UTME){
     iso <- UTME[strts[g]:ends[g]]
     stepLsE[g] <- sum(abs(diff(iso)))
   }
-  data.frame(start=DT[strts], end=DT[ends], dispN = stepLsN, dispE = stepLsE)
+  data.frame(start=DT[strts], end=DT[ends], dispN = stepLsN, dispE = stepLsE, strtInd = strts, endInd = ends)
 }
 levy <- function(x,mu){
   x^-mu
 }
-sel <- as.data.frame(allD[allD$tagID == allD$tagID[1] & allD$Year == allD$Year[1],])
-selTest <- StLCalc(sel$DT, sel$UTMN, sel$UTME)
+outTraj <- vector(mode = "list", length = length(ListD))
+for(b in 1:length(ListD)){
+  sel<-ListD[[b]]
+  sel$ForPoint <- 0
+  sel$ForPoint[sel$tkb==1 | sel$dv == 1] <- 1
+  sel$tToFor <- NA
+  sel$tToFor[sel$ForPoint == 1] = 0
+  sel$dToFor <- NA
+  sel$dToFor[sel$ForPoint == 1] = 0
+  forStart <- which(diff(sel$ForPoint == 1) == 1) + 1
+  if(sel$ForPoint[1] == 1){
+    forStart <- c(1, forStart)
+  }
+  forEnd <- which(diff(sel$ForPoint == 1) == -1) + 1
+  for(starts in which(sel$ForPoint == 0)){
+    if(any(sel$ForPoint[starts:nrow(sel)] == 1)){
+      sel$tToFor[starts] <- difftime(sel$DT[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))], sel$DT[starts], units = "secs")
+      sel$dToFor[starts] <- sqrt((sel$UTMN[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))] - sel$UTMN[starts])^2 + (sel$UTME[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))] - sel$UTME[starts])^2)
+    }
+  }
+  # remove non-flight values
+  sel <- sel[which(sel$spTrav > 15),]
+  # colnames(sel)
+  sel$tdiff <- c(NA, difftime(sel$DT[2:nrow(sel)], sel$DT[1:(nrow(sel) - 1)], units = 'secs'))
+  # decide outgoing/incoming
+  sel$appSpd <- c(NA, diff(sel[,grepl("Fk", names(sel))]))/sel$tdiff # approach speed to Fk Island
+  sel$rtChg <- NA
+  for(c in 1:nrow(sel)){
+    sel$rtChg[c] <- mean(sel$appSpd[sel$DT >= sel$DT[c] & sel$DT <= (sel$DT[c] + lubridate::hours(1))]/as.numeric(sel$tdiff[sel$DT >= sel$DT[c] & sel$DT <= (sel$DT[c] + lubridate::hours(1))]))
+  }
+  # sel <- sel[which(sel$rtChg < 0),]
+  UDsts <- StLCalc(sel$DT,sel$UTMN,sel$UTME)
+  dt <- difftime(UDsts$end,UDsts$start,units="secs")
+  aveHead <- NA
+  trajHead <- NA
+  trajSpd <- NA
+  for(ind in 1:nrow(UDsts)){
+    aveHead[ind] <- atan2(mean(diff(sel$UTMN[UDsts$strtInd[ind]:UDsts$endInd[ind]])), mean(diff(sel$UTME[UDsts$strtInd[ind]:UDsts$endInd[ind]])))
+    tryCatch({
+      trajs <- TrackTraj(sel$DT[UDsts$strtInd[ind]], sel$Lat[UDsts$strtInd[ind]], sel$Lon[UDsts$strtInd[ind]], 6)
+    }, error = function(e){cat("ERROR :", conditionMessage(e), "\n")})
+    tryCatch({
+      trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
+      trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+      trutmDiff <- cbind(diff(trCord.utm$coords.x1), diff(trCord.utm$coords.x2))
+      trajHead[ind] <- atan2(mean(trutmDiff[,1]), mean(trutmDiff[,2]))
+      trajSpd[ind] <- mean(sqrt(trutmDiff[,1]^2 + trutmDiff[,2]^2))/(length(trutmDiff[,1])*3600)
+    }, error = function(e){c(NA)})
+  }
+  outTraj[[b]] <- data.frame(DT = sel$DT[UDsts$strtInd], aveHd = aveHead, trjHd = trajHead, trjSpd = trajSpd, lat = sel$Lat[UDsts$strtInd], lon = sel$Lon[UDsts$strtInd], timeTo = sel$tToFor[UDsts$strtInd], distTo = sel$dToFor[UDsts$strtInd])
+}
+
+show <- 8
+ggplot(ListD[[show]]) +
+  geom_path(aes(x = Lon, y = Lat)) +
+  xlim(c(143.5,144.8)) + ylim(c(42,43)) +
+  geom_point(data = outTraj[[show]][UDsts$strtInd,], aes(x = lon, y = lat)) +
+  geom_spoke(data = outTraj[[show]], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = scales::rescale(outTraj[[show]]$trjSpd, c(.2, .8))) +
+  scale_colour_distiller(palette = "RdYlGn", name = "Approx. speed") +
+  theme(legend.position = 'bottom', legend.direction = 'horizontal') +
+  theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black'))
+
+outTraj[[4]]$relH <- outTraj[[4]]$aveHd - outTraj[[4]]$trjHd
+outTraj[[4]]$relH[outTraj[[4]]$relH < -pi] <- outTraj[[4]]$relH[outTraj[[4]]$relH < -pi] + 2*pi
+outTraj[[4]]$relH[outTraj[[4]]$relH > pi] <- outTraj[[4]]$relH[outTraj[[4]]$relH > pi] - 2*pi
+ggplot(outTraj[[4]][outTraj[[4]]$timeTo > (5*60),], aes(x = distTo, y = relH)) +
+  geom_point() + xlim(c(0,25000))
+
+outTraj[[show]]$relH <- outTraj[[show]]$aveHd - outTraj[[show]]$trjHd
+outTraj[[show]]$relH[outTraj[[show]]$relH < -pi] <- outTraj[[show]]$relH[outTraj[[show]]$relH < -pi] + 2*pi
+outTraj[[show]]$relH[outTraj[[show]]$relH > pi] <- outTraj[[show]]$relH[outTraj[[show]]$relH > pi] - 2*pi
+outTraj[[show]]$relW <- NA
+outTraj[[show]]$relW[outTraj[[show]]$relH < pi/4 & outTraj[[show]]$relH > -pi/4] <- "Front"
+outTraj[[show]]$relW[outTraj[[show]]$relH < -pi/4 & outTraj[[show]]$relH > -3*pi/4] <- "Side"
+outTraj[[show]]$relW[outTraj[[show]]$relH > pi/4 & outTraj[[show]]$relH < 3*pi/4] <- "Side"
+outTraj[[show]]$relW[outTraj[[show]]$relH < -3*pi/4 | outTraj[[show]]$relH > 3*pi/4] <- "Behind"
+outTraj[[show]]$Phase <- NA
+outTraj[[show]]$Phase[outTraj[[show]]$timeTo < 30*60] <- "Near"
+outTraj[[show]]$Phase[outTraj[[show]]$timeTo >= 30*60] <- "Transit"
+outTraj[[show]]$proxim <- "Far"
+outTraj[[show]]$proxim[outTraj[[show]]$distTo < 10^3] <- "Close"
+outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 10^3 & outTraj[[show]]$distTo < 50^3] <- "Inter"
+ggplot(outTraj[[show]], aes(y = trjSpd, x = relH*(180/pi), colour = relW)) + coord_polar() + scale_x_continuous(limits = c(-180,180)) + geom_point()
+
+ggplot(outTraj[[show]], aes(x = distTo*10^-3, y = relH, colour = relW)) + geom_point()
+ggplot(outTraj[[show]][outTraj[[show]]$proxim == "Inter",], aes(x = timeTo, y = relH, colour = relW)) + geom_point()
+
+
+ggplot(outTraj[[show]], aes(x = lon, y = lat)) +
+  geom_point() + geom_spoke(data = outTraj[[show]], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = scales::rescale(outTraj[[show]]$trjSpd, c(.2, .8))) +
+  scale_colour_distiller(palette = "RdYlGn", name = "Approx. speed") +
+  theme(legend.position = 'bottom', legend.direction = 'horizontal') +
+  theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black'))
+
+
+ListD[[show]]$tagID[1]
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/6_S1AirTraj.png", width = 700, height = 800)
+dev.off()
+ggplot(Sel[1:50,], aes(x = Lon, y = Lat, fill = FlSpeed, angle = FlHead, 
+    radius = scales::rescale(FlSpeed, c(.2, .8)))) +
+    geom_raster() +
+    geom_spoke(arrow = arrow(length = unit(.05, 'inches'))) + 
+    scale_fill_distiller(palette = "RdYlGn") + 
+    coord_equal(expand = 0) + 
+    theme(legend.position = 'bottom', 
+          legend.direction = 'horizontal')
+
+
+tags <- unique(allD$tagID)
+years <- unique(allD$Year)
+sel <- as.data.frame(allD[allD$tagID == tags[1] & allD$Year == years[1],])
+comps <- vector(mode="list",length=length(ListD))
+powLs <- vector(mode="list",length=length(ListD))
+expLs <- vector(mode="list",length=length(ListD))
+normLs <- vector(mode="list",length=length(ListD))
+for(b in 1:length(ListD)){
+  sel <- ListD[[b]][which(ListD[[b]]$spTrav > 15),]
+  # colnames(sel)
+  sel$tdiff <- c(NA, difftime(sel$DT[2:nrow(sel)], sel$DT[1:(nrow(sel) - 1)], units = 'secs'))
+  # decide outgoing/incoming
+  sel$appSpd <- c(NA, diff(sel[,grepl("Fk", names(sel))]))/sel$tdiff # approach speed to Fk Island
+  sel$rtChg <- NA
+  for(c in 1:nrow(sel)){
+    sel$rtChg[c] <- mean(sel$appSpd[sel$DT >= sel$DT[c] & sel$DT <= (sel$DT[c] + lubridate::hours(1))]/as.numeric(sel$tdiff[sel$DT >= sel$DT[c] & sel$DT <= (sel$DT[c] + lubridate::hours(1))]))
+  }
+  # take outgoing (-ve approach speeds) only
+  out <- sel[which(sel$rtChg < 0),]
+  ret <- sel[which(sel$rtChg > 0),]
+  selTest <- StLCalc(sel$DT, sel$UTMN, sel$UTME)
+  outTest <- StLCalc(out$DT, out$UTMN, out$UTME)
+  retTest <- StLCalc(ret$DT, ret$UTMN, ret$UTME)
+
+  powLs[[b]] <- conpl$new(Nls$disp[Nls$disp>0])
+  est <- estimate_xmin(powLs[[b]])
+  powLs[[b]]$setXmin(est)
+
+  expLs[[b]] <- conexp$new(Nls$disp[Nls$disp>0])
+  expLs[[b]]$setXmin(estimate_xmin(expLs[[b]]))
+
+  normLs[[b]] <- conlnorm$new(Nls$disp[Nls$disp>0])
+  est <- estimate_xmin(normLs[[b]])
+  normLs[[b]]$setXmin(est)
+
+  # powLs[[b]] <- conpl$new(Nls$disp[Nls$disp>0])
+  # m_bl$setXmin(estimate_xmin(powLs[[b]]))
+  normLs[[b]] <- conlnorm$new(Nls$disp[Nls$disp>0])
+  normLs[[b]]$setXmin(powLs[[b]]$getXmin())
+  normLs[[b]]$setPars(estimate_pars(normLs[[b]]))
+  comps[[b]] <- compare_distributions(powLs[[b]], normLs[[b]])
+  comp$p_two_sided
+  comp$test_statistic
+}
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/1_S1StepLengths.png", width = 700, height = 800)
+plot(powLs[[b]], xlab = expression('log'[10]*' Step length'), ylab = expression('log'[10]*' Rank'))
+lines(powLs[[b]], col = 2, lwd = 2)
+lines(expLs[[b]], col=4, lwd= 2)
+lines(normLs[[b]], col = 3, lwd = 2)
+dev.off()
+
+plot(powLs[[b]])
+lines(powLs[[b]], col=2, lwd=2)
+lines(normLs[[b]], col=3,lwd=2)
+plot(comps[[b]])
+# remove non-flight values
+
+
 rank(selTest$dispN)/max(rank(selTest$dispN))
-Nls <- data.frame(disp = sort(selTest$dispN, decreasing = T)*10^-3, rank = rev(rank(sort(selTest$dispN, decreasing = T)*10^-3)/max(rank(sort(selTest$dispN, decreasing = T)*10^-3))))
+Nls <- data.frame(disp = sort(selTest$dispE, decreasing = T)*10^-3, rank = rev(rank(sort(selTest$dispE, decreasing = T)*10^-3)/max(rank(sort(selTest$dispN, decreasing = T)*10^-3))))
 plot(log10(Nls$disp*10^-3), log10(levy(Nls$disp*10^-3,2)))
 plot(log10(Nls$disp),log10(levy(sort(selTest$dispN, decreasing = T),2)))
 p1<-ggplot(Nls, aes(x = (disp), y = (rank))) +
@@ -134,14 +309,37 @@ p1 + geom_line(Nls, mapping=aes(x = (disp), y = (levy(disp,1.5))), colour = "red
 
 p1 + geom_smooth(method="lm", formula = y~x)
 
+plot(rev(cumsum(log(rev(Nls$disp[Nls$disp>0])))))
+plot(rev(seq_along(Nls$disp[Nls$disp>0])))
 # working with poweRlaw
 m_bl <- conpl$new(Nls$disp[Nls$disp>0])
 est <- estimate_xmin(m_bl)
-m_bl$setXmin(17)
+m_bl$setXmin(est)
+plot(m_bl)
+lines(m_bl, col = 2, lwd = 2)
+
+m_exp <- conexp$new(Nls$disp[Nls$disp>0])
+m_exp$setXmin(estimate_xmin(m_exp))
+lines(m_exp, col=4, lwd= 2)
+
 m_bl_ln <- conlnorm$new(Nls$disp[Nls$disp>0])
 est <- estimate_xmin(m_bl_ln)
 m_bl_ln$setXmin(est)
 lines(m_bl_ln, col = 3, lwd = 2)
+
+m_bl <- conpl$new(Nls$disp[Nls$disp>0])
+m_bl$setXmin(estimate_xmin(m_bl))
+m_bl_ln <- conlnorm$new(Nls$disp[Nls$disp>0])
+m_bl_ln$setXmin(m_bl$getXmin())
+m_bl_ln$setPars(estimate_pars(m_bl_ln))
+comp <- compare_distributions(m_bl, m_bl_ln)
+comp$p_two_sided
+comp$test_statistic
+plot(m_bl)
+lines(m_bl, col=2, lwd=2)
+lines(m_bl_ln, col=3,lwd=2)
+plot(comp)
+
 bs <- bootstrap(m_bl, xmins = seq(5,50,1))
 plot(bs, trim = 0.1)
 
@@ -191,17 +389,23 @@ stepLsN <- vector(mode = "list", length = length(stepAreas))
 stepLsE <- vector(mode = "list", length = length(stepAreas))
 
 
-tstr<-data.frame(dat=c(0,4,5,9,7,2,-4,-6,-2,3,6,5,2,4,6,9,3,0,-4,-8,-2,6,8,10,5,3,1,2,2),swtch=NA,
-  dt=c(NA,30,30,30,30,30,51,30,30,30,30,30,30,30,62,182,30,30,30,30,30,30,30,30,30,651,30,30,30))
+tstr<-data.frame(dat=c(4,5,9,7,2,-4,-6,-2,3,6,5,2,4,6,9,3,0,-4,-8,-2,6,8,10,5,3,1,2,2),swtch=NA,
+  dt=c(30,30,30,30,30,51,30,30,30,30,30,30,30,62,182,30,30,30,30,30,30,30,30,30,651,30,30,30))
 plot(tstr,type="l")
 points(which(diff(diff(tstr$dat) >= 0)!=0) + 1,tstr$dat[which(diff(diff(tstr$dat) >= 0)!=0) + 1])
 tstr$swtch<-0
 tstr$swtch[which(diff(diff(tstr$dat) >= 0)!=0) + 1]=1
 swtch<-which(diff(diff(tstr) >= 0)!=0) + 1
 strts <- which(tstr$dt > cutoff)+1
+if(strts[length(strts)] > length(tstr$dt)){
+  strts <- strts[1:(length(strts)-1)]
+}
 strts <- c(1,strts[!tstr$dt[strts] > cutoff])
-ends <- c(which(tstr$dt > cutoff)-1,nrow(tstr))
-ends <- ends[!tstr$dt[ends] > cutoff]
+ends <- NA
+for(sts in strts){
+  ends[sts] <- min(min(which(tstr$dt[sts:length(tstr$dt)] > cutoff))-1, nrow(tstr))
+}
+ends <- strts+sapply(strts, function(x) min(which(tstr$dt[x:length(tstr$dt)] > cutoff)))-1
 tstr$DT <- c(0,cumsum(tstr$dt[2:nrow(tstr)]))
 plot(tstr$DT, tstr$dt,type="l")
 points(tstr$DT[strts],tstr$dt[strts])
