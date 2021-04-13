@@ -535,30 +535,36 @@ for(b in 1:length(windFiles)){
 WindDat$DT <- as.POSIXct(WindDat$DT, format = "%Y-%m-%d %H:%M:%OS")
 WindDat$timeTo <- NA
 WindDat$distTo <- NA
+allD$forage[is.na(allD$forage)] <- 0
 tags <- unique(WindDat$ID)
 for(b in 1:nrow(WindDat)){
-  sel <- allD[allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y"),]
-  if(any(sel$forage[sel$DT > WindDat$DT[b]] %in% 1)){
-    strtpoint <- which(sel$DT == WindDat$DT[b])
-    WindDat$timeTo[b] <- difftime(sel$DT[strtpoint-1+min(which(sel$forage[strtpoint:nrow(sel)] == 1))],WindDat$DT[b], units="secs")
-    WindDat$distTo[b] <- sqrt((sel$UTMN[strtpoint-1+min(which(sel$forage[strtpoint:nrow(sel)] == 1))] - sel$UTMN[sel$DT == WindDat$DT[b]])^2 + (sel$UTME[strtpoint-1+min(which(sel$forage[strtpoint:nrow(sel)] == 1))] - sel$UTME[sel$DT == WindDat$DT[b]])^2)
+  if(any(allD$forage[allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y") & allD$DT > WindDat$DT[b]] == 1)){
+    point <- which(allD$lat == WindDat$Lat[b] & allD$lon == WindDat$Lon[b] & allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y"))
+    forInd <- min(which(allD$forage[point:max(which(allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y")))] == 1)) + point - 1
+    WindDat$timeTo[b] <- as.numeric(difftime(allD$DT[point+forInd],WindDat$DT[b], units="secs"))
+    WindDat$distTo[b] <- sqrt((allD$UTMN[forInd] - allD$UTMN[point])^2 + (allD$UTME[forInd] - allD$UTME[point])^2)
   }
 }
-save()
-  if(any(allD$forage[allD$tagID == tags[b] & allD$Year == format(WindDat$DT[b], "%Y") & allD$DT > WindDat$DT[b]] == 1))
-
-  strtpoint <- which(allD$DT[allD$tagID == tags[b] & allD$Year == format(WindDat$DT[b], "%Y")] == WindDat$DT[b])
-  nxtFor <- min(which(allD$forage[strtpoint:(strtpoint + )]))
-  WindDat$timeTo[b] <- difftime(which(allD$DT[allD$tagID == tags[b] & allD$Year == format(WindDat$DT[b], "%Y")] == WindDat$DT[b]+min()))
-}
-  for(starts in which(sel$ForPoint == 0)){
-    if(any(sel$ForPoint[starts:nrow(sel)] == 1)){
-      sel$tToFor[starts] <- difftime(sel$DT[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))], sel$DT[starts], units = "secs")
-      sel$dToFor[starts] <- sqrt((sel$UTMN[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))] - sel$UTMN[starts])^2 + (sel$UTME[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))] - sel$UTME[starts])^2)
-    }
+WindDat$timeTo[b] <- difftime(sel$DT[strtpoint-1+min(which(sel$forage[strtpoint:nrow(sel)] == 1))],WindDat$DT[b], units="secs")
+WindDat$distTo[b] <- sqrt((sel$UTMN[strtpoint-1+min(which(sel$forage[strtpoint:nrow(sel)] == 1))] - sel$UTMN[sel$DT == WindDat$DT[b]])^2 + (sel$UTME[strtpoint-1+min(which(sel$forage[strtpoint:nrow(sel)] == 1))] - 
+    tPoint <- WindDat$DT[b]
+    decDat <- SpatialPoints(cbind(WindDat$Lon[b],WindDat$Lat[b]), proj4string = CRS("+proj=longlat"))
+    utmPoint <- spTransform(decDat, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    nrth <- utmPoint$coords.x2
+    est <- utmPoint$coords.x1
+    fTime <- allD$DT[which()]
+    allD$DT[which(allD$DT == WindDat$DT[b] & allD$tagID == WindDat$ID[b])]
+    allD[28593,]
+    WindDat[b,]
   }
+}
 
-
+load(WindDat, file="F:/UTokyoDrive/PhD/Data/WindCalc/windDat.RData")
+WindDat$WHd <- atan2(WindDat$X,WindDat$Y)
+WindDat$RelHead <- WindDat$Head-WindDat$WHd
+WindDat$RelHead[WindDat$RelHead < -pi] <- WindDat$RelHead[WindDat$RelHead < -pi] + 2*pi
+WindDat$RelHead[WindDat$RelHead > pi] <- WindDat$RelHead[WindDat$RelHead > pi] - 2*pi
+ggplot(WindDat[WindDat$distTo > 5^3 & WindDat$distTo < 50^3,], aes(y = distTo, x = RelHead, colour = timeTo)) + geom_point() + coord_polar()
 
 
 
