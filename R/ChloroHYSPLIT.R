@@ -8,9 +8,11 @@ library(sp)
 # devtools::install_github('ropensci/plotdap')
 library(plotdap)
 library(scales)
-# install.packages("plotdap",repos='http://cran.us.r-project.org')
+# install.packages("StreamMetabolism",repos='http://cran.us.r-project.org')
 library(poweRlaw)
 library(ggpubr)
+library(maptools)
+library(StreamMetabolism)
 options(timeout = 200)
 # load in data 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -97,11 +99,11 @@ max(D18$Lat)
 min(D18$Lon)
 max(D18$Lon)
 
-StLDisp <- function(utm){
+StLDisp <- function(utm){ # find changes in sign
   chgs <- diff(utm) >= 0
   swtch <- which(diff(chgs)!=0) + 1
 }
-StLCalc <- function(DT,UTMN,UTME){
+StLCalc <- function(DT,UTMN,UTME){ # split data into steps, including with consistent sampling intervals
   deltaT <- difftime(DT[2:length(DT)], DT[1:(length(DT)-1)], units = "secs")
   # find the cutoff points from the time difference
   cutoff <- median(deltaT, na.rm = T) + 10
@@ -175,7 +177,7 @@ for(b in 1:length(ListD)){
     tryCatch({
       trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
       trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
-      trutmDiff <- cbind(diff(trCord.utm$coords.x1), diff(trCord.utm$coords.x2))
+      trutmDiff <- cbind(diff(trCord.utm$coords.x2), diff(trCord.utm$coords.x1))
       trajHead[ind] <- atan2(mean(trutmDiff[,1]), mean(trutmDiff[,2]))
       trajSpd[ind] <- mean(sqrt(trutmDiff[,1]^2 + trutmDiff[,2]^2))/(length(trutmDiff[,1])*3600)
     }, error = function(e){c(NA)})
@@ -183,6 +185,19 @@ for(b in 1:length(ListD)){
   outTraj[[b]] <- data.frame(DT = sel$DT[UDsts$strtInd], aveHd = aveHead, trjHd = trajHead, trjSpd = trajSpd, lat = sel$Lat[UDsts$strtInd], lon = sel$Lon[UDsts$strtInd], timeTo = sel$tToFor[UDsts$strtInd], distTo = sel$dToFor[UDsts$strtInd])
 }
 
+for(b in 1:length(outTraj)){
+  sel <- ListD[[b]]
+  sel <- sel[which(sel$spTrav > 15),]
+  UDsts <- StLCalc(sel$DT,sel$UTMN,sel$UTME)
+  dist <- NA
+  for(g in 1:nrow(UDsts)){
+    dist[g] <- sum(sel$distTrav[(UDsts$strtInd[g]+1):UDsts$endInd[g]])
+  }
+  outTraj[[b]]$cumDist <- dist
+}
+
+
+# save(outTraj,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTraj.RData")
 sel <- allD[allD$forage == 1,]
 ggplot(sel, aes(x = lon, y = lat)) + geom_point()
 # LOAD IN THE STEP LENGTHS TRAJECTORIES
@@ -191,9 +206,58 @@ if(Sys.info()['sysname'] == "Darwin"){
 } else {
     load("F:/UTokyoDrive/PhD/Data/splitr/StepsTraj.RData")
 }
+# save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
+if(Sys.info()['sysname'] == "Darwin"){
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
+} else {
+    load("F:/UTokyoDrive/PhD/Data/splitr/ListD.RData")
+}
 summary(outTraj)
 
-
+for(show in 1:length(outTraj)){
+  outTraj[[show]]$relH <- outTraj[[show]]$aveHd - outTraj[[show]]$trjHd
+  outTraj[[show]]$relH[outTraj[[show]]$relH < -pi] <- outTraj[[show]]$relH[outTraj[[show]]$relH < -pi] + 2*pi
+  outTraj[[show]]$relH[outTraj[[show]]$relH > pi] <- outTraj[[show]]$relH[outTraj[[show]]$relH > pi] - 2*pi
+  outTraj[[show]]$relW <- NA
+  outTraj[[show]]$relW[outTraj[[show]]$relH < pi/4 & outTraj[[show]]$relH > -pi/4] <- "Front"
+  outTraj[[show]]$relW[outTraj[[show]]$relH < -pi/4 & outTraj[[show]]$relH > -3*pi/4] <- "Side"
+  outTraj[[show]]$relW[outTraj[[show]]$relH > pi/4 & outTraj[[show]]$relH < 3*pi/4] <- "Side"
+  outTraj[[show]]$relW[outTraj[[show]]$relH < -3*pi/4 | outTraj[[show]]$relH > 3*pi/4] <- "Behind"
+  outTraj[[show]]$Phase <- NA
+  outTraj[[show]]$Phase[outTraj[[show]]$timeTo < 10*60] <- "<10"
+  outTraj[[show]]$Phase[outTraj[[show]]$timeTo >= 10*60 & outTraj[[show]]$timeTo < 20*60] <- "10-20"
+  outTraj[[show]]$Phase[outTraj[[show]]$timeTo >= 20*60 & outTraj[[show]]$timeTo < 30*60] <- "20-30"
+  outTraj[[show]]$Phase[outTraj[[show]]$timeTo >= 30*60 & outTraj[[show]]$timeTo < 40*60] <- "30-40"
+  outTraj[[show]]$Phase[outTraj[[show]]$timeTo >= 40*60 & outTraj[[show]]$timeTo < 50*60] <- "40-50"
+  outTraj[[show]]$Phase[outTraj[[show]]$timeTo >= 50*60 & outTraj[[show]]$timeTo < 60*60] <- "50-60"
+  outTraj[[show]]$Phase[outTraj[[show]]$timeTo >= 60*60] <- "60+"
+  # outTraj[[show]]$Phase[outTraj[[show]]$timeTo < 30*60] <- "Near"
+  # outTraj[[show]]$Phase[outTraj[[show]]$timeTo >= 30*60] <- "Transit"
+  outTraj[[show]]$proxim <- "Far"
+  outTraj[[show]]$proxim[outTraj[[show]]$distTo < 10^3] <- "<10"
+  outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 10^3 & outTraj[[show]]$distTo < 20^3] <- "10-20"
+  outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 20^3 & outTraj[[show]]$distTo < 30^3] <- "20-30"
+  outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 30^3 & outTraj[[show]]$distTo < 40^3] <- "30-40"
+  outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 40^3 & outTraj[[show]]$distTo < 50^3] <- "40-50"
+  outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 50^3 & outTraj[[show]]$distTo < 60^3] <- "50-60"
+  fr <- ggplot(outTraj[[show]][outTraj[[show]]$proxim=="Far",], aes(x = relH*(180/pi))) +
+    geom_histogram() + coord_polar()
+  nr<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="<10",], aes(x = relH*(180/pi))) +
+    geom_histogram() + coord_polar()
+  Ten20<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="10-20",], aes(x = relH*(180/pi))) +
+    geom_histogram() + coord_polar()
+  Twenty30<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="20-30",], aes(x = relH*(180/pi))) +
+    geom_histogram() + coord_polar()
+  Thirty40<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="30-40",], aes(x = relH*(180/pi))) +
+    geom_histogram() + coord_polar()
+  Forty50<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="40-50",], aes(x = relH*(180/pi))) +
+    geom_histogram() + coord_polar()
+  Fifty60<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="50-60",], aes(x = relH*(180/pi))) +
+    geom_histogram() + coord_polar()
+  png(paste("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/",as.character(ListD[[show]]$tagID[1]),format(outTraj[[show]]$DT[1],"%Y"),"OffTraj.png",sep=""))
+  print(ggarrange(nr, Ten20, Twenty30, Thirty40, Forty50, Fifty60, ncol= 3, nrow = 2, labels = c("<10km", "10-20km", "20-30km","30-40km","40-50km","50-60km")))
+  dev.off()
+}
 show <- 3
 # ggplot(ListD[[show]]) +
 #   geom_path(aes(x = Lon, y = Lat)) +
@@ -288,14 +352,95 @@ hist(outTraj[[show]]$relH[outTraj[[show]]$proxim == "Inter"]*(180/pi))
 ggplot(outTraj[[show]], aes(x = distTo*10^-3, y = relH, colour = relW)) + geom_point()
 ggplot(outTraj[[show]][outTraj[[show]]$proxim == "Inter",], aes(x = timeTo, y = relH, colour = relW)) + geom_point()
 
-
-ggplot(outTraj[[show]], aes(x = lon, y = lat)) +
-  geom_point() + geom_spoke(data = outTraj[[show]], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
-  radius = scales::rescale(outTraj[[show]]$trjSpd, c(.2, .8))) +
+ggplot(outTraj[[4]], aes(x = lon, y = lat)) +
+  geom_point() + geom_spoke(data = outTraj[[4]], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd+pi), arrow = arrow(length = unit(0.05,"inches")),
+  radius = scales::rescale(outTraj[[4]]$trjSpd, c(.2, .8))) +
   scale_colour_distiller(palette = "RdYlGn", name = "Approx. speed") +
   theme(legend.position = 'bottom', legend.direction = 'horizontal') +
   theme_bw() + theme(panel.grid = element_blank()) +
   theme(panel.border = element_rect(colour = 'black'))
+
+# add in information about outgoing or returning
+for(b in 1:length(ListD)){
+  tdiff <- c(NA, difftime(ListD[[b]]$DT[2:nrow(ListD[[b]])], ListD[[b]]$DT[1:(nrow(ListD[[b]]) - 1)], units = 'secs'))
+  # decide outgoing/incoming
+  ListD[[b]]$appSpd <- c(NA, diff(ListD[[b]][,grepl("Fk", names(ListD[[b]]))]))/tdiff # approach speed to Fk Island
+  ListD[[b]]$rtChg <- NA
+  for(c in 1:nrow(ListD[[b]])){
+    ListD[[b]]$rtChg[c] <- mean(ListD[[b]]$appSpd[ListD[[b]]$DT >= ListD[[b]]$DT[c] & ListD[[b]]$DT <= (ListD[[b]]$DT[c] + lubridate::hours(1))]/as.numeric(tdiff[ListD[[b]]$DT >= ListD[[b]]$DT[c] & ListD[[b]]$DT <= (ListD[[b]]$DT[c] + lubridate::hours(1))]))
+  }
+}
+
+# FIND THE OFFSET TRAJECTORY AND ASSIGN DEPART/RETURN VALUES (FOR PROCEEDING HOUR AS PER SHIOMI 2012)
+for(b in 1:length(outTraj)){
+  # outTraj[[b]]$relH <- outTraj[[b]]$aveHd - outTraj[[b]]$trjHd
+  # outTraj[[b]]$relH[outTraj[[b]]$relH < -pi] <- outTraj[[b]]$relH[outTraj[[b]]$relH < -pi] + 2*pi
+  # outTraj[[b]]$relH[outTraj[[b]]$relH > pi] <- outTraj[[b]]$relH[outTraj[[b]]$relH > pi] - 2*pi
+  # outTraj[[b]]$relW <- NA
+  # outTraj[[b]]$relW[outTraj[[b]]$relH < pi/4 & outTraj[[b]]$relH > -pi/4] <- "Front"
+  # outTraj[[b]]$relW[outTraj[[b]]$relH < -pi/4 & outTraj[[b]]$relH > -3*pi/4] <- "Side"
+  # outTraj[[b]]$relW[outTraj[[b]]$relH > pi/4 & outTraj[[b]]$relH < 3*pi/4] <- "Side"
+  # outTraj[[b]]$relW[outTraj[[b]]$relH < -3*pi/4 | outTraj[[b]]$relH > 3*pi/4] <- "Behind"
+  # outTraj[[b]]$Phase <- NA
+  # outTraj[[b]]$Phase[outTraj[[b]]$timeTo < 10*60] <- "<10"
+  # outTraj[[b]]$Phase[outTraj[[b]]$timeTo >= 10*60 & outTraj[[b]]$timeTo < 20*60] <- "10-20"
+  # outTraj[[b]]$Phase[outTraj[[b]]$timeTo >= 20*60 & outTraj[[b]]$timeTo < 30*60] <- "20-30"
+  # outTraj[[b]]$Phase[outTraj[[b]]$timeTo >= 30*60 & outTraj[[b]]$timeTo < 40*60] <- "30-40"
+  # outTraj[[b]]$Phase[outTraj[[b]]$timeTo >= 40*60 & outTraj[[b]]$timeTo < 50*60] <- "40-50"
+  # outTraj[[b]]$Phase[outTraj[[b]]$timeTo >= 50*60 & outTraj[[b]]$timeTo < 60*60] <- "50-60"
+  # outTraj[[b]]$Phase[outTraj[[b]]$timeTo >= 60*60] <- "60+"
+  outTraj[[b]]$proxim <- "20+"
+  outTraj[[b]]$proxim[outTraj[[b]]$distTo < 1*10^3] <- "<1"
+  outTraj[[b]]$proxim[outTraj[[b]]$distTo >= 1*10^3 & outTraj[[b]]$distTo < 5*10^3] <- "1-5"
+  outTraj[[b]]$proxim[outTraj[[b]]$distTo >= 5*10^3 & outTraj[[b]]$distTo < 10*10^3] <- "5-10"
+  outTraj[[b]]$proxim[outTraj[[b]]$distTo >= 10*10^3 & outTraj[[b]]$distTo < 15*10^3] <- "10-15"
+  outTraj[[b]]$proxim[outTraj[[b]]$distTo >= 15*10^3 & outTraj[[b]]$distTo < 20*10^3] <- "15-20"
+  # outTraj[[b]]$rtChg <- NA
+  # for(g in 1:nrow(outTraj[[b]])){
+  #   outTraj[[b]]$rtChg[g] <- ListD[[b]]$rtChg[ListD[[b]]$DT == outTraj[[b]]$DT[g]]
+  # }
+}
+
+allTraj <- bind_rows(outTraj)
+allTraj$relH <- allTraj$relH + pi
+fr <- ggplot(allTraj[allTraj$proxim=="20+" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
+  geom_histogram() + coord_polar()
+nr<-ggplot(allTraj[allTraj$proxim=="<1" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
+  geom_histogram() + coord_polar()
+Ten20<-ggplot(allTraj[allTraj$proxim=="1-5" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
+  geom_histogram() + coord_polar()
+Twenty30<-ggplot(allTraj[allTraj$proxim=="5-10" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
+  geom_histogram() + coord_polar()
+Thirty40<-ggplot(allTraj[allTraj$proxim=="10-15" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
+  geom_histogram() + coord_polar()
+Forty50<-ggplot(allTraj[allTraj$proxim=="15-20" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
+  geom_histogram() + coord_polar()
+ggarrange(nr, Ten20, Twenty30, Thirty40, Forty50, ncol= 3, nrow = 2, labels = c("<1km", "1-5km", "5-10km","10-15km","15-20km"))
+
+
+p1 <- ggplot(allTraj[allTraj$rtChg<0,]) + geom_point(aes(x = aveHd, y = log10(distTo)), colour = "red")+ coord_polar(start = pi)
+p2 <- ggplot(allTraj[allTraj$rtChg<0,]) + geom_point(aes(x = trjHd, y = log10(distTo)), colour = "green") + coord_polar(start=pi)
+ggarrange(p1, p2, ncol=1,nrow=2)
+
+for(show in 1:length(outTraj)){
+  fr <- ggplot(outTraj[[show]][outTraj[[show]]$proxim=="20+" & outTraj[[show]]$rtChg < 0,], aes(x = relH*(180/pi))) +
+    geom_density() + coord_polar(start=((-pi/2)*180/pi)) + xlim(c(-180,180)) + ylim(c(0,0.0045))
+  nr<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="<1" & outTraj[[show]]$rtChg < 0,], aes(x = relH*(180/pi))) +
+    geom_density() + coord_polar(start=((-pi/2)*180/pi)) + xlim(c(-180,180)) + ylim(c(0,0.0045))
+  Ten20<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="1-5" & outTraj[[show]]$rtChg < 0,], aes(x = relH*(180/pi))) +
+    geom_density() + coord_polar(start=((-pi/2)*180/pi)) + xlim(c(-180,180)) + ylim(c(0,0.0045))
+  Twenty30<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="5-10" & outTraj[[show]]$rtChg < 0,], aes(x = relH*(180/pi))) +
+    geom_density() + coord_polar(start=((-pi/2)*180/pi)) + xlim(c(-180,180)) + ylim(c(0,0.0045))
+  Thirty40<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="10-15" & outTraj[[show]]$rtChg < 0,], aes(x = relH*(180/pi))) +
+    geom_density() + coord_polar(start=((-pi/2)*180/pi)) + xlim(c(-180,180)) + ylim(c(0,0.0045))
+  Forty50<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="15-20" & outTraj[[show]]$rtChg < 0,], aes(x = relH*(180/pi))) +
+    geom_density() + coord_polar(start=((-pi/2)*180/pi)) + xlim(c(-180,180)) + ylim(c(0,0.0045))
+  png(paste("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/Figures/Outward/",as.character(ListD[[show]]$tagID[1]),format(outTraj[[show]]$DT[1],"%Y"),"OutWardOffTraj.png",sep=""),width=800,height=800)
+  print(ggarrange(nr, Ten20, Twenty30, Thirty40, Forty50, ncol= 3, nrow = 2, labels = c("<1km", "1-5km", "5-10km","10-15km","15-20km")))
+  dev.off()
+}
+
+ggplot(allTraj[allTraj$distTo<20*10^3 & allTraj$rtChg<0,], aes(x = relH)) + geom_density() + coord_polar(start=-pi/2)
 
 
 ListD[[show]]$tagID[1]
@@ -555,19 +700,65 @@ for(b in 1:nrow(WindDat)){
   }
 }
 
-load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat.RData")
+if(Sys.info()['sysname'] == "Darwin"){
+  load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDat.RData")
+} else {
+  load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat.RData")
+}
 WindDat$WHd <- atan2(WindDat$X,WindDat$Y)
 WindDat$RelHead <- WindDat$Head-WindDat$WHd
 WindDat$RelHead[WindDat$RelHead < -pi] <- WindDat$RelHead[WindDat$RelHead < -pi] + 2*pi
 WindDat$RelHead[WindDat$RelHead > pi] <- WindDat$RelHead[WindDat$RelHead > pi] - 2*pi
 ggplot(WindDat, aes(y = distTo, x = Head)) + geom_point() + coord_polar()
 ggplot(WindDat, aes(y = distTo, x = WHd)) + geom_point() + coord_polar()
+ggplot(WindDat[WindDat$distTo < 10,], aes(x = RelHead)) + geom_histogram() + coord_polar(start=-pi/2) + xlim(c(-pi,pi))
+Less1<- ggplot(WindDat[WindDat$distTo < 1,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) +
+  labs(x="Relative wind heading",y="Count")
+One2<- ggplot(WindDat[WindDat$distTo < 2 & WindDat$distTo >= 1,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+Two3<- ggplot(WindDat[WindDat$distTo < 3 & WindDat$distTo >= 2,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+Three4<- ggplot(WindDat[WindDat$distTo < 4 & WindDat$distTo >= 3,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+Four5<- ggplot(WindDat[WindDat$distTo < 5 & WindDat$distTo >= 4,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+Five6<- ggplot(WindDat[WindDat$distTo < 6 & WindDat$distTo >= 5,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+Six7<- ggplot(WindDat[WindDat$distTo < 7 & WindDat$distTo >= 6,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+Seven8<- ggplot(WindDat[WindDat$distTo < 8 & WindDat$distTo >= 7,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+Eight9<- ggplot(WindDat[WindDat$distTo < 9 & WindDat$distTo >= 8,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+Nine10<- ggplot(WindDat[WindDat$distTo < 10 & WindDat$distTo >= 9,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+png("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/1-5km.png",width=800,height=800)
+ggarrange(Less1,One2,Two3,Three4,Four5,Five6, ncol=3,nrow=2, labels=c("<1km","1-2km","2-3km","3-4km","4-5km","5-6km"))
+dev.off()
+png("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/5-10km.png",width=800,height=800)
+ggarrange(Four5,Five6,Six7,Seven8,Eight9,Nine10, ncol=3,nrow=2, labels=c("4-5km","5-6km","6-7km","7-8km","8-9km","9-10km"))
+dev.off()
 
+for(b in 1:length(outTraj)){
+  outTraj[[b]]$travDir <- NA
+  outTraj[[b]]$travDir[outTraj[[b]]$relH > -pi/4 & outTraj[[b]]$relH < pi/4] <- "Away"
+  outTraj[[b]]$travDir[outTraj[[b]]$relH > pi/4 & outTraj[[b]]$relH < 3*pi/4] <- "R side"
+  outTraj[[b]]$travDir[outTraj[[b]]$relH > -3*pi/4 & outTraj[[b]]$relH < -pi/4] <- "L side"
+  outTraj[[b]]$travDir[outTraj[[b]]$relH < -3*pi/4 | outTraj[[b]]$relH > 3*pi/4] <- "Toward"
+}
+b=2
+ggplot(outTraj[[b]][outTraj[[b]]$rtChg<0 & outTraj[[b]]$distTo < 10*10^3 & outTraj[[b]]$distTo > 1*10^3,], aes(x =(distTo))) + geom_density(aes(fill = travDir), alpha = .5)
 
+allTraj <- bind_rows(outTraj)
+allTraj <- allTraj[allTraj$distTo != 0,]
+# remove where the trajectory model failed
+allTraj <- allTraj[!is.na(allTraj$lat),]
+#calculate sunrise/sunset times
+sriseset<-cbind(rep(NA,nrow(allTraj)),rep(NA,nrow(allTraj)))
+for(b in 1:nrow(allTraj)){
+  sriseset[b,] <- cbind(sunrise.set(allTraj$lat[b], allTraj$lon[b], format(allTraj$DT[b],format="%Y/%m/%d"), timezone="Asia/Tokyo")$sunrise,sunrise.set(allTraj$lat[b], allTraj$lon[b], format(allTraj$DT[b],format="%Y/%m/%d"), timezone="Asia/Tokyo")$sunset)
+}
+allTraj$
 
+ggplot(allTraj[allTraj$rtChg<0,], aes(x = log10(cumDist))) + geom_density()
+sum(is.na(allTraj$rtChg))
+colnames(allTraj)
 
+ggplot(allTraj[allTraj$rtChg<0,], aes(x = trjHd, y = distTo)) + geom_point() + coord_polar(start=-pi/2)
+ggplot(allTraj[allTraj$rtChg<0,], aes(x = aveHd, y = distTo)) + geom_point() + coord_polar(start=-pi/2)
 
-
+ggplot(allTraj[allTraj$rtChg<0 & allTraj$distTo <= 1*10^3,], aes(x = distTo)) + geom_density(aes(fill=travDir),alpha=.5)
 
 # calculate high concentration chloro-A locations and test average air trajectories vs bird headings
 
@@ -595,3 +786,13 @@ ggplot(res[[2]][res[[2]]$time == days[1],], aes(x = lon, y = lat, fill = chlorop
 
 
 hist(log10(res[[2]]$chlorophyll[res[[2]]$time == days[1]]),1000)
+
+lat <- ListD[[1]]$Lat
+lon <- ListD[[1]]$Lon
+trCord.dec <- SpatialPoints(cbind((lon), (lat)), proj4string=CRS("+proj=longlat"))
+trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+norf <- trCord.utm$coords.x1
+est <- trCord.utm$coords.x2
+plot(lon,lat)
+plot(norf,est)
+
