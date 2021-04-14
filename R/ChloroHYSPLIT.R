@@ -5,10 +5,10 @@ library(plyr)
 library(ggplot2)
 library(rnaturalearth)
 library(sp)
-devtools::install_github('ropensci/plotdap')
+# devtools::install_github('ropensci/plotdap')
 library(plotdap)
 library(scales)
-install.packages("plotdap",repos='http://cran.us.r-project.org')
+# install.packages("plotdap",repos='http://cran.us.r-project.org')
 library(poweRlaw)
 library(ggpubr)
 options(timeout = 200)
@@ -194,7 +194,7 @@ if(Sys.info()['sysname'] == "Darwin"){
 summary(outTraj)
 
 
-show <- 8
+show <- 3
 # ggplot(ListD[[show]]) +
 #   geom_path(aes(x = Lon, y = Lat)) +
 #   xlim(c(143.5,144.8)) + ylim(c(42,43)) +
@@ -236,10 +236,11 @@ outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 10^3 & outTraj[[show]]$distTo <
 outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 20^3 & outTraj[[show]]$distTo < 30^3] <- "20-30"
 outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 30^3 & outTraj[[show]]$distTo < 40^3] <- "30-40"
 outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 40^3 & outTraj[[show]]$distTo < 50^3] <- "40-50"
-ggplot(outTraj[[show]], aes(y = trjSpd, x = relH*(180/pi), colour = relW)) + coord_polar() + scale_x_continuous(limits = c(-180,180)) + geom_point()
+outTraj[[show]]$proxim[outTraj[[show]]$distTo >= 50^3 & outTraj[[show]]$distTo < 60^3] <- "50-60"
+# ggplot(outTraj[[show]], aes(y = trjSpd, x = relH*(180/pi), colour = relW)) + coord_polar() + scale_x_continuous(limits = c(-180,180)) + geom_point()
 
-ggplot(outTraj[[show]], aes(x = relH*(180/pi), fill = proxim)) +
-  geom_histogram(alpha = .5, position = 'dodge')
+# ggplot(outTraj[[show]], aes(x = relH*(180/pi), fill = proxim)) +
+#   geom_histogram(alpha = .5, position = 'dodge')
 fr <- ggplot(outTraj[[show]][outTraj[[show]]$proxim=="Far",], aes(x = relH*(180/pi))) +
   geom_histogram() + coord_polar()
 nr<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="<10",], aes(x = relH*(180/pi))) +
@@ -252,8 +253,16 @@ Thirty40<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="30-40",], aes(x = relH
   geom_histogram() + coord_polar()
 Forty50<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="40-50",], aes(x = relH*(180/pi))) +
   geom_histogram() + coord_polar()
+Fifty60<-ggplot(outTraj[[show]][outTraj[[show]]$proxim=="50-60",], aes(x = relH*(180/pi))) +
+  geom_histogram() + coord_polar()
 
-ggarrange(nr, Ten20, Twenty30, Thirty40, Forty50, ncol= 3, nrow = 2, labels = c("Far", "10-20", "20-30","30-40","40-50"))
+ggplot(outTraj[[show]], aes(x = distTo*10^-3, y = relH*(180/pi))) + 
+  geom_point() + xlim(c(0,60))
+
+ggarrange(nr, Ten20, Twenty30, Thirty40, Forty50, Fifty60, ncol= 3, nrow = 2, labels = c("<10km", "10-20km", "20-30km","30-40km","40-50km","50-60km"))
+ggplot()+
+  geom_path(data=ListD[[show]],aes(x=Lon,y=Lat)) +geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    coord_sf(xlim = c(141, 147), ylim = c(39, 44)) + geom_point(data=FkOshi,aes(x =Long,y=Lat,colour = "green"))
 
 
 Less10min<-ggplot(outTraj[[show]][outTraj[[show]]$Phase=="<10",], aes(x = relH*(180/pi))) +
@@ -546,12 +555,13 @@ for(b in 1:nrow(WindDat)){
   }
 }
 
-load(WindDat, file="F:/UTokyoDrive/PhD/Data/WindCalc/windDat.RData")
+load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat.RData")
 WindDat$WHd <- atan2(WindDat$X,WindDat$Y)
 WindDat$RelHead <- WindDat$Head-WindDat$WHd
 WindDat$RelHead[WindDat$RelHead < -pi] <- WindDat$RelHead[WindDat$RelHead < -pi] + 2*pi
 WindDat$RelHead[WindDat$RelHead > pi] <- WindDat$RelHead[WindDat$RelHead > pi] - 2*pi
-ggplot(WindDat, aes(y = log10(distTo), x = RelHead)) + geom_point() + coord_polar()
+ggplot(WindDat, aes(y = distTo, x = Head)) + geom_point() + coord_polar()
+ggplot(WindDat, aes(y = distTo, x = WHd)) + geom_point() + coord_polar()
 
 
 
