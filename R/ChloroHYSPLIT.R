@@ -13,7 +13,8 @@ library(poweRlaw)
 library(ggpubr)
 library(maptools)
 library(StreamMetabolism)
-options(timeout = 200)
+library(RColorBrewer)
+options(timeout = 300)
 # load in data 
 if(Sys.info()['sysname'] == "Darwin"){
     exec_loc <- "/Users/aran/hysplit/"
@@ -63,7 +64,7 @@ TrackDisp <- function(DT, lat, lon, hrs){
   add_dispersion_params(
     start_time = lubridate::ymd_hm(time) - lubridate::hours(hrs),
     end_time = lubridate::ymd_hm(time),
-    direction = "forward", 
+    direction = "backward", 
     met_type = "reanalysis",
     met_dir = paste(exec_loc, "met", sep = ""),
     exec_dir = paste(exec_loc, "exec", sep = "")
@@ -207,6 +208,7 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("F:/UTokyoDrive/PhD/Data/splitr/StepsTraj.RData")
 }
 # save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
+# LOAD IN THE LISTED DATA
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
 } else {
@@ -699,16 +701,72 @@ for(b in 1:nrow(WindDat)){
     WindDat$distTo[b] <- sqrt((allD$UTMN[forInd] - allD$UTMN[point])^2 + (allD$UTME[forInd] - allD$UTME[point])^2)*10^-3
   }
 }
+#REPEAT FOR 2019
+if(Sys.info()['sysname'] == "Darwin"){
+    windLoc19 = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
+} else {
+    windLoc19 = "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/MinDat/"
+}
+windFiles19 <- dir(windLoc19,pattern=".csv")
+for(b in 1:length(windFiles19)){
+  if(b == 1){
+    WindDat19 <- read.delim(paste(windLoc19, windFiles19[b], sep = ''), sep = ",", header = F)
+    colnames(WindDat19) <- c("DT","Lat","Lon","Head","X","Y")
+    WindDat19$ID <- sub("*.csv", "", windFiles19[b])
+    Wind.dec <- SpatialPoints(cbind(WindDat19$Lon,WindDat19$Lat), proj4string = CRS("+proj=longlat"))
+    UTMdat <- spTransform(Wind.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    WindDat19$UTME <- coordinates(UTMdat)[, 1]
+    WindDat19$UTMN <- coordinates(UTMdat)[, 2] 
+  } else {
+    toAdd <- read.delim(paste(windLoc19, windFiles19[b], sep = ''), sep = ",", header = T)
+    colnames(toAdd) <- c("DT","Lat","Lon","Head","X","Y")
+    toAdd$ID <- sub("*.csv", "", windFiles19[b])
+    Add.dec <- SpatialPoints(cbind(toAdd$Lon,toAdd$Lat), proj4string = CRS("+proj=longlat"))
+    UTMdat <- spTransform(Add.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    toAdd$UTME <- coordinates(UTMdat)[, 1]
+    toAdd$UTMN <- coordinates(UTMdat)[, 2] 
+    WindDat19 <- rbind(WindDat19, toAdd)
+  }
+}
+WindDat19$DT <- as.POSIXct(WindDat19$DT, format = "%Y-%m-%d %H:%M:%OS")
+WindDat19$timeTo <- NA
+WindDat19$distTo <- NA
+
+tags <- unique(WindDat19$ID)
+for(g in 1:nrow(WindDat19)){
+  if(any(allD$forage[allD$tagID == WindDat19$ID[g] & allD$Year == format(WindDat19$DT[g], "%Y") & allD$DT > WindDat19$DT[g]] == 1)){
+    point <- which(allD$lat == WindDat19$Lat[g] & allD$lon == WindDat19$Lon[g] & allD$tagID == WindDat19$ID[g] & allD$Year == format(WindDat19$DT[b], "%Y"))
+    forInd <- min(which(allD$forage[point:max(which(allD$tagID == WindDat19$ID[g] & allD$Year == format(WindDat19$DT[b], "%Y")))] == 1)) + point - 1
+    WindDat19$timeTo[g] <- as.numeric(difftime(allD$DT[point+forInd],WindDat19$DT[g], units="secs"))
+    WindDat19$distTo[g] <- sqrt((allD$UTMN[forInd] - allD$UTMN[point])^2 + (allD$UTME[forInd] - allD$UTME[point])^2)*10^-3
+  } else {
+    next
+  }
+}
+# save(WindDat19,file="/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDat19.RData")
 
 if(Sys.info()['sysname'] == "Darwin"){
   load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDat.RData")
+  load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDat19.RData")
 } else {
   load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat.RData")
+  load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat19.RData")
 }
+# remove data points after the last foraging points
+WindDat <- WindDat[!is.na(WindDat$distTo),]
+WindDat19 <- WindDat19[!is.na(WindDat19$distTo),]
 WindDat$WHd <- atan2(WindDat$X,WindDat$Y)
 WindDat$RelHead <- WindDat$Head-WindDat$WHd
 WindDat$RelHead[WindDat$RelHead < -pi] <- WindDat$RelHead[WindDat$RelHead < -pi] + 2*pi
 WindDat$RelHead[WindDat$RelHead > pi] <- WindDat$RelHead[WindDat$RelHead > pi] - 2*pi
+WindDat19$WHd <- atan2(WindDat19$X,WindDat19$Y)
+WindDat19$RelHead <- WindDat19$Head-WindDat19$WHd
+WindDat19$RelHead[WindDat19$RelHead < -pi] <- WindDat19$RelHead[WindDat19$RelHead < -pi] + 2*pi
+WindDat19$RelHead[WindDat19$RelHead > pi] <- WindDat19$RelHead[WindDat19$RelHead > pi] - 2*pi
+
+# combine '18, '19 data
+WindDat<-rbind(WindDat,WindDat19)
+
 ggplot(WindDat, aes(y = distTo, x = Head)) + geom_point() + coord_polar()
 ggplot(WindDat, aes(y = distTo, x = WHd)) + geom_point() + coord_polar()
 ggplot(WindDat[WindDat$distTo < 10,], aes(x = RelHead)) + geom_histogram() + coord_polar(start=-pi/2) + xlim(c(-pi,pi))
@@ -730,6 +788,87 @@ png("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/5-10km.png",width=800,heigh
 ggarrange(Four5,Five6,Six7,Seven8,Eight9,Nine10, ncol=3,nrow=2, labels=c("4-5km","5-6km","6-7km","7-8km","8-9km","9-10km"))
 dev.off()
 
+# align the data for plotting
+WindDat$aligned <- WindDat$RelHead + pi
+WindDat$aligned[WindDat$aligned > pi] <- WindDat$aligned[WindDat$aligned > pi] - 2*pi
+# bin distances into kilometres 
+breaks<- c(0,1,2,3,4,5,6,7,8,9,10,max(WindDat$distTo,na.omit=T)+1)
+WindDat$bins<-cut(WindDat$distTo, breaks=breaks,include.lowest = T, right=F)
+#calculate mean of each group
+mnW <- ddply(WindDat, "bins", summarise, grp.mean=mean(aligned))
+png()
+ggplot(WindDat[WindDat$distTo < 10,], aes(x = aligned, colour = bins)) + geom_density(alpha=.2,show.legend=FALSE)+
+  stat_density(aes(x=aligned, colour=bins), geom="line",position="identity") +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("Density") + theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black')) +
+  scale_colour_discrete(name="Dist to foraging (km)")
+
+breaks<-seq(from=0,to=round_any(max(WindDat$distTo),10,f=ceiling),by=10)
+mnW <- ddply(WindDat, "bin10", summarise, grp.mean=mean(aligned))
+
+
+ggplot(mnW, aes(y = 10*as.numeric(bin10), x = grp.mean)) + 
+  geom_point() +
+  scale_x_continuous(limits = c(-pi, pi),name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail"))
+
+# bin data every 10 km
+WindDat$bin10 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/DistRelDensity.png",width=800,height=800)
+ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = aligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")
+  geom_density(alpha=.2,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), geom="line",position="identity") +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("Density") + theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 20,
+        family = "Arial"), axis.text = element_text(size = 20, family = "Arial")) + 
+  scale_colour_manual(name="Dist to foraging (km)", values = rev(brewer.pal(9,"YlOrRd")))
+dev.off()
+
+ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, fill = bin10)) +#max(WindDat$distTo),], aes(x = aligned, colour = bin10)) +
+  geom_density(alpha=.4) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("Density") + theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 20,
+        family = "Arial"), axis.text = element_text(size = 20, family = "Arial"))
+  
+  geom_histogram(alpha=.2,aes(fill = bin10))
+  geom_density(alpha=.2,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), geom="line",position="identity") +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("Density") + theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 20,
+        family = "Arial"), axis.text = element_text(size = 20, family = "Arial")) + 
+  scale_colour_manual(name="Dist to foraging (km)", values = rev(brewer.pal(9,"YlOrRd")))
+
+AllTraj <- bind_rows(outTraj)
+TrLess1<- ggplot(AllTraj[AllTraj$distTo < 1*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) +
+  labs(x="Relative wind heading",y="Count")
+TrOne2<- ggplot(AllTraj[AllTraj$distTo < 2*10^3 & AllTraj$distTo >= 1*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrTwo3<- ggplot(AllTraj[AllTraj$distTo < 3*10^3 & AllTraj$distTo >= 2*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrThree4<- ggplot(AllTraj[AllTraj$distTo < 4*10^3 & AllTraj$distTo >= 3*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrFour5<- ggplot(AllTraj[AllTraj$distTo < 5*10^3 & AllTraj$distTo >= 4*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrFive6<- ggplot(AllTraj[AllTraj$distTo < 6*10^3 & AllTraj$distTo >= 5*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrSix7<- ggplot(AllTraj[AllTraj$distTo < 7*10^3 & AllTraj$distTo >= 6*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrSeven8<- ggplot(AllTraj[AllTraj$distTo < 8*10^3 & AllTraj$distTo >= 7*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrEight9<- ggplot(AllTraj[AllTraj$distTo < 9*10^3 & AllTraj$distTo >= 8*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrNine10<- ggplot(AllTraj[AllTraj$distTo < 10*10^3 & AllTraj$distTo >= 9*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+# png("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/1-5km.png",width=800,height=800)
+ggarrange(TrLess1,TrOne2,TrTwo3,TrThree4,TrFour5,TrFive6, ncol=3,nrow=2, labels=c("<1km","1-2km","2-3km","3-4km","4-5km","5-6km"))
+# dev.off()
+# png("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/5-10km.png",width=800,height=800)
+ggarrange(TrFour5,TrFive6,TrSix7,TrSeven8,TrEight9,TrNine10, ncol=3,nrow=2, labels=c("4-5km","5-6km","6-7km","7-8km","8-9km","9-10km"))
+# dev.off()
+TrZero10 <- ggplot(AllTraj[AllTraj$distTo >= 0 & AllTraj$distTo < 10,], aes(x = relH)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+TrTen20 <- ggplot(AllTraj[AllTraj$distTo >= 10 & AllTraj$distTo < 20,], aes(x = relH)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+TrTwenty30 <- ggplot(AllTraj[AllTraj$distTo >= 20 & AllTraj$distTo < 30,], aes(x = relH)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+TrThirty40 <- ggplot(AllTraj[AllTraj$distTo >= 30 & AllTraj$distTo < 40,], aes(x = relH)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/0-40kmTraj.png", width = 700, height = 700)
+ggarrange(TrZero10,TrTen20,TrTwenty30,TrThirty40,ncol=2,nrow=2,labels=c("0-10km","10-20km","20-30km","30-40km"))
+dev.off()
+
 for(b in 1:length(outTraj)){
   outTraj[[b]]$travDir <- NA
   outTraj[[b]]$travDir[outTraj[[b]]$relH > -pi/4 & outTraj[[b]]$relH < pi/4] <- "Away"
@@ -737,8 +876,26 @@ for(b in 1:length(outTraj)){
   outTraj[[b]]$travDir[outTraj[[b]]$relH > -3*pi/4 & outTraj[[b]]$relH < -pi/4] <- "L side"
   outTraj[[b]]$travDir[outTraj[[b]]$relH < -3*pi/4 | outTraj[[b]]$relH > 3*pi/4] <- "Toward"
 }
-b=2
+b=1
 ggplot(outTraj[[b]][outTraj[[b]]$rtChg<0 & outTraj[[b]]$distTo < 10*10^3 & outTraj[[b]]$distTo > 1*10^3,], aes(x =(distTo))) + geom_density(aes(fill = travDir), alpha = .5)
+
+# find the relative directions for the wind data
+WindDat$travDir <- NA
+WindDat$travDir[WindDat$RelHead > -pi/4 & WindDat$RelHead < pi/4] <- "Away"
+WindDat$travDir[WindDat$RelHead > pi/4 & WindDat$RelHead < 3*pi/4] <- "R side"
+WindDat$travDir[WindDat$RelHead > -3*pi/4 & WindDat$RelHead < -pi/4] <- "L side"
+WindDat$travDir[WindDat$RelHead < -3*pi/4 | WindDat$RelHead > 3*pi/4] <- "Toward"
+WindDat19$travDir <- NA
+WindDat19$travDir[WindDat19$RelHead > -pi/4 & WindDat19$RelHead < pi/4] <- "Away"
+WindDat19$travDir[WindDat19$RelHead > pi/4 & WindDat19$RelHead < 3*pi/4] <- "R side"
+WindDat19$travDir[WindDat19$RelHead > -3*pi/4 & WindDat19$RelHead < -pi/4] <- "L side"
+WindDat19$travDir[WindDat19$RelHead < -3*pi/4 | WindDat19$RelHead > 3*pi/4] <- "Toward"
+ggplot(data=WindDat[WindDat$distTo < 10,], aes(x = distTo, fill = as.factor(travDir))) +
+  geom_density(alpha=.5)
+
+plot(WindDat$distTo[WindDat$distTo < 10],WindDat$RelHead[WindDat$distTo < 10])
+ggplot(data=WindDat[WindDat$distTo < 10,], aes(x = RelHead, y = distTo, colour = travDir)) +
+  geom_point() + coord_polar()
 
 allTraj <- bind_rows(outTraj)
 allTraj <- allTraj[allTraj$distTo != 0,]
@@ -749,7 +906,7 @@ sriseset<-cbind(rep(NA,nrow(allTraj)),rep(NA,nrow(allTraj)))
 for(b in 1:nrow(allTraj)){
   sriseset[b,] <- cbind(sunrise.set(allTraj$lat[b], allTraj$lon[b], format(allTraj$DT[b],format="%Y/%m/%d"), timezone="Asia/Tokyo")$sunrise,sunrise.set(allTraj$lat[b], allTraj$lon[b], format(allTraj$DT[b],format="%Y/%m/%d"), timezone="Asia/Tokyo")$sunset)
 }
-allTraj$
+
 
 ggplot(allTraj[allTraj$rtChg<0,], aes(x = log10(cumDist))) + geom_density()
 sum(is.na(allTraj$rtChg))
@@ -796,3 +953,272 @@ est <- trCord.utm$coords.x2
 plot(lon,lat)
 plot(norf,est)
 
+AllTraj[1,]
+a <- 130
+traj <- TrackTraj(AllTraj$DT[a],AllTraj$lat[a],AllTraj$lon[a],6)
+disp <- TrackDisp(AllTraj$DT[a],AllTraj$lat[a],AllTraj$lon[a],6)
+gdtraj <- create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = AllTraj$lat[4029],
+    lon = AllTraj$lon[4029],
+    height = 10,
+    duration = 6,
+    days = "2018-09-05",
+    daily_hours = 12,
+    direction = "backward",
+    met_type = "gdas1",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model() %>% get_output_tbl()
+traj %>% trajectory_plot()
+
+a=4029
+ggplot(AllTraj[a,]) +
+  geom_spoke(data = AllTraj[a,], aes(x = lon, y = lat, colour = trjSpd, angle = aveHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = .5) +
+  geom_point(data=traj, aes(x=lon,y=lat,shape=as.factor(traj_dt))) +
+  geom_point(data=gdtraj, aes(x=lon,y=lat,shape=as.factor(traj_dt))) +
+  scale_colour_distiller(palette="RdYlGn")
+
+disp <- create_dispersion_model() %>%
+  add_source(
+    name = "particle",
+    lat = 43, lon = 145, height = 10,
+    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
+    release_start = lubridate::ymd_hm("2018-09-05 15:00", tz = "Asia/Tokyo") + lubridate::hours(6),
+    release_end = lubridate::ymd_hm("2018-09-05 15:00", tz = "Asia/Tokyo") + lubridate::hours(6) + lubridate::hours(2)
+  ) %>%
+  add_dispersion_params(
+    start_time = lubridate::ymd_hm("2018-09-05 15:00", tz = "Asia/Tokyo") + lubridate::hours(6),
+    end_time = lubridate::ymd_hm("2018-09-05 15:00", tz = "Asia/Tokyo"),
+    direction = "backward", 
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+  ) %>%
+    run_model() %>% get_output_tbl()
+disp %>% dispersion_plot()
+disp
+hist(disp$height)
+
+
+wGribDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",")
+wGribDat$DT <- as.POSIXct(wGribDat$DT, format="%Y-%m-%dT%H:%M:%S")
+wGribDat$trajHead <- NA
+wGribDat$trajSpd <- NA
+for(ind in 1:nrow(wGribDat)){
+  tryCatch({
+    trajs <- TrackTraj(wGribDat$DT[ind], wGribDat$Lat[ind], wGribDat$Lon[ind], 6)
+    }, error = function(e){cat("ERROR :", conditionMessage(e), "\n")})
+  tryCatch({
+    trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
+    trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    trutmDiff <- cbind(diff(trCord.utm$coords.x2), diff(trCord.utm$coords.x1))
+    wGribDat$trajHead[ind] <- atan2(mean(trutmDiff[,1]), mean(trutmDiff[,2]))
+    wGribDat$trajSpd[ind] <- mean(sqrt(trutmDiff[,1]^2 + trutmDiff[,2]^2))/(length(trutmDiff[,1])*3600)
+  }, error = function(e){c(NA)})
+}
+wGribDat$estHead <- atan2(wGribDat$Y,wGribDat$X)
+# install.packages("reshape")
+library(reshape)
+mdata <- melt(wGribDat[,2:ncol(wGribDat)], id=c("WindHead"))
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/TrajEstcomparison.png", height = 800, width = 800)
+ggplot(mdata[mdata$variable == "trajHead" | mdata$variable == "estHead",], aes(x = WindHead, y = value)) +
+  geom_point(aes(fill = variable), shape = 21,size=3) + geom_line(data = data.frame("x" = -pi:pi, "y" = -pi:pi), aes(x = x, y = y)) +
+  scale_y_continuous(name = "Estimated headings") + scale_x_continuous(name = "JMA wind headings") +
+  scale_fill_manual(name = "", values=c("deepskyblue","red"), labels = c("Trajectory","Track estimate")) +
+  theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 20,
+        family = "Arial"), axis.text = element_text(size = 20, family = "Arial"))
+dev.off()
+
+# TEST STRAIGHTNESS OF STEP LENGTHS
+UDsts <- vector(mode="list", length=length(ListD))
+for(b in 1:length(ListD)){
+  sel<-ListD[[b]]
+  # remove non-flight values
+  sel <- sel[which(sel$spTrav > 15),]
+  # sel <- sel[which(sel$rtChg < 0),]
+  UDsts[[b]] <- StLCalc(sel$DT,sel$UTMN,sel$UTME)
+}
+colnames(UDsts[[1]])
+for(b in 1:length(UDsts)){
+  UDsts[[b]]$dist <- NA
+  for(g in 1:nrow(UDsts[[b]])){
+    UDsts[[b]]$dist[g] <- sqrt((ListD[[b]]$UTMN[UDsts[[b]]$strtInd[g]] - ListD[[b]]$UTMN[UDsts[[b]]$endInd[g]])^2 + (ListD[[b]]$UTME[UDsts[[b]]$strtInd[g]] - ListD[[b]]$UTME[UDsts[[b]]$endInd[g]])^2)
+  }
+  outTraj[[b]]$dist <- UDsts[[b]]$dist
+}
+
+
+ggplot(UDsts[[1]]) +
+  geom_segment(aes(x = ListD[[1]]$Lon[strtInd], y = ListD[[1]]$Lat[strtInd], xend = ListD[[1]]$Lon[endInd], yend = ListD[[1]]$Lat[endInd]))
+library(wGribDat)
+
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/TrackVTraj.png", width = 800, height = 900)
+ggplot(wGribDat, aes(x = estHead, y = trajHead)) +
+  geom_point(shape = "o",size=3) + geom_line(data = data.frame("x" = -pi:pi, "y" = -pi:pi), aes(x = x, y = y)) +
+  scale_y_continuous(name = "Trajectory headings") + scale_x_continuous(name = "Track headings") +
+  theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 20,
+        family = "Arial"), axis.text = element_text(size = 20, family = "Arial"))
+dev.off()
+
+library(circular)
+
+
+res<-cor.circular(wGribDat$WindHead, wGribDat$estHead, test = T)
+res<-cor.circular(atan2(wGribDat$X,wGribDat$Y), atan2(wGribDat$U,wGribDat$V),test=T)
+ggplot(sel, aes(x = WindHead, y = EHead)) +
+    geom_point() #+
+    # geom_line(aes(x=-3:3,y=-3:3))
+# res
+spres <- cor.test(wGribDat$ESpd, wGribDat$WSpd)
+summary(wGribDat)
+
+
+Less1<- ggplot(WindDat[WindDat$distTo < 1,], aes(x = RelHead)) + geom_histogram(bins=50,aes(fill = RelHead)) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+One2<- ggplot(WindDat[WindDat$distTo < 2 & WindDat$distTo >= 1,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 12, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+Two3<- ggplot(WindDat[WindDat$distTo < 3 & WindDat$distTo >= 2,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+Three4<- ggplot(WindDat[WindDat$distTo < 4 & WindDat$distTo >= 3,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+Four5<- ggplot(WindDat[WindDat$distTo < 5 & WindDat$distTo >= 4,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+Five6<- ggplot(WindDat[WindDat$distTo < 6 & WindDat$distTo >= 5,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+Six7<- ggplot(WindDat[WindDat$distTo < 7 & WindDat$distTo >= 6,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+Seven8<- ggplot(WindDat[WindDat$distTo < 8 & WindDat$distTo >= 7,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+Eight9<- ggplot(WindDat[WindDat$distTo < 9 & WindDat$distTo >= 8,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+Nine10<- ggplot(WindDat[WindDat$distTo < 10 & WindDat$distTo >= 9,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
+
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/1-6km20182019.png", width = 800, height = 900)
+ggarrange(Less1,One2,Two3,Three4,Four5,Five6, ncol=2,nrow=3, labels=c("<1km","1-2km","2-3km","3-4km","4-5km","5-6km"))
+dev.off()
+
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/4-10km20182019.png", width = 800, height = 900)
+ggarrange(Four5,Five6,Six7,Seven8,Eight9,Nine10, ncol=2,nrow=3, labels=c("4-5km","5-6km","6-7km","7-8km","8-9km","9-10km"))
+dev.off()
+# ggplot(WindDat[WindDat$distTo > 5 & WindDat$distTo < 100,], aes(x = RelHead)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2)
+Zero10 <- ggplot(WindDat[WindDat$distTo >= 0 & WindDat$distTo < 10,], aes(x = RelHead)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Ten20 <- ggplot(WindDat[WindDat$distTo >= 10 & WindDat$distTo < 20,], aes(x = RelHead)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Twenty30 <- ggplot(WindDat[WindDat$distTo >= 20 & WindDat$distTo < 30,], aes(x = RelHead)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Thirty40 <- ggplot(WindDat[WindDat$distTo >= 30 & WindDat$distTo < 40,], aes(x = RelHead)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+
+png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/0-40km20182019.png", width = 700, height = 700)
+ggarrange(Zero10,Ten20,Twenty30,Thirty40,ncol=2,nrow=2,labels=c("0-10km","10-20km","20-30km","30-40km"))
+dev.off()
+
+TrOne2<- ggplot(AllTraj[AllTraj$distTo < 2*10^3 & AllTraj$distTo >= 1*10^3,], aes(x = relH, y = dist/10^3)) + geom_point() + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Distance")
+TrTwo3<- ggplot(AllTraj[AllTraj$distTo < 3*10^3 & AllTraj$distTo >= 2*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrThree4<- ggplot(AllTraj[AllTraj$distTo < 4*10^3 & AllTraj$distTo >= 3*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrFour5<- ggplot(AllTraj[AllTraj$distTo < 5*10^3 & AllTraj$distTo >= 4*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrFive6<- ggplot(AllTraj[AllTraj$distTo < 6*10^3 & AllTraj$distTo >= 5*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrSix7<- ggplot(AllTraj[AllTraj$distTo < 7*10^3 & AllTraj$distTo >= 6*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrSeven8<- ggplot(AllTraj[AllTraj$distTo < 8*10^3 & AllTraj$distTo >= 7*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrEight9<- ggplot(AllTraj[AllTraj$distTo < 9*10^3 & AllTraj$distTo >= 8*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+TrNine10<- ggplot(AllTraj[AllTraj$distTo < 10*10^3 & AllTraj$distTo >= 9*10^3,], aes(x = relH)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
+# png("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/1-5km.png",width=800,height=800)
+ggarrange(TrLess1,TrOne2,TrTwo3,TrThree4,TrFour5,TrFive6, ncol=3,nrow=2, labels=c("<1km","1-2km","2-3km","3-4km","4-5km","5-6km"))
+
+WindDat$Yr <- format(WindDat$DT, format="%Y")
+windTags <- unique(WindDat[c("ID","Yr")])
+plots <- vector(mode="list",length=nrow(windTags))
+for(b in 1:nrow(windTags)){
+  Less1<- ggplot(WindDat[WindDat$distTo < 1 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50,aes(fill = RelHead)) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+One2<- ggplot(WindDat[WindDat$distTo < 2 & WindDat$distTo >= 1 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 12, family = "Arial"))
+Two3<- ggplot(WindDat[WindDat$distTo < 3 & WindDat$distTo >= 2 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Three4<- ggplot(WindDat[WindDat$distTo < 4 & WindDat$distTo >= 3 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Four5<- ggplot(WindDat[WindDat$distTo < 5 & WindDat$distTo >= 4 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Five6<- ggplot(WindDat[WindDat$distTo < 6 & WindDat$distTo >= 5 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Six7<- ggplot(WindDat[WindDat$distTo < 7 & WindDat$distTo >= 6 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Seven8<- ggplot(WindDat[WindDat$distTo < 8 & WindDat$distTo >= 7 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Eight9<- ggplot(WindDat[WindDat$distTo < 9 & WindDat$distTo >= 8 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+Nine10<- ggplot(WindDat[WindDat$distTo < 10 & WindDat$distTo >= 9 & WindDat$ID == windTags$ID[b] & WindDat$Yr == windTags$Yr[b],], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+plots[[b]]<-ggarrange(Less1,One2,Two3,Three4,Four5,Five6,Six7,Seven8,Eight9,Nine10)
+}
+plots[[2]]
+plots[[b]]<-ggarrange(Less1,One2,Two3,Three4,Four5,Five6,Six7,Seven8,Eight9,Nine10)
+plots[[b]]<-ggarrange(Less1,One2)
+plots[[b]]<-ggarrange(Nine10)
+plots[[b]]<-ggarrange(Three4,Four5,Five6,Six7,Seven8,Eight9,Nine10)
+
+plots[[b]]<-ggarrange(Two3,Three4,Four5,Five6,Six7,Seven8,Eight9,Nine10)
+
+
+
+
+plots[[b]]<-ggarrange(Eight9,Nine10)
+
+
+plots[[b]]<-NA
+
+plots[[b]]<-ggarrange(Four5,Five6,Six7,Seven8,Eight9)
+
+plots[[b]]<-ggarrange(Six7,Seven8,Eight9,Nine10)
+plots[[b]]<-ggarrange(Two3,Three4,Four5,Five6,Six7,Eight9,Nine10)
+plots[[b]]<-ggarrange(Less1,One2,Two3,Six7,Seven8,Eight9,Nine10,labels=c("<1","1-2","2-3","6-7","7-8","8-9","9-10"))
+plots[[b]]<-ggarrange(Less1,Five6,Nine10,labels=c("<1","5-6","9-10"))
+plots[[b]]<-ggarrange(Less1,One2,Seven8,Eight9,Nine10,labels=c("<1","1-2","7-8","8-9","9-10"))
+plots[[b]]<-ggarrange(Six7,Seven8,Eight9,Nine10,labels=c("6-7","7-8","8-9","9-10"))
+
+b=1
+plots[[b]]
+b=b+1
+
+for(b in 1:length(plots)){
+  png(paste("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/IndivRelHead/",windTags[b,1],windTags[b,2],".png",sep=""),width=800,height=800)
+  print(plots[[b]])
+  dev.off()
+}
+
+
+
+# MODELLING RELATIVE HEADINGS AS DISCRETE VARIABLE
+# convert relative headings into discrete
+colnames(WindDat)
+summary(WindDat)

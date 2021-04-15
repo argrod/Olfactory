@@ -1,8 +1,220 @@
 using RData
 using DataFrames
 using Plots
+using GRIB
+using Query
+using Dates
+using RCall
+using CSV
+using Geodesy
+using Plots
+using StructArrays
+using RecursiveArrayTools
+##
 
-wEst = load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDat.RData", convert=true)
-wEst = DataFrame(wEst["WindDat"])
+# load in the wind calculations
+estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
+# estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/2018/"
+cd(estLoc)
+EFiles = readdir(estLoc)
+EDat = []
+for b = 1:length(EFiles)
+    if b == 1
+        EDat = CSV.File(string(estLoc,EFiles[b]), header = false) |> DataFrame
+    else Add = CSV.File(string(estLoc,EFiles[b]), header = false) |> DataFrame
+        EDat = vcat(EDat, Add)
+    end
+end
 
-plot(wEst.RelHead.*(180/pi),wEst.distTo,seriestype=:scatter, proj=:polar, m=:red, bg=:black)
+## FORMAT DATA INTO UTM, FIND XY AND WIND HEADING
+# rename!(EDat, [:DT,:Head,:X,:Y,:Lat,:Lon])
+rename!(EDat, [:DT,:Lat,:Lon,:Head,:X,:Y])
+df = dateformat"y-m-d H:M:S"
+EDat.DT = DateTime.(EDat.DT, df)
+Ll = LLA.(EDat.Lat,EDat.Lon)
+UTMD = UTMZfromLLA(wgs84)
+utmDat = map(UTMD, Ll); utmDat = StructArray(utmDat)
+X = diff(utmDat.x)
+Y = diff(utmDat.y)
+head = atan.(X,Y)
+## FUNCTION TO FIND THE INDECES OF SUITABLE WIND ESTIMATIONS
+function gribCond(dt, h, md)
+    hr = Dates.hour(round(dt, Dates.Hour))
+    min = Dates.minute(dt)
+    iszero(hr%h) && (min > 60 - md || min < md)
+end
+sel = filter(:DT => x -> gribCond(x, 3, 4), EDat)
+##
+function gribGen(dt)
+    yr = string(Dates.year(dt))
+    mn = string(Dates.month(dt))
+    if length(mn) == 1
+        mn = "0"*mn
+    end
+    dy = string(Dates.day(dt))
+    if length(dy) == 1
+        dy = "0"*dy
+    end
+    hr = string(Dates.hour(round(dt, Dates.Hour)))
+    if length(hr) == 1
+        hr = "0"*hr
+    end
+    "Z__C_RJTD_"*yr*mn*dy*hr*"0000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"
+end
+
+gribsels = unique(gribGen.(sel.DT))
+##
+function roundF(vals, rnum)
+    rnum*(round(vals)/rnum)
+end
+# sel.GLat = roundF.(sel.Lat, .05)
+# sel.GLon = roundF.(sel.Lon, .0625)
+##
+WLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/gribs/"
+cd(WLoc)
+@rput gribsels
+function gribT(dt)
+    yr = string(Dates.year(dt))
+    mn = string(Dates.month(dt))
+    if length(mn) == 1
+        mn = "0"*mn
+    end
+    dy = string(Dates.day(dt))
+    if length(dy) == 1
+        dy = "0"*dy
+    end
+    hr = string(Dates.hour(round(dt, Dates.Hour)))
+    if length(hr) == 1
+        hr = "0"*hr
+    end
+    return yr*mn*dy*hr
+end
+gribTimes = unique(gribT.(sel.DT))
+@rput gribTimes
+##
+R"""
+dloadLoc  = "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/gribsOld/"
+for(b in 1:length(gribsels)){
+	download.file(paste("http://database.rish.kyoto-u.ac.jp/arch/jmadata/data/gpv/original/",substr(gribTimes[b],1,4),"/",substr(gribTimes[b],5,6),"/",substr(gribTimes[b],7,8),"/",gribsels[b],sep=""), 
+		destfile = paste(dloadLoc,gribsels[b], sep = "")
+		)
+}
+"""
+
+##
+function ConanThe(GribN)
+    msg = GribFile(GribN) do f
+        Message(f)
+    end
+    keylist = Vector{String}()
+    for key in keys(msg)
+        key != "values" && key != "latitudes" && key != "longitudes" && push!(keylist, key)
+    end
+    keylist = unique(keylist)
+    df = DataFrame((Symbol(key) => Any[] for key in keylist)...)
+    GribFile(GribN) do f
+        for message in f
+            push!(df, tuple((message[key] for key in keylist)...))
+        end
+    end
+    df
+end
+##
+function xtractUWind00(GribN)
+    GribFile(GribN) do f
+        for message in f
+            message["forecastTime"] == 0 && message["shortName"] == "10u" && return message
+        end
+    end
+end
+function xtractVWind00(GribN)
+    GribFile(GribN) do f
+        for message in f
+            message["forecastTime"] == 0 && message["shortName"] == "10v" && return message
+        end
+    end
+end
+## EXTRACT GRIBDATA FOR SELECTED TIME
+function gribSelect(dt, lat, lon)
+    gribob = gribGen(dt)
+    # fls = readdir()
+    # if any(fls.==gribob)
+    #     println("Failed on ", gribob)
+    # end
+    UWind = @NamedTuple{lon, lat, value}(data(xtractUWind00(gribob)))
+    VWind = @NamedTuple{lon, lat, value}(data(xtractVWind00(gribob)))
+    nrlon = unique(UWind.lon[(abs.(UWind.lon .- roundF(lon,0.0625)) .== min(abs.(UWind.lon .- roundF(lon,0.0625))...))])
+    nrlat = unique(UWind.lat[(abs.(UWind.lat .- roundF(lat,0.05)) .== min(abs.(UWind.lat .- roundF(lat,0.05))...))])
+    return UWind.value[@. (UWind.lon .== nrlon) & (UWind.lat .== nrlat)]..., VWind.value[@. (UWind.lon .== nrlon) & (UWind.lat .== nrlat)]...
+end
+##
+gribD = gribSelect.(sel.DT, sel.Lat, sel.Lon)
+##
+sel.U = reduce(vcat,[x[1] for x in gribD])
+sel.V = reduce(vcat,[x[2] for x in gribD])
+sel.WindHead = atan.(sel.U,sel.V)
+sel.EHead = atan.(sel.X,sel.Y)
+# plot(sel.WindHead, sel.Head, seriestype = :scatter)
+# plot(sqrt.(sel.X.^2 + sel.Y.^2), sqrt.(sel.U.^2 + sel.V.^2), seriestype = :scatter)
+sel.ESpd = sqrt.(sel.X.^2 + sel.Y.^2)
+sel.WSpd = sqrt.(sel.U.^2 + sel.V.^2)
+# CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sel)
+##
+@rput sel
+R"""
+# library(circular)
+library(ggplot2)
+res<-cor.circular(sel$WindHead, sel$EHead, test = T)
+# res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
+ggplot(sel, aes(x = WindHead, y = EHead)) +
+    geom_point() #+
+    # geom_line(aes(x=-3:3,y=-3:3))
+# res
+# spres <- circular::cor.test(sel$ESpd, sel$WSpd)
+"""
+## 
+# CALCULATE THE TRAJECTORY HEADINGS FOR THE SAME LOCATIONS FOR PRECEEDING 6 HOURS
+@rput sel
+R"""
+if(Sys.info()['sysname'] == "Darwin"){
+    exec_loc <- "/Users/aran/hysplit/"
+} else {
+    exec_loc <- "C:/hysplit/"
+}
+TrackTraj <- function(DT, lat, lon, hrs){
+  time <- format(DT, "%Y-%m-%d")
+  hr <- format(DT, "%H")
+  trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = lat,
+    lon = lon,
+    height = 10,
+    duration = hrs,
+    days = time,
+    daily_hours = hr,
+    direction = "backward",
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model()
+  return(trajectory_model %>% get_output_tbl())
+}
+library(splitr)
+sel$trajHead <- NA
+sel$trajSpd <- NA
+for(ind in 1:nrow(sel)){
+    tryCatch({
+      trajs <- TrackTraj(sel$DT[ind], sel$Lat[ind], sel$Lon[ind], 6)
+    }, error = function(e){cat("ERROR :", conditionMessage(e), "\n")})
+    tryCatch({
+      trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
+      trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+      trutmDiff <- cbind(diff(trCord.utm$coords.x2), diff(trCord.utm$coords.x1))
+      sel$trajHead[ind] <- atan2(mean(trutmDiff[,1]), mean(trutmDiff[,2]))
+      sel$trajSpd[ind] <- mean(sqrt(trutmDiff[,1]^2 + trutmDiff[,2]^2))/(length(trutmDiff[,1])*3600)
+    }, error = function(e){c(NA)})
+}
+"""
+@rget sel
+summary(sel.trajHead)
