@@ -1002,7 +1002,7 @@ disp
 hist(disp$height)
 
 
-wGribDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",")
+wGribDat <- read.delim("F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",")
 wGribDat$DT <- as.POSIXct(wGribDat$DT, format="%Y-%m-%dT%H:%M:%S")
 wGribDat$trajHead <- NA
 wGribDat$trajSpd <- NA
