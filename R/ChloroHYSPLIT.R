@@ -87,7 +87,7 @@ TrackTraj <- function(DT, lat, lon, hrs){
     days = time,
     daily_hours = hr,
     direction = "backward",
-    met_type = "gdas1",
+    met_type = "reanalysis",
     met_dir = paste(exec_loc, "met", sep = ""),
     exec_dir = paste(exec_loc, "exec", sep = "")) %>%
   run_model()
@@ -191,7 +191,7 @@ for(b in 1:length(outTraj)){
   outTraj[[b]]$cumDist <- dist
 }
 
-# save(outTraj,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChg.RData")
+# save(outTraj,file="F:/UTokyoDrive/PhD/Data/splitr/StepsTrajTimeChg.RData")
 sel <- allD[allD$forage == 1,]
 ggplot(sel, aes(x = lon, y = lat)) + geom_point()
 # LOAD IN THE STEP LENGTHS TRAJECTORIES
@@ -390,10 +390,10 @@ for(b in 1:length(outTraj)){
   outTraj[[b]]$proxim[outTraj[[b]]$distTo >= 5*10^3 & outTraj[[b]]$distTo < 10*10^3] <- "5-10"
   outTraj[[b]]$proxim[outTraj[[b]]$distTo >= 10*10^3 & outTraj[[b]]$distTo < 15*10^3] <- "10-15"
   outTraj[[b]]$proxim[outTraj[[b]]$distTo >= 15*10^3 & outTraj[[b]]$distTo < 20*10^3] <- "15-20"
-  # outTraj[[b]]$rtChg <- NA
-  # for(g in 1:nrow(outTraj[[b]])){
-  #   outTraj[[b]]$rtChg[g] <- ListD[[b]]$rtChg[ListD[[b]]$DT == outTraj[[b]]$DT[g]]
-  # }
+  outTraj[[b]]$rtChg <- NA
+  for(g in 1:nrow(outTraj[[b]])){
+    outTraj[[b]]$rtChg[g] <- ListD[[b]]$rtChg[ListD[[b]]$DT == outTraj[[b]]$DT[g]]
+  }
 }
 
 allTraj <- bind_rows(outTraj)
@@ -1463,3 +1463,63 @@ if(Sys.info()['sysname'] == "Darwin"){
     netcdLoc <- "F:/UTokyoDrive/PhD/Data/Data/Oceanographic"
 }
 ncFiles <- list.files(netcdLoc, pattern = "*.hdf")
+
+
+
+
+
+
+TrackTraj <- function(DT, lat, lon, hrs){
+  time <- format(DT - lubridate::hours(9), "%Y-%m-%d") # convert to UTC
+  hr <- format(DT, "%H")
+  trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = lat,
+    lon = lon,
+    height = 10,
+    duration = hrs,
+    days = time,
+    daily_hours = hr,
+    direction = "backward",
+    met_type = "gdas1",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model()
+  return(trajectory_model %>% get_output_tbl())
+}
+trajs <- TrackTraj(sel$DT[UDsts$strtInd[ind]], sel$Lat[UDsts$strtInd[ind]], sel$Lon[UDsts$strtInd[ind]], 6)
+DT=sel$DT[UDsts$strtInd[ind]]
+lat=sel$Lat[UDsts$strtInd[ind]]
+lon=sel$Lon[UDsts$strtInd[ind]]
+hrs=6
+
+trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = lat,
+    lon = lon,
+    height = 10,
+    duration = 6,
+    days = "2018-08-28",
+    daily_hours = "04",
+    direction = "backward",
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model()
+
+trajectory <- 
+  hysplit_trajectory(
+    lat = 42.83752,
+    lon = -80.30364,
+    height = 50,
+    duration = 24,
+    days = "2012-03-12",
+    daily_hours = c(0, 6, 12, 18),
+    direction = "forward",
+    met_type = "gdas1",
+    extended_met = TRUE,
+    met_dir = here::here("met"),
+    exec_dir = here::here("out")
+  ) 
