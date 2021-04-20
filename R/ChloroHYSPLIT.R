@@ -14,7 +14,7 @@ library(ggpubr)
 library(maptools)
 library(StreamMetabolism)
 library(RColorBrewer)
-options(timeout = 300)
+options(timeout = 800)
 # load in data 
 if(Sys.info()['sysname'] == "Darwin"){
     exec_loc <- "/Users/aran/hysplit/"
@@ -58,13 +58,13 @@ TrackDisp <- function(DT, lat, lon, hrs){
     name = "particle",
     lat = lat, lon = lon, height = 10,
     rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
-    release_start = lubridate::ymd_hm(time) - lubridate::hours(hrs),
-    release_end = lubridate::ymd_hm(time) - lubridate::hours(hrs) + lubridate::hours(2)
+    release_start = lubridate::ymd_hm(time) + lubridate::hours(hrs),
+    release_end = lubridate::ymd_hm(time) + lubridate::hours(hrs) + lubridate::hours(2)
   ) %>%
   add_dispersion_params(
-    start_time = lubridate::ymd_hm(time) - lubridate::hours(hrs),
+    start_time = lubridate::ymd_hm(time) + lubridate::hours(hrs),
     end_time = lubridate::ymd_hm(time),
-    direction = "backward", 
+    direction = "forward", 
     met_type = "reanalysis",
     met_dir = paste(exec_loc, "met", sep = ""),
     exec_dir = paste(exec_loc, "exec", sep = "")
@@ -75,7 +75,7 @@ TrackDisp <- function(DT, lat, lon, hrs){
   outpt <- list("DispModel" = dispersion_model,"partDisp" = dispersion_tbl, "partPoly" = hulls)
 }
 TrackTraj <- function(DT, lat, lon, hrs){
-  time <- format(DT, "%Y-%m-%d")
+  time <- format(DT - lubridate::hours(9), "%Y-%m-%d") # convert to UTC
   hr <- format(DT, "%H")
   trajectory_model <-
   create_trajectory_model() %>%
@@ -87,19 +87,13 @@ TrackTraj <- function(DT, lat, lon, hrs){
     days = time,
     daily_hours = hr,
     direction = "backward",
-    met_type = "reanalysis",
+    met_type = "gdas1",
     met_dir = paste(exec_loc, "met", sep = ""),
     exec_dir = paste(exec_loc, "exec", sep = "")) %>%
   run_model()
   return(trajectory_model %>% get_output_tbl())
 }
 ListD <- c(Dat,Dat19)
-
-min(D18$Lat)
-max(D18$Lat)
-min(D18$Lon)
-max(D18$Lon)
-
 StLDisp <- function(utm){ # find changes in sign
   chgs <- diff(utm) >= 0
   swtch <- which(diff(chgs)!=0) + 1
@@ -174,7 +168,7 @@ for(b in 1:length(ListD)){
     aveHead[ind] <- atan2(mean(diff(sel$UTMN[UDsts$strtInd[ind]:UDsts$endInd[ind]])), mean(diff(sel$UTME[UDsts$strtInd[ind]:UDsts$endInd[ind]])))
     tryCatch({
       trajs <- TrackTraj(sel$DT[UDsts$strtInd[ind]], sel$Lat[UDsts$strtInd[ind]], sel$Lon[UDsts$strtInd[ind]], 6)
-    }, error = function(e){cat("ERROR :", conditionMessage(e), "\n")})
+    }, error = function(e){c(NA)})
     tryCatch({
       trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
       trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
@@ -197,8 +191,7 @@ for(b in 1:length(outTraj)){
   outTraj[[b]]$cumDist <- dist
 }
 
-
-# save(outTraj,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTraj.RData")
+# save(outTraj,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChg.RData")
 sel <- allD[allD$forage == 1,]
 ggplot(sel, aes(x = lon, y = lat)) + geom_point()
 # LOAD IN THE STEP LENGTHS TRAJECTORIES
@@ -766,6 +759,14 @@ WindDat19$RelHead[WindDat19$RelHead > pi] <- WindDat19$RelHead[WindDat19$RelHead
 
 # combine '18, '19 data
 WindDat<-rbind(WindDat,WindDat19)
+# save(WindDat,file="/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
+# LOAD WIND DATA
+if(Sys.info()['sysname'] == "Darwin"){
+  load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
+} else {
+  load("F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
+}
+
 
 ggplot(WindDat, aes(y = distTo, x = Head)) + geom_point() + coord_polar()
 ggplot(WindDat, aes(y = distTo, x = WHd)) + geom_point() + coord_polar()
@@ -1032,6 +1033,7 @@ ggplot(mdata[mdata$variable == "trajHead" | mdata$variable == "estHead",], aes(x
         family = "Arial"), axis.text = element_text(size = 20, family = "Arial"))
 dev.off()
 
+
 # TEST STRAIGHTNESS OF STEP LENGTHS
 UDsts <- vector(mode="list", length=length(ListD))
 for(b in 1:length(ListD)){
@@ -1076,6 +1078,21 @@ ggplot(sel, aes(x = WindHead, y = EHead)) +
 spres <- cor.test(wGribDat$ESpd, wGribDat$WSpd)
 summary(wGribDat)
 
+# test the trajectory values for wind calculations
+WindDat$trajHead <- NA
+WindDat$trajSpd <- NA
+for(ind in 1:nrow(WindDat)){
+  tryCatch({
+    trajs <- TrackTraj(WindDat$DT[ind], WindDat$Lat[ind], WindDat$Lon[ind], 6)
+    }, error = function(e){c(NA)})
+  tryCatch({
+    trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
+    trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    trutmDiff <- cbind(diff(trCord.utm$coords.x2), diff(trCord.utm$coords.x1))
+    WindDat$trajHead[ind] <- atan2(mean(trutmDiff[,1]), mean(trutmDiff[,2]))
+    WindDat$trajSpd[ind] <- mean(sqrt(trutmDiff[,1]^2 + trutmDiff[,2]^2))/(length(trutmDiff[,1])*3600)
+  }, error = function(e){c(NA)})
+}
 
 Less1<- ggplot(WindDat[WindDat$distTo < 1,], aes(x = RelHead)) + geom_histogram(bins=50,aes(fill = RelHead)) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
   theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
@@ -1216,9 +1233,233 @@ for(b in 1:length(plots)){
   dev.off()
 }
 
+# test the trajectories vs. wind headings
+colnames(WindDat)
+a<-80
+lat <- WindDat$Lat[a]
+lon <- WindDat$Lon[a]
+days <- format(WindDat$DT[a],"%Y-%m-%d")
+time <- format(WindDat$DT[a],"%Y-%m-%d %H:%M")
+hr <- format(WindDat$DT[a],"%H")
+hrs <- 6
+
+for(b in 1:nrow(WindDat)){
+  trajs <- 
+    hysplit_trajectory(
+      lat = lat,
+      lon = lon,
+      height = 10,
+      duration = hrs,
+      days = days,
+      daily_hours = hr,
+      direction = "forward",
+      met_type = "gdas1",
+      extended_met = TRUE,
+      met_dir = paste(exec_loc, "met", sep = ""),
+      exec_dir = paste(exec_loc, "exec", sep = "")
+    ) 
+
+
+  trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
+  trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+  trutmDiff <- cbind(diff(trCord.utm$coords.x2), diff(trCord.utm$coords.x1))
+  WindDat$trajHead[b] <- atan2(mean(trutmDiff[,1]), mean(trutmDiff[,2]))
+  WindDat$trajSpd[b] <- mean(sqrt(trutmDiff[,1]^2 + trutmDiff[,2]^2))/(length(trutmDiff[,1])*3600)
+}
+WindDat$TrRelHead <- WindDat$Head-WindDat$trajHead
+WindDat$TrRelHead[WindDat$TrRelHead < -pi] <- WindDat$TrRelHead[WindDat$TrRelHead < -pi] + 2*pi
+WindDat$TrRelHead[WindDat$TrRelHead > pi] <- WindDat$TrRelHead[WindDat$TrRelHead > pi] - 2*pi
+ggplot(WindDat) + 
+  geom_point(aes(x = RelHead, y = TrRelHead))
+
+ggplot(WindDat[WindDat$distTo < 10,]) + 
+  geom_point(aes(y = distTo, x = (RelHead))) + coord_polar() + xlim(c(-pi,pi))
+
+ggplot(WindDat[WindDat$distTo < 10,]) + 
+  geom_histogram(aes(x = (RelHead))) + coord_polar() + xlim(c(-pi,pi))
+
+
+range(WindDat$RelHead)
+
+hist(WindDat$aligned)
+
+plot(WindDat$RelHead-WindDat$TrRelHead)
+
+hist(WindDat$RelHead - WindDat$TrRelHead)
+
+WindDat$TrRelHead*(180/pi)
+
+WindDat$Head[a]
+(WindDat$Head[a] - trajHead)*(180/pi)
+colnames(WindDat)
+trajectory_tbl <- trajectory_plot()
+
+trajectory_model <- create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = lat,
+    lon = lon,
+    height = 10,
+    duration = hrs,
+    days = time,
+    daily_hours = hr,
+    direction = "backward",
+    met_type = "gdas1",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model()
+  return(trajectory_model %>% get_output_tbl())
+a<-1:20
+tst <- TrackTraj(WindDat$DT[a],WindDat$Lat[a],WindDat$Lon[a],6)
 
 
 # MODELLING RELATIVE HEADINGS AS DISCRETE VARIABLE
 # convert relative headings into discrete
 colnames(WindDat)
 summary(WindDat)
+# or use Bayesian circular GLM package
+devtools::install_github("keesmulder/circglmbayes")
+library(circglmbayes)
+library(lme4)
+
+dat <- generateCircGLMData()
+m <- circGLM(th ~ ., dat)
+print(m, type="all")
+
+testGLM <- circGLM(RelHead ~ distTo + factor(ID), WindDat)
+print(testGLM)
+
+# convert RelHead to single side
+WindDat$oneSide <- WindDat$RelHead
+WindDat$oneSide[WindDat$oneSide < 0] <- WindDat$oneSide[WindDat$oneSide < 0]*-1
+
+ggplot(WindDat[WindDat$distTo < 40,]) + 
+  geom_point(aes(x = distTo, y = oneSide))
+
+hist(WindDat$oneSide)
+
+glmtest <- lmer(oneSide ~ distTo | ID, WindDat)
+plot(lmtest)
+
+
+breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")
+WindDat$windCond <- NA
+WindDat$windCond[WindDat$aligned > -pi/2 & WindDat$aligned < pi/2] <- "Tail"
+WindDat$windCond[WindDat$aligned < -pi/2 & WindDat$aligned > -3*pi/2] <- "Side"
+WindDat$windCond[WindDat$aligned > pi/2 & WindDat$aligned < 3*pi/2] <- "Side"
+WindDat$windCond[WindDat$aligned > 3*pi/2 | WindDat$aligned < -3*pi/2] <- "Tail"
+
+# CALCULATE FORWARD DISPERSION MODEL FOR EACH FORAGING SPOT
+# find foraging beginnings
+options(timeout = 800)
+allD$forage[is.na(allD$forage)] <- 0
+forSt <- which(diff(allD$forage) == 1) + 1
+if(allD$forage[1] == 1){
+  forSt <- c(1, forSt)
+}
+forEd <- which(diff(allD$forage) == -1)
+if(allD$forage[nrow(allD)] == 1){
+  forEd <- c(forEd, nrow(allD))
+}
+allD$forage[forSt[5]:forEd[5]]
+
+TrackDisp <- function(DT, lat, lon, hrs){
+  time <- format(DT, "%Y-%m-%d %H:%M")
+  dispersion_model <-
+  create_dispersion_model() %>%
+  add_source(
+    name = "particle",
+    lat = lat, lon = lon, height = 10,
+    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
+    release_start = lubridate::ymd_hm(time) + lubridate::hours(hrs),
+    release_end = lubridate::ymd_hm(time) + lubridate::hours(hrs) + lubridate::hours(2)
+  ) %>%
+  add_dispersion_params(
+    start_time = lubridate::ymd_hm(time) + lubridate::hours(hrs),
+    end_time = lubridate::ymd_hm(time),
+    direction = "forward", 
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+  ) %>%
+    run_model()
+  dispersion_tbl <- dispersion_model %>% get_output_tbl()
+  hulls <- ddply(dispersion_tbl, "hour", find_hull)
+  outpt <- list("DispModel" = dispersion_model,"partDisp" = dispersion_tbl, "partPoly" = hulls)
+}
+
+disp <- vector(mode="list",length=length(forSt))
+forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
+for(start in 1:length(forSt)){
+  disp[[start]] <- TrackDisp(allD$DT[forSt[start]] - lubridate::hours(6) - lubridate::hours(9),allD$lat[forSt[start]],allD$lon[forSt[start]], 6)
+}
+disp[[start]]$DispModel %>% dispersion_plot()
+
+summary(disp[[start]])
+
+dispersion_model <-
+  create_dispersion_model() %>%
+  add_source(
+    name = "particle",
+    lat = 39.38484, lon = 142.0118, height = 10,
+    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
+    release_start = lubridate::ymd_hm(format(allD$DT[forSt[start]] - lubridate::hours(6) - lubridate::hours(9) + lubridate::hours(2), format = "%Y-%m-%d %H:%M")),
+    release_end = lubridate::ymd_hm(format(allD$DT[forSt[start]] - lubridate::hours(6) - lubridate::hours(9) + lubridate::hours(6), format = "%Y-%m-%d %H:%M"))
+  ) %>%
+  add_dispersion_params(
+    start_time = lubridate::ymd_hm(format(allD$DT[forSt[start]] - lubridate::hours(6) - lubridate::hours(9), format = "%Y-%m-%d %H:%M")),
+    end_time = lubridate::ymd_hm(format(allD$DT[forSt[start]] - lubridate::hours(6) - lubridate::hours(9) + lubridate::hours(6), format = "%Y-%m-%d %H:%M")),
+    direction = "forward", 
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+  ) %>%
+    run_model()
+dispersion_model %>% dispersion_plot()
+
+dispersion_model <-
+  create_dispersion_model() %>%
+  add_source(
+    name = "particle",
+    lat = 39.38484, lon = 142.0118, height = 10,
+    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
+    release_start = lubridate::ymd_hm("2015-07-01 00:00"),
+    release_end = lubridate::ymd_hm("2015-07-01 00:00") + lubridate::hours(2)
+  ) %>%
+  add_dispersion_params(
+    start_time = lubridate::ymd_hm("2015-07-01 00:00"),
+    end_time = lubridate::ymd_hm("2015-07-01 00:00") + lubridate::hours(6),
+    direction = "forward", 
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+  ) %>%
+  run_model()
+dispersion_tbl <- dispersion_model %>% get_output_tbl()
+
+dispersion_model <-
+  create_dispersion_model() %>%
+  add_source(
+    name = "particle",
+    lat = 39.38484, lon = 142.0118, height = 10,
+    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
+    release_start = lubridate::ymd_hm("2018-08-28 15:00"),
+    release_end = lubridate::ymd_hm("2018-08-28 15:00") + lubridate::hours(2)
+  ) %>%
+  add_dispersion_params(
+    start_time = lubridate::ymd_hm("2018-08-28 15:00"),
+    end_time = lubridate::ymd_hm("2018-08-28 15:00") + lubridate::hours(6),
+    direction = "forward", 
+    met_type = "gdas1",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+  ) %>%
+  run_model()
+
+# read in data from www.science.oregonstate.edu/ocean.productivity/standard.product.php
+library(ncdf4)
+if(Sys.info()['sysname'] == "Darwin"){
+    netcdLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/Oceanographic/"
+} else {
+    netcdLoc <- "F:/UTokyoDrive/PhD/Data/Data/Oceanographic"
+}
+ncFiles <- list.files(netcdLoc, pattern = "*.hdf")
