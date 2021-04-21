@@ -214,6 +214,14 @@ if(Sys.info()['sysname'] == "Darwin"){
 }
 summary(outTraj)
 
+ind<-100
+ggplot(ListD[[1]][UDsts$strtInd[ind]:UDsts$endInd[ind],], aes(x=Lon,y=Lat)) +
+  geom_path() +
+  geom_point(data = outTraj[[1]][ind,], aes(x = lon, y = lat))
+  geom_spoke(data = outTraj[[1]][ind,], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = scales::rescale(outTraj[[1]]$trjSpd[ind], c(.2, .8)))
+
+
 for(show in 1:length(outTraj)){
   outTraj[[show]]$relH <- outTraj[[show]]$aveHd - outTraj[[show]]$trjHd
   outTraj[[show]]$relH[outTraj[[show]]$relH < -pi] <- outTraj[[show]]$relH[outTraj[[show]]$relH < -pi] + 2*pi
@@ -908,7 +916,7 @@ ggplot(data=WindDat[WindDat$distTo < 10,], aes(x = RelHead, y = distTo, colour =
 allTraj <- bind_rows(outTraj)
 allTraj <- allTraj[allTraj$distTo != 0,]
 # remove where the trajectory model failed
-allTraj <- allTraj[!is.na(allTraj$lat),]
+allTraj <- allTraj[!is.na(allTraj$trjHd),]
 allTraj$relH <- allTraj$aveHd - allTraj$trjHd
 #calculate sunrise/sunset times
 sriseset<-cbind(rep(NA,nrow(allTraj)),rep(NA,nrow(allTraj)))
