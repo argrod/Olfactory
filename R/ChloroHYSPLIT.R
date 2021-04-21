@@ -210,6 +210,14 @@ if(Sys.info()['sysname'] == "Darwin"){
 }
 summary(outTraj)
 
+ind<-100
+ggplot(ListD[[1]][UDsts$strtInd[ind]:UDsts$endInd[ind],], aes(x=Lon,y=Lat)) +
+  geom_path() +
+  geom_point(data = outTraj[[1]][ind,], aes(x = lon, y = lat))
+  geom_spoke(data = outTraj[[1]][ind,], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = scales::rescale(outTraj[[1]]$trjSpd[ind], c(.2, .8)))
+
+
 for(show in 1:length(outTraj)){
   outTraj[[show]]$relH <- outTraj[[show]]$aveHd - outTraj[[show]]$trjHd
   outTraj[[show]]$relH[outTraj[[show]]$relH < -pi] <- outTraj[[show]]$relH[outTraj[[show]]$relH < -pi] + 2*pi
@@ -904,7 +912,7 @@ ggplot(data=WindDat[WindDat$distTo < 10,], aes(x = RelHead, y = distTo, colour =
 allTraj <- bind_rows(outTraj)
 allTraj <- allTraj[allTraj$distTo != 0,]
 # remove where the trajectory model failed
-allTraj <- allTraj[!is.na(allTraj$lat),]
+allTraj <- allTraj[!is.na(allTraj$trjHd),]
 allTraj$relH <- allTraj$aveHd - allTraj$trjHd
 #calculate sunrise/sunset times
 sriseset<-cbind(rep(NA,nrow(allTraj)),rep(NA,nrow(allTraj)))
@@ -1431,7 +1439,7 @@ TrackDisp <- function(DT, lat, lon, hrs){
     start_time = lubridate::ymd_hm(time),
     end_time = lubridate::ymd_hm(time) + lubridate::hours(hrs),
     direction = "forward", 
-    met_type = "gdas1",
+    met_type = "reanalysis",
     met_dir = paste(exec_loc, "met", sep = ""),
     exec_dir = paste(exec_loc, "exec", sep = "")
   ) %>%
@@ -1445,13 +1453,15 @@ disp1 <- vector(mode="list",length=length(forSt))
 disp2 <- vector(mode="list",length=length(forSt))
 disp3 <- vector(mode="list",length=length(forSt))
 forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
-for(start in 1:length(forSt)){
-  tryCatch({
-    disp1[[start]] <- TrackDisp(allD$DT[forSt[start]] - lubridate::hours(1),allD$lat[forSt[start]],allD$lon[forSt[start]], 3)
+for(b in 1:length(forSt)){
+  disp1[[b]] <-  tryCatch({
+    TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
     }, error = function(e){c(NA)})
-    disp2[[start]] <- TrackDisp(allD$DT[forSt[start]] - lubridate::hours(2),allD$lat[forSt[start]],allD$lon[forSt[start]], 3)
+  disp2[[b]] tryCatch({
+    TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
     }, error = function(e){c(NA)})
-    disp3[[start]] <- TrackDisp(allD$DT[forSt[start]] - lubridate::hours(3),allD$lat[forSt[start]],allD$lon[forSt[start]], 3)
+    disp3[[b]] <-  tryCatch({
+    TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
     }, error = function(e){c(NA)})
 }
 disp[[start]]$DispModel %>% dispersion_plot()
