@@ -197,9 +197,9 @@ sel <- allD[allD$forage == 1,]
 ggplot(sel, aes(x = lon, y = lat)) + geom_point()
 # LOAD IN THE STEP LENGTHS TRAJECTORIES
 if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTraj.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChg.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/StepsTraj.RData")
+    load("F:/UTokyoDrive/PhD/Data/splitr/StepsTrajTimeChg.RData")
 }
 # save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
 # LOAD IN THE LISTED DATA
@@ -216,7 +216,64 @@ ggplot(ListD[[1]][UDsts$strtInd[ind]:UDsts$endInd[ind],], aes(x=Lon,y=Lat)) +
   geom_point(data = outTraj[[1]][ind,], aes(x = lon, y = lat))
   geom_spoke(data = outTraj[[1]][ind,], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
   radius = scales::rescale(outTraj[[1]]$trjSpd[ind], c(.2, .8)))
+ggplot(outTraj[[1]][outTraj[[1]]$distTo<10*10^3 & outTraj[[1]]$rtChg <0,],aes(x = lon,y=lat)) +
+  geom_spoke(aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")), radius = scales::rescale(outTraj[[1]]$trjSpd[outTraj[[1]]$distTo<10*10^3 & outTraj[[1]]$rtChg <0], c(.2, .8))) +
+  scale_colour_gradient(low = "yellow", high= "red") +
+  geom_spoke(aes(x = lon, y = lat, angle = aveHd), arrow = arrow(length = unit(0.05,"inches")), radius = scales::rescale(outTraj[[1]]$trjSpd[outTraj[[1]]$distTo<10*10^3 & outTraj[[1]]$rtChg <0], c(.2, .8)))
+colnames(outTraj[[1]])
 
+
+# add the duration of the proceeding foraging point
+allEth <- c(Eth,Eth19)
+colnames(allEth[[1]])
+for(b in 1:length(outTraj)){
+  outTraj[[b]]$nxtForDur <- NA
+  for(g in 1:nrow(outTraj[[b]])){
+    if(any(allEth[[b]]$DT > outTraj[[b]]$DT[g], na.rm=T)){
+      loc <- min(which(allEth[[b]]$DT > outTraj[[b]]$DT[g]))
+      if(any(allEth[[b]]$cat[loc:nrow(allEth[[b]])] == "Forage", na.rm=T)){
+        nxtFor <- min(which(allEth[[b]]$cat[loc:nrow(allEth[[b]])] == "Forage")) + loc - 1
+        strT <- allEth[[b]]$DT[nxtFor]
+        endT <- allEth[[b]]$DT[min(which(allEth[[b]]$cat[nxtFor:nrow(allEth[[b]])] != "Forage")) + nxtFor - 1]
+        outTraj[[b]]$nxtForDur[g] <- as.numeric(difftime(endT,strT,units='secs'))
+      }
+    }
+  }
+}
+# repeat for windDat
+WindDat$yr <- format(WindDat$DT, format = "%Y")
+indivs <- unique(WindDat[c("ID","yr")])
+ethInds <- data.frame(ID=NA,DT=NA)
+for(b in 1:length(allEth)){
+  ethInds[b,] <- cbind(allEth[[b]]$tagID[1],format(allEth[[b]]$DT[1],format="%Y"))
+}
+WindDat$nxtForDur <- NA
+for(b in 1:nrow(indivs)){
+  if(length(which(WindDat$ID == indivs$ID[b] & WindDat$yr == indivs$yr[b])) != 0){
+    selInd <- which(WindDat$ID == indivs$ID[b] & WindDat$yr == indivs$yr[b])
+    for(g in 1:length(selInd)){
+      EthSel <- allEth[[which(ethInds$ID == indivs$ID[b] & ethInds$DT==indivs$yr[b])]]
+      loc <- min(which(EthSel$DT > WindDat$DT[selInd[g]]))
+      if(any(EthSel$cat[loc:nrow(EthSel)] == "Forage", na.rm=T)){
+        nxtFor <- min(which(EthSel$cat[loc:nrow(EthSel)] == "Forage")) + loc - 1
+        strT <- EthSel$DT[nxtFor]
+        endT <- EthSel$DT[min(which(EthSel$cat[nxtFor:nrow(EthSel)] != "Forage")) + nxtFor - 1]
+        WindDat$nxtForDur[selInd[g]] <- as.numeric(difftime(endT,strT,units='secs'))
+      }
+    }
+  }
+}
+
+EthSel$cat[nxtFor:min(which(EthSel$cat[nxtFor:nrow(EthSel)] != "Forage")) + nxtFor - 1]
+EthSel$cat[min(which(EthSel$cat[nxtFor:nrow(EthSel)] != "Forage")) + nxtFor]
+EthSel$cat[34:43]
+
+colnames(Eth[[1]])
+summary(Dat[[1]]$Dur)
+for(b in 1:length(ListD)){
+  print(ListD[[b]]$tagID[1])
+  print(allEth[[b]]$tagID[1])
+}
 
 for(show in 1:length(outTraj)){
   outTraj[[show]]$relH <- outTraj[[show]]$aveHd - outTraj[[show]]$trjHd
@@ -262,17 +319,18 @@ for(show in 1:length(outTraj)){
   # print(ggarrange(nr, Ten20, Twenty30, Thirty40, Forty50, Fifty60, ncol= 3, nrow = 2, labels = c("<10km", "10-20km", "20-30km","30-40km","40-50km","50-60km")))
   # dev.off()
 }
-show <- 3
-# ggplot(ListD[[show]]) +
-#   geom_path(aes(x = Lon, y = Lat)) +
-#   xlim(c(143.5,144.8)) + ylim(c(42,43)) +
-#   geom_point(data = outTraj[[show]][UDsts$strtInd,], aes(x = lon, y = lat)) +
-#   geom_spoke(data = outTraj[[show]], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
-#   radius = scales::rescale(outTraj[[show]]$trjSpd, c(.2, .8))) +
-#   scale_colour_distiller(palette = "RdYlGn", name = "Approx. speed") +
-#   theme(legend.position = 'bottom', legend.direction = 'horizontal') +
-#   theme_bw() + theme(panel.grid = element_blank()) +
-#   theme(panel.border = element_rect(colour = 'black'))
+show <- 6
+UDsts <- StLCalc(ListD[[show]]$DT,ListD[[show]]$UTMN,ListD[[show]]$UTME)
+ggplot(ListD[[show]]) +
+  geom_path(aes(x = Lon, y = Lat)) +
+  xlim(c(143.5,144.8)) + ylim(c(42,43)) +
+  geom_point(data = outTraj[[show]][UDsts$strtInd,], aes(x = lon, y = lat)) +
+  geom_spoke(data = outTraj[[show]], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = scales::rescale(outTraj[[show]]$trjSpd, c(.2, .8))) +
+  scale_colour_distiller(palette = "RdYlGn", name = "Approx. speed") +
+  theme(legend.position = 'bottom', legend.direction = 'horizontal') +
+  theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black'))
 
 # outTraj[[4]]$relH <- outTraj[[4]]$aveHd - outTraj[[4]]$trjHd
 # outTraj[[4]]$relH[outTraj[[4]]$relH < -pi] <- outTraj[[4]]$relH[outTraj[[4]]$relH < -pi] + 2*pi
@@ -769,7 +827,7 @@ WindDat19$RelHead[WindDat19$RelHead > pi] <- WindDat19$RelHead[WindDat19$RelHead
 
 # combine '18, '19 data
 WindDat<-rbind(WindDat,WindDat19)
-# save(WindDat,file="/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
+# save(WindDat,file="F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
 # LOAD WIND DATA
 if(Sys.info()['sysname'] == "Darwin"){
   load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
@@ -783,7 +841,8 @@ ggplot(WindDat, aes(y = distTo, x = WHd)) + geom_point() + coord_polar()
 ggplot(WindDat[WindDat$distTo < 10,], aes(x = RelHead)) + geom_histogram() + coord_polar(start=-pi/2) + xlim(c(-pi,pi))
 Less1<- ggplot(WindDat[WindDat$distTo < 1,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) +
   labs(x="Relative wind heading",y="Count")
-  rose.diag(WindDat$RelHead[WindDat$distTo <10])
+  rose.diag(WindDat$RelHead[WindDat$distTo <10], bins = 30)
+  rose.diag(WindDat$RelHead[WindDat$distTo >=10 & WindDat$distTo <20])
 One2<- ggplot(WindDat[WindDat$distTo < 2 & WindDat$distTo >= 1,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
 Two3<- ggplot(WindDat[WindDat$distTo < 3 & WindDat$distTo >= 2,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
 Three4<- ggplot(WindDat[WindDat$distTo < 4 & WindDat$distTo >= 3,], aes(x = RelHead)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + labs(x="Relative wind heading",y="Count")
@@ -799,6 +858,10 @@ dev.off()
 png("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/5-10km.png",width=800,height=800)
 ggarrange(Four5,Five6,Six7,Seven8,Eight9,Nine10, ncol=3,nrow=2, labels=c("4-5km","5-6km","6-7km","7-8km","8-9km","9-10km"))
 dev.off()
+
+
+ggplot(WindDat,aes(y = nxtForDur, x = RelHead)) + geom_point() + coord_polar()
+hist(WindDat$RelHead)
 
 # align the data for plotting
 WindDat$aligned <- WindDat$RelHead + pi
@@ -1137,13 +1200,13 @@ Nine10<- ggplot(WindDat[WindDat$distTo < 10 & WindDat$distTo >= 9,], aes(x = Rel
   theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
         family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_y_continuous(limits=c(0,6))
 
-png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/1-6km20182019.png", width = 800, height = 900)
+# png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/1-6km20182019.png", width = 800, height = 900)
 ggarrange(Less1,One2,Two3,Three4,Four5,Five6, ncol=2,nrow=3, labels=c("<1km","1-2km","2-3km","3-4km","4-5km","5-6km"))
-dev.off()
+# dev.off()
 
-png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/4-10km20182019.png", width = 800, height = 900)
+# png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/4-10km20182019.png", width = 800, height = 900)
 ggarrange(Four5,Five6,Six7,Seven8,Eight9,Nine10, ncol=2,nrow=3, labels=c("4-5km","5-6km","6-7km","7-8km","8-9km","9-10km"))
-dev.off()
+# dev.off()
 # ggplot(WindDat[WindDat$distTo > 5 & WindDat$distTo < 100,], aes(x = RelHead)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2)
 Zero10 <- ggplot(WindDat[WindDat$distTo >= 0 & WindDat$distTo < 10,], aes(x = RelHead)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
   theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
@@ -1158,9 +1221,9 @@ Thirty40 <- ggplot(WindDat[WindDat$distTo >= 30 & WindDat$distTo < 40,], aes(x =
   theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
         family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
 
-png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/0-40km20182019.png", width = 700, height = 700)
+# png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/0-40km20182019.png", width = 700, height = 700)
 ggarrange(Zero10,Ten20,Twenty30,Thirty40,ncol=2,nrow=2,labels=c("0-10km","10-20km","20-30km","30-40km"))
-dev.off()
+# dev.off()
 
 AllTraj <- allTraj
 AllTraj$relH[AllTraj$relH < -pi] <- AllTraj$relH[AllTraj$relH < -pi] + 2*pi
@@ -1198,6 +1261,11 @@ TrNine10<- ggplot(AllTraj[AllTraj$distTo < 10*10^3 & AllTraj$distTo >= 9*10^3 & 
 # png("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/1-5km.png",width=800,height=800)
 ggarrange(TrLess1,TrOne2,TrTwo3,TrThree4,TrFour5,TrFive6, ncol=3,nrow=2, labels=c("<1km","1-2km","2-3km","3-4km","4-5km","5-6km"))
 ggarrange(TrFour5,TrFive6,TrSix7,TrSeven8,TrEight9,TrNine10, ncol=3,nrow=2, labels=c("5-4km","5-6km","6-7km","7-8km","8-9km","9-10km"))
+
+ggplot(AllTraj[AllTraj$distTo < 6*10^3 & AllTraj$distTo >= 5*10^3 & AllTraj$rtChg < 0,], aes(x = trjHd)) + geom_histogram(bins=50) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
+  theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
+
 
 # ggplot(AllTraj[AllTraj$distTo > 5 & AllTraj$distTo < 100,], aes(x = relH)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2)
 TrZero10 <- ggplot(AllTraj[AllTraj$distTo >= 0 & AllTraj$distTo < 10,], aes(x = relH)) + geom_histogram(bins=100) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
@@ -1377,7 +1445,8 @@ library(circular)
 
 circlm <- lm.circular(WindDat$RelHead, WindDat$distTo, type=c("c-l"),)
 
-circglm <- circGLM(RelHead ~ distTo, data = WindDat)
+circglm <- circGLM(RelHead ~ distTo + nxtForDur, data = WindDat[WindDat$distTo < 20,])
+circglm2 <- circGLM(RelHead ~ distTo, data = WindDat[WindDat$distTo < 20,])
 
 hist(WindDat$distTo)
 dat <- generateCircGLMData()
