@@ -181,7 +181,11 @@ for(b in 1:length(ListD)){
   }
   outTraj[[b]] <- data.frame(DT = sel$DT[UDsts$strtInd], aveHd = aveHead, trjHd = trajHead, trjSpd = trajSpd, lat = sel$Lat[UDsts$strtInd], lon = sel$Lon[UDsts$strtInd], timeTo = sel$tToFor[UDsts$strtInd], distTo = sel$dToFor[UDsts$strtInd], rtChg = sel$rtChg[UDsts$strtInd])
 }
+ind=205
+plot(sel$Lon[which(sel$DT==UDsts$start[ind]):which(sel$DT==UDsts$end[ind])],sel$Lat[which(sel$DT==UDsts$start[ind]):which(sel$DT==UDsts$end[ind])],type='l')
+points(trajs$lon,trajs$lat)
 
+plot(trajs$lon,trajs$lat)
 for(b in 1:length(outTraj)){
   sel <- ListD[[b]]
   sel <- sel[which(sel$spTrav > 15),]
@@ -1523,14 +1527,11 @@ disp2 <- vector(mode="list",length=length(forSt))
 disp3 <- vector(mode="list",length=length(forSt))
 forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
 for(b in 1:length(forSt)){
-  disp1[[b]] <-  tryCatch({
-    TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    disp1[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
     }, error = function(e){c(NA)})
-  disp2[[b]] tryCatch({
-    TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    disp2[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
     }, error = function(e){c(NA)})
-    disp3[[b]] <-  tryCatch({
-    TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    disp3[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
     }, error = function(e){c(NA)})
 }
 disp[[start]]$DispModel %>% dispersion_plot()
@@ -1587,3 +1588,22 @@ if(Sys.info()['sysname'] == "Darwin"){
 ncFiles <- list.files(netcdLoc, pattern = "*.hdf")
 
   time <- format(allD$DT[forSt[start]] - lubridate::hours(3) - lubridate::hours(9), "%Y-%m-%d %H:%M")
+
+
+trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = 43.45,
+    lon = -79.70,
+    height = 50,
+    duration = 6,
+    days = "2015-07-01",
+    daily_hours = c(0, 12),
+    direction = "forward",
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")
+    ) %>%
+  run_model()
+trajectory_tbl <- trajectory_model %>% get_output_tbl()
+trajectory_tbl %>% trajectory_plot()
