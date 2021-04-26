@@ -14,6 +14,15 @@ library(ggpubr)
 library(maptools)
 library(StreamMetabolism)
 library(RColorBrewer)
+library(reshape)
+library(circular)
+library(wGribDat)
+# devtools::install_github("keesmulder/circglmbayes")
+library(circglmbayes)
+library(lme4)
+library(ncdf4)
+install.packages("CircStats")
+library(CircStats)
 options(timeout = 800)
 # load in data 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -185,6 +194,13 @@ ind=205
 plot(sel$Lon[which(sel$DT==UDsts$start[ind]):which(sel$DT==UDsts$end[ind])],sel$Lat[which(sel$DT==UDsts$start[ind]):which(sel$DT==UDsts$end[ind])],type='l')
 points(trajs$lon,trajs$lat)
 
+ind<-100
+ggplot(ListD[[1]][UDsts$strtInd[ind]:UDsts$endInd[ind],], aes(x=Lon,y=Lat)) +
+  geom_path() +
+  geom_point(data = outTraj[[1]][ind,], aes(x = lon, y = lat))
+  geom_spoke(data = outTraj[[1]][ind,], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = scales::rescale(outTraj[[1]]$trjSpd[ind], c(.2, .8)))
+
 plot(trajs$lon,trajs$lat)
 for(b in 1:length(outTraj)){
   sel <- ListD[[b]]
@@ -214,12 +230,7 @@ if(Sys.info()['sysname'] == "Darwin"){
 }
 summary(outTraj)
 
-ind<-100
-ggplot(ListD[[1]][UDsts$strtInd[ind]:UDsts$endInd[ind],], aes(x=Lon,y=Lat)) +
-  geom_path() +
-  geom_point(data = outTraj[[1]][ind,], aes(x = lon, y = lat))
-  geom_spoke(data = outTraj[[1]][ind,], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
-  radius = scales::rescale(outTraj[[1]]$trjSpd[ind], c(.2, .8)))
+
 
 
 for(show in 1:length(outTraj)){
@@ -946,10 +957,6 @@ myFunc <- function(x) log(x)
 format(allD$DT, format ="%Y-%m-%d" & min(abs(allD$Lat - res[[2]]$lat)) & min(abs(allD$Lon - res[[2]]$lon))
 
 
-
-summary(res[[2]]$chlorophyll)
-
-
 days <- unique(res[[2]]$time)
 lapply(days, function(x) which(res[[2]]$chlorophyll[res[[2]]$time == x] == max(res[[2]]$chlorophyll[res[[2]]$time == x], na.rm = T)))
 res[[2]][39533,c(2,3)]
@@ -1019,25 +1026,33 @@ disp
 hist(disp$height)
 
 
-wGribDat <- read.delim("F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",")
+wGribDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",")
 wGribDat$DT <- as.POSIXct(wGribDat$DT, format="%Y-%m-%dT%H:%M:%S")
 wGribDat$trajHead <- NA
 wGribDat$trajSpd <- NA
 for(ind in 1:nrow(wGribDat)){
-  tryCatch({
-    trajs <- TrackTraj(wGribDat$DT[ind], wGribDat$Lat[ind], wGribDat$Lon[ind], 6)
-    }, error = function(e){cat("ERROR :", conditionMessage(e), "\n")})
-  tryCatch({
+  trajs <- tryCatch({TrackTraj(wGribDat$DT[ind], wGribDat$Lat[ind], wGribDat$Lon[ind], 6)
+    }, error = function(e){c(NA)})
+  if(!is.na(trajs)){
     trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
     trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
     trutmDiff <- cbind(diff(trCord.utm$coords.x2), diff(trCord.utm$coords.x1))
     wGribDat$trajHead[ind] <- atan2(mean(trutmDiff[,1]), mean(trutmDiff[,2]))
     wGribDat$trajSpd[ind] <- mean(sqrt(trutmDiff[,1]^2 + trutmDiff[,2]^2))/(length(trutmDiff[,1])*3600)
-  }, error = function(e){c(NA)})
+    } else {
+      wGribDat$trajHead[ind] <- NA
+      wGribDat$trajSpd[ind] <- NA
+    }
 }
 wGribDat$estHead <- atan2(wGribDat$Y,wGribDat$X)
-# install.packages("reshape")
-library(reshape)
+colnames(wGribDat)
+ggplot(wGribDat, aes(x = WindHead, y = trajHead)) + geom_point() + geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y))
+res<-cor.circular(wGribDat$estHead[!is.na(wGribDat$trajHead)], wGribDat$trajHead[!is.na(wGribDat$trajHead)], test = T)
+
+res<-cor.circular(wGribDat$WindHead[!is.na(wGribDat$trajHead)], wGribDat$trajHead[!is.na(wGribDat$trajHead)], test = T)
+
+res<-cor.circular(wGribDat$estHead, wGribDat$WindHead, test = T)
+
 mdata <- melt(wGribDat[,2:ncol(wGribDat)], id=c("WindHead"))
 png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/TrajEstcomparison.png", height = 800, width = 800)
 ggplot(mdata[mdata$variable == "trajHead" | mdata$variable == "estHead",], aes(x = WindHead, y = value)) +
@@ -1071,7 +1086,6 @@ for(b in 1:length(UDsts)){
 
 ggplot(UDsts[[1]]) +
   geom_segment(aes(x = ListD[[1]]$Lon[strtInd], y = ListD[[1]]$Lat[strtInd], xend = ListD[[1]]$Lon[endInd], yend = ListD[[1]]$Lat[endInd]))
-library(wGribDat)
 
 png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/TrackVTraj.png", width = 800, height = 900)
 ggplot(wGribDat, aes(x = estHead, y = trajHead)) +
@@ -1082,7 +1096,6 @@ ggplot(wGribDat, aes(x = estHead, y = trajHead)) +
         family = "Arial"), axis.text = element_text(size = 20, family = "Arial"))
 dev.off()
 
-library(circular)
 
 
 res<-cor.circular(wGribDat$WindHead, wGribDat$estHead, test = T)
@@ -1098,17 +1111,21 @@ summary(wGribDat)
 WindDat$trajHead <- NA
 WindDat$trajSpd <- NA
 for(ind in 1:nrow(WindDat)){
-  tryCatch({
-    trajs <- TrackTraj(WindDat$DT[ind], WindDat$Lat[ind], WindDat$Lon[ind], 6)
+  trajs <- tryCatch({TrackTraj(WindDat$DT[ind], WindDat$Lat[ind], WindDat$Lon[ind], 6)
     }, error = function(e){c(NA)})
-  tryCatch({
+  if(!is.na(trajs)){
     trCord.dec <- SpatialPoints(cbind(rev(trajs$lon), rev(trajs$lat)), proj4string=CRS("+proj=longlat"))
     trCord.utm <- spTransform(trCord.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
     trutmDiff <- cbind(diff(trCord.utm$coords.x2), diff(trCord.utm$coords.x1))
     WindDat$trajHead[ind] <- atan2(mean(trutmDiff[,1]), mean(trutmDiff[,2]))
     WindDat$trajSpd[ind] <- mean(sqrt(trutmDiff[,1]^2 + trutmDiff[,2]^2))/(length(trutmDiff[,1])*3600)
-  }, error = function(e){c(NA)})
+  } else {
+    WindDat$trajHead[ind] <- NA
+    WindDat$trajSpd[ind] <- NA
+  }
 }
+colnames(WindDat)
+ggplot(WindDat,aes(x=trajHead,y=WHd)) + geom_point()
 
 Less1<- ggplot(WindDat[WindDat$distTo < 1,], aes(x = RelHead)) + geom_histogram(bins=50,aes(fill = RelHead)) + coord_polar(start=-2*pi/2) + xlim(c(-pi,pi)) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2), labels=c("Head","Side","Tail","Side")) +
   theme_bw() + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
@@ -1374,10 +1391,6 @@ tst <- TrackTraj(WindDat$DT[a],WindDat$Lat[a],WindDat$Lon[a],6)
 colnames(WindDat)
 summary(WindDat)
 # or use Bayesian circular GLM package
-devtools::install_github("keesmulder/circglmbayes")
-library(circglmbayes)
-library(lme4)
-library(circular)
 
 circlm <- lm.circular(WindDat$RelHead, WindDat$distTo, type=c("c-l"),)
 
@@ -1426,7 +1439,6 @@ forEd <- which(diff(allD$forage) == -1)
 if(allD$forage[nrow(allD)] == 1){
   forEd <- c(forEd, nrow(allD))
 }
-allD$forage[forSt[1]:forEd[1]]
 
 TrackDisp <- function(DT, lat, lon, hrs){
   time <- format(DT - lubridate::hours(9), "%Y-%m-%d %H:%M")
@@ -1453,64 +1465,38 @@ TrackDisp <- function(DT, lat, lon, hrs){
   outpt <- list("DispModel" = dispersion_model,"partDisp" = dispersion_tbl, "partPoly" = hulls)
 }
 
-disp1 <- vector(mode="list",length=length(forSt))
-disp2 <- vector(mode="list",length=length(forSt))
-disp3 <- vector(mode="list",length=length(forSt))
-forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
-for(b in 1:length(forSt)){
-    disp1[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
-    disp2[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
-    disp3[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
+# disp1 <- vector(mode="list",length=length(forSt))
+# disp2 <- vector(mode="list",length=length(forSt))
+# disp3 <- vector(mode="list",length=length(forSt))
+# forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
+# for(b in 1:length(forSt)){
+#     disp1[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+#     }, error = function(e){c(NA)})
+#     disp2[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+#     }, error = function(e){c(NA)})
+#     disp3[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+#     }, error = function(e){c(NA)})
+# }
+# bring in dispersal data
+if(Sys.info()['sysname'] == "Darwin"){
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
+} else {
+    load("F:/UTokyoDrive/PhD/PhD/Data/splitr/ForageDisps.RData")
 }
-disp[[start]]$DispModel %>% dispersion_plot()
+summary(disp1[[1]])
+disp1[[1]]$partDisp
 
-summary(disp[[start]])
+for(b in 1:length(disp1)){
 
-dispersion_model <-
-  create_dispersion_model() %>%
-  add_source(
-    name = "particle",
-    lat = 39.38484, lon = 142.0118, height = 10,
-    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
-    release_start = lubridate::ymd_hm("2018-08-28 15:09") + lubridate::hours(3),
-    release_end = lubridate::ymd_hm("2018-08-28 15:09") + lubridate::hours(3) + lubridate::hours(2)
-  ) %>%
-  add_dispersion_params(
-    start_time = lubridate::ymd_hm("2018-08-28 15:09") + lubridate::hours(3),
-    end_time = lubridate::ymd_hm("2018-08-28 15:09") + lubridate::hours(3) + lubridate::hours(3), 
-    direction = "forward", 
-    met_type = "reanalysis",
-    met_dir = paste(exec_loc, "met", sep = ""),
-    exec_dir = paste(exec_loc, "exec", sep = "")
-  ) %>%
-    run_model()
+}
 
-dispersion_model <-
-  create_dispersion_model() %>%
-  add_source(
-    name = "particle",
-    lat = 49.0, lon = -123.0, height = 50,
-    rate = 5, pdiam = 15, density = 1.5, shape_factor = 0.8,
-    release_start = lubridate::ymd_hm("2015-07-01 00:00"),
-    release_end = lubridate::ymd_hm("2015-07-01 00:00") + lubridate::hours(2)
-  ) %>%
-  add_dispersion_params(
-    start_time = lubridate::ymd_hm("2015-07-01 00:00"),
-    end_time = lubridate::ymd_hm("2015-07-01 00:00") + lubridate::hours(6),
-    direction = "forward", 
-    met_type = "gdas1",
-    met_dir = paste(exec_loc, "met", sep = ""),
-    exec_dir = paste(exec_loc, "exec", sep = "")
-  ) %>%
-  run_model()
-
-
+tgYr <- allD[forSt,c("tagID","Year")]
+b=430
+ggplot() + 
+  geom_point(data=disp1[[b]]$partDisp, aes(x = lon, y = lat, colour = as.factor(hour))) +
+  geom_path(data=allD[allD$DT > (allD$DT[forSt[b]] - lubridate::minutes(60)) & allD$DT <= allD$DT[forSt[b]]& allD$tagID == tgYr$tagID[b] & allD$Year == tgYr$Year[b],], aes(x = lon, y = lat))
 
 # read in data from www.science.oregonstate.edu/ocean.productivity/standard.product.php
-library(ncdf4)
 if(Sys.info()['sysname'] == "Darwin"){
     netcdLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/Oceanographic/"
 } else {
@@ -1520,21 +1506,57 @@ ncFiles <- list.files(netcdLoc, pattern = "*.hdf")
 
   time <- format(allD$DT[forSt[start]] - lubridate::hours(3) - lubridate::hours(9), "%Y-%m-%d %H:%M")
 
+lengths<-seq(from=0,to=max(WindDat$distTo)-1, by = 1)
+lengthsL <- lengths+1 
+binDat <- data.frame(dist = lengthsL, aveHd = unlist(lapply(1:length(lengths), function(x) circ.mean(WindDat$RelHead[WindDat$distTo >= lengths[x] & WindDat$distTo < lengthsL[x]]))),
+  disp = unlist(lapply(1:length(lengths), function(x) circ.disp(WindDat$RelHead[WindDat$distTo >= lengths[x] & WindDat$distTo < lengthsL[x]])$var)))
 
-trajectory_model <-
-  create_trajectory_model() %>%
-  add_trajectory_params(
-    lat = 43.45,
-    lon = -79.70,
-    height = 50,
-    duration = 6,
-    days = "2015-07-01",
-    daily_hours = c(0, 12),
-    direction = "forward",
-    met_type = "reanalysis",
-    met_dir = paste(exec_loc, "met", sep = ""),
-    exec_dir = paste(exec_loc, "exec", sep = "")
-    ) %>%
-  run_model()
-trajectory_tbl <- trajectory_model %>% get_output_tbl()
-trajectory_tbl %>% trajectory_plot()
+binDat <- binDat[!is.na(binDat$disp),]
+ggplot(binDat, aes(x = dist, y = disp)) + geom_line() + geom_vline(xintercept=10, linetype="dotted")
+wGribDat$EHead <- atan2(wGribDat$X, wGribDat$Y)
+wGribDat$WindHead <- atan2(wGribDat$U, wGribDat$V)
+circ.cor(wGribDat$EHead, wGribDat$WindHead, test=T)
+plot(wGribDat$EHead,wGribDat$WindHead)
+lines(-3:3,-3:3)
+# RAYLEIGH TEST OF UNIFORMITY (FROM VON MISES DIST)
+# calculate means and find prob of uniformity
+circ.mean(WindDat$RelHead[WindDat$distTo < 10])
+r.test(WindDat$RelHead[WindDat$distTo < 10])
+r.test(WindDat$RelHead[WindDat$distTo < 1])
+
+circ.mean(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20])
+r.test(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20])
+circ.mean(WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30])
+circ.mean(WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40])
+
+circ.mean(na.omit(allTraj$relH[allTraj$distTo < 10*10^3]))
+circ.mean(na.omit(allTraj$relH[allTraj$distTo < 10*10^3]))
+r.test(na.omit(allTraj$relH[allTraj$distTo < 10*10^3]))
+
+allTraj$relH[allTraj$relH < -pi] <- allTraj$relH[allTraj$relH < -pi] + 2*pi
+allTraj$relH[allTraj$relH > pi] <- allTraj$relH[allTraj$relH > pi] - 2*pi
+ggplot(allTraj[allTraj$distTo < 10*10^3,], aes(x = relH, y = distTo)) + 
+ geom_point() + coord_polar()
+
+
+# MODIFIED RAYLEIGHT TEST - TEST IF DISTRIBUTION MEAN IS WHAT IS EXPECTED
+
+# HODGES-AJNE TEST FOR UNIFORMITY - ALTERNATIVE TO RAYLEIGHS W/OUT ASSUME SAMPLING FROM SPECIFIC DISTRIBUTION
+
+# WILCOXON SIGNED-RANK - TEST SYMMETRY AROUND MEDIAN
+
+# WATSON-WILLIAMS TWO-SAMPLE TEST - TEST IF 2 DISTS ARE DISTINCT (CAN BE EXTENDED TO MULTI-SAMPLE)
+# OR WATSON TEST (FOR NON-UNIMODAL DATA)
+# ALSO WHEELER-WATSON
+watson.two(WindDat$RelHead[WindDat$distTo < 1], WindDat$RelHead[WindDat$distTo >= 1 & WindDat$distTo < 2])
+watson.two(WindDat$RelHead[WindDat$distTo >= 1 & WindDat$distTo < 2], WindDat$RelHead[WindDat$distTo >= 2 & WindDat$distTo < 3])
+watson.two(WindDat$RelHead[WindDat$distTo < 1], WindDat$RelHead[WindDat$distTo >= 4 & WindDat$distTo < 5]) 
+
+watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20])
+watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30])
+watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40])
+watson.two(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20], WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30])
+watson.two(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20], WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40])
+
+
+# MANN-WHITNEY TEST FOR ANGULAR DISPERSION
