@@ -21,7 +21,8 @@ library(wGribDat)
 library(circglmbayes)
 library(lme4)
 library(ncdf4)
-# install.packages("Cairo")
+# install.packages("gdalUtils")
+library(gdalUtils)
 library(CircStats)
 library(Cairo)
 options(timeout = 800)
@@ -1578,7 +1579,11 @@ if(Sys.info()['sysname'] == "Darwin"){
     netcdLoc <- "F:/UTokyoDrive/PhD/Data/Oceanographic"
 }
 ncFiles <- list.files(netcdLoc, pattern = "*.hdf")
-list.files(netcdLoc)[grepl(pattern="*.hdf",list.files(netcdLoc))]
+mcFiles <- ncFiles[!grepl(pattern="*.hdf.gz",list.files(netcdLoc))]
+filename <- '/Volumes/GoogleDrive/My Drive/PhD/Data/Oceanographic/test.tif'
+gdal_translate(ncFiles[1], dst_dataset = filename)
+# Load the Geotiff created into R
+r <- raster(filename)
 
   time <- format(allD$DT[forSt[start]] - lubridate::hours(3) - lubridate::hours(9), "%Y-%m-%d %H:%M")
 
