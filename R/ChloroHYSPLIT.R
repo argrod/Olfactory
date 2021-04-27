@@ -21,8 +21,9 @@ library(wGribDat)
 library(circglmbayes)
 library(lme4)
 library(ncdf4)
-install.packages("CircStats")
+# install.packages("Cairo")
 library(CircStats)
+library(Cairo)
 options(timeout = 800)
 # load in data 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -1555,7 +1556,7 @@ TrackDisp <- function(DT, lat, lon, hrs){
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/PhD/Data/splitr/ForageDisps.RData")
+    load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
 }
 summary(disp1[[1]])
 disp1[[1]]$partDisp
@@ -1574,9 +1575,10 @@ ggplot() +
 if(Sys.info()['sysname'] == "Darwin"){
     netcdLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/Oceanographic/"
 } else {
-    netcdLoc <- "F:/UTokyoDrive/PhD/Data/Data/Oceanographic"
+    netcdLoc <- "F:/UTokyoDrive/PhD/Data/Oceanographic"
 }
 ncFiles <- list.files(netcdLoc, pattern = "*.hdf")
+list.files(netcdLoc)[grepl(pattern="*.hdf",list.files(netcdLoc))]
 
   time <- format(allD$DT[forSt[start]] - lubridate::hours(3) - lubridate::hours(9), "%Y-%m-%d %H:%M")
 
@@ -1595,6 +1597,7 @@ lines(-3:3,-3:3)
 # RAYLEIGH TEST OF UNIFORMITY (FROM VON MISES DIST)
 # calculate means and find prob of uniformity
 circ.mean(WindDat$RelHead[WindDat$distTo < 10])
+rose.diag(WindDat$RelHead[WindDat$distTo < 10],50,prop=3)
 r.test(WindDat$RelHead[WindDat$distTo < 10])
 r.test(WindDat$RelHead[WindDat$distTo < 1])
 
