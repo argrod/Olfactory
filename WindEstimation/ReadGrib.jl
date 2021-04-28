@@ -41,7 +41,7 @@ function gribCond(dt, h, md)
     min = Dates.minute(dt)
     iszero(hr%h) && (min > 60 - md || min < md)
 end
-sel = filter(:DT => x -> gribCond(x, 3, 4), EDat)
+sel = filter(:DT => x -> gribCond(x, 3, 50), EDat)
 ##
 function gribGen(dt)
     yr = string(Dates.year(dt))
