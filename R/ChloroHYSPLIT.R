@@ -849,6 +849,17 @@ WindDat19$RelHead[WindDat19$RelHead > pi] <- WindDat19$RelHead[WindDat19$RelHead
 
 # combine '18, '19 data
 WindDat<-rbind(WindDat,WindDat19)
+WindDat$distFromFk <- NA
+WindDat$rtChg <- NA
+totalDat <- bind_rows(ListD)
+for(b in 1:nrow(WindDat)){
+  WindDat$distFromFk[b] <- totalDat$distFromFk[which(totalDat$DT > WindDat$DT[b] - lubridate::minutes(1) & totalDat$DT < WindDat$DT[b] + lubridate::minutes(1) & totalDat$Lat == WindDat$Lat[b] & totalDat$Lon == WindDat$Lon[b])]
+  WindDat$rtChg[b] <- totalDat$rtChg[which(totalDat$DT > WindDat$DT[b] - lubridate::minutes(1) & totalDat$DT < WindDat$DT[b] + lubridate::minutes(1) & totalDat$Lat == WindDat$Lat[b] & totalDat$Lon == WindDat$Lon[b])]
+}
+WindDat$yrID <- NA
+for(b in 1:nrow(WindDat)){
+  WindDat$yrID[b] <- paste(totalDat$tagID[which(totalDat$DT > WindDat$DT[b] - lubridate::minutes(1) & totalDat$DT < WindDat$DT[b] + lubridate::minutes(1) & totalDat$Lat == WindDat$Lat[b] & totalDat$Lon == WindDat$Lon[b])], format(totalDat$DT[which(totalDat$DT > WindDat$DT[b] - lubridate::minutes(1) & totalDat$DT < WindDat$DT[b] + lubridate::minutes(1) & totalDat$Lat == WindDat$Lat[b] & totalDat$Lon == WindDat$Lon[b])],format="%Y"),sep="")
+}
 # save(WindDat,file="F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
 # LOAD WIND DATA
 if(Sys.info()['sysname'] == "Darwin"){
@@ -1562,11 +1573,10 @@ if(Sys.info()['sysname'] == "Darwin"){
 summary(disp1[[1]])
 disp1[[1]]$partDisp
 
+tgYr <- allD[forSt,c("tagID","Year")]
 for(b in 1:length(disp1)){
-
 }
 
-tgYr <- allD[forSt,c("tagID","Year")]
 b=430
 ggplot() + 
   geom_point(data=disp1[[b]]$partDisp, aes(x = lon, y = lat, colour = as.factor(hour))) +
@@ -1631,14 +1641,27 @@ ggplot(allTraj[allTraj$distTo < 10*10^3,], aes(x = relH, y = distTo)) +
 # OR WATSON TEST (FOR NON-UNIMODAL DATA)
 # ALSO WHEELER-WATSON
 watson.two(WindDat$RelHead[WindDat$distTo < 1], WindDat$RelHead[WindDat$distTo >= 1 & WindDat$distTo < 2])
+watson.wheeler.test(WindDat$RelHead[WindDat$distTo < 2], group = WindDat$distTo[WindDat$distTo < 2] < 1)
+watson.wheeler.test(list(WindDat$RelHead[WindDat$distTo < 1], WindDat$RelHead[WindDat$distTo >= 1 & WindDat$distTo < 2]))
 watson.two(WindDat$RelHead[WindDat$distTo >= 1 & WindDat$distTo < 2], WindDat$RelHead[WindDat$distTo >= 2 & WindDat$distTo < 3])
 watson.two(WindDat$RelHead[WindDat$distTo < 1], WindDat$RelHead[WindDat$distTo >= 4 & WindDat$distTo < 5]) 
 
 watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20])
 watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30])
-watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40])
+watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40],plot=T)
 watson.two(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20], WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30])
 watson.two(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20], WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40])
 
 
+
+
+watson.wheeler.test(list(WindDat$RelHead[WindDat$distTo < 1], WindDat$RelHead[WindDat$distTo >= 1 & WindDat$distTo < 2]))
+watson.wheeler.test(list(WindDat$RelHead[WindDat$distTo < 1], WindDat$RelHead[WindDat$distTo >= 2 & WindDat$distTo < 3]))
+watson.wheeler.test(list(WindDat$RelHead[WindDat$distTo < 1], WindDat$RelHead[WindDat$distTo >= 3 & WindDat$distTo < 4]))
+
+
+
+tst <- watson.wheeler.test(list(WindDat$RelHead[WindDat$distTo < 4 & WindDat$distTo >= 3], WindDat$RelHead[WindDat$distTo >= 4 & WindDat$distTo < 5]))[[4]]
+summary(tst)
+tst[[4]]
 # MANN-WHITNEY TEST FOR ANGULAR DISPERSION
