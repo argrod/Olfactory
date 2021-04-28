@@ -23,10 +23,25 @@ for b = 1:length(EFiles)
         EDat = vcat(EDat, Add)
     end
 end
+# repeat for 2019
+estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
+# estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/2018/"
+cd(estLoc)
+EFiles = readdir(estLoc)
+EFiles = EFiles[contains.(EFiles,".csv")]
+EDat19 = []
+for b = 1:length(EFiles)
+    if b == 1
+        EDat19 = CSV.File(string(estLoc,EFiles[b]), header = false) |> DataFrame
+    else Add19 = CSV.File(string(estLoc,EFiles[b]), header = false) |> DataFrame
+        EDat19 = vcat(EDat19, Add19)
+    end
+end
+EDat = vcat(EDat,EDat19)
 
 ## FORMAT DATA INTO UTM, FIND XY AND WIND HEADING
 # rename!(EDat, [:DT,:Head,:X,:Y,:Lat,:Lon])
-rename!(EDat, [:DT,:Lat,:Lon,:Head,:X,:Y])
+rename!(EDat, [:DT,:Lat,:Lon,:Head,:X,:Y]) 
 df = dateformat"y-m-d H:M:S"
 EDat.DT = DateTime.(EDat.DT, df)
 Ll = LLA.(EDat.Lat,EDat.Lon)
@@ -41,7 +56,7 @@ function gribCond(dt, h, md)
     min = Dates.minute(dt)
     iszero(hr%h) && (min > 60 - md || min < md)
 end
-sel = filter(:DT => x -> gribCond(x, 3, 50), EDat)
+sel = filter(:DT => x -> gribCond(x, 3, 5), EDat)
 ##
 function gribGen(dt)
     yr = string(Dates.year(dt))
@@ -68,7 +83,7 @@ end
 # sel.GLat = roundF.(sel.Lat, .05)
 # sel.GLon = roundF.(sel.Lon, .0625)
 ##
-WLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/gribs/"
+WLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
 cd(WLoc)
 @rput gribsels
 function gribT(dt)
@@ -143,7 +158,7 @@ function gribSelect(dt, lat, lon)
     VWind = @NamedTuple{lon, lat, value}(data(xtractVWind00(gribob)))
     nrlon = unique(UWind.lon[(abs.(UWind.lon .- roundF(lon,0.0625)) .== min(abs.(UWind.lon .- roundF(lon,0.0625))...))])
     nrlat = unique(UWind.lat[(abs.(UWind.lat .- roundF(lat,0.05)) .== min(abs.(UWind.lat .- roundF(lat,0.05))...))])
-    return UWind.value[@. (UWind.lon .== nrlon) & (UWind.lat .== nrlat)]..., VWind.value[@. (UWind.lon .== nrlon) & (UWind.lat .== nrlat)]...
+    return UWind.value[@. (UWind.lon .== nrlon) & (UWind.lat .== nrlat)]..., VWind.value[@. (UWind.lon .== nrlon) & (UWind.lat .== nrlat)]..., nrlat, nrlon
 end
 ##
 gribD = gribSelect.(sel.DT, sel.Lat, sel.Lon)
@@ -156,7 +171,7 @@ sel.EHead = atan.(sel.X,sel.Y)
 # plot(sqrt.(sel.X.^2 + sel.Y.^2), sqrt.(sel.U.^2 + sel.V.^2), seriestype = :scatter)
 sel.ESpd = sqrt.(sel.X.^2 + sel.Y.^2)
 sel.WSpd = sqrt.(sel.U.^2 + sel.V.^2)
-CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sel)
+CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/gribSelected5min.csv", sel)
 ##
 @rput sel
 R"""
