@@ -152,10 +152,18 @@ end
 function birdWindow(tPoints)
     iso = EDat[(tPoints - Minute(25)) .< EDat.DT .< (tPoints + Minute(25)),:]
     isol = filter(:DT => x -> gribCond(x, 3, 25), iso)
-    aveWind(isol.X,isol.Y)
+    aveWHd = aveWind(isol.X,isol.Y)
     # iso = EDat[(tPoints[b] - Minute(50)) .< EDat.DT .< (tPoints[b] + Minute(50)),:]
     # isol = filter(:DT => x -> gribCond(x, 3, 50), iso)
     # gribAve.(isol.DT, isol.Lon,isol.Lat)
+    return aveWHd
+end
+##
+function birdWSpeed(tPoints)
+    iso = EDat[(tPoints - Minute(25)) .< EDat.DT .< (tPoints + Minute(25)),:]
+    isol = filter(:DT => x -> gribCond(x, 3, 25), iso)
+    aveSpd = sqrt(mean(isol.X)^2 + mean(isol.Y)^2)
+    return aveSpd
 end
 # ## 
 # function WindVal(t, lat, lon)
@@ -250,11 +258,13 @@ EFilesAll = vcat(EFiles,EFiles19)
 for g = 1:length(EFilesAll)
     if g > length(EFiles)
         cd(estLoc19)
+        # read in and format data
+        EDat = CSV.File(string(estLoc19,EFilesAll[g]), header = false) |> DataFrame
     else
         cd(estLoc)
+        # read in and format data
+        EDat = CSV.File(string(estLoc,EFilesAll[g]), header = false) |> DataFrame
     end
-    # read in and format data
-    EDat = CSV.File(string(estLoc,EFilesAll[g]), header = false) |> DataFrame
     EDat.ID = fill("18"*EFilesAll[g][1:end-4],nrow(EDat))
     rename!(EDat, [:DT,:Lat,:Lon,:Head,:X,:Y,:ID]) 
     df = dateformat"y-m-d H:M:S"
@@ -274,16 +284,14 @@ for g = 1:length(EFilesAll)
         aveSpds[tPoint] = sqrt(mean(U)^2 + mean(V)^2)
     end
     if g == 1
-        outPt = hcat(t, aveHeds, aveSpds, birdWindow.(t),fill(EFilesAll[g][1:(end-4)],length(t))) |> DataFrame
-        rename!(outPt, [:Time,:gribHead,:gribSpeed,:estHead,:tagID])
+        outPt = hcat(t, aveHeds, aveSpds, birdWindow.(t),birdWSpeed.(t),fill(EFilesAll[g][1:(end-4)],length(t))) |> DataFrame
+        rename!(outPt, [:Time,:gribHead,:gribSpeed,:estHead,:estSpeed,:tagID])
     else
-        add = hcat(t, aveHeds, aveSpds, birdWindow.(t),fill(EFilesAll[g][1:(end-4)],length(t))) |> DataFrame
-        rename!(add, [:Time,:gribHead,:gribSpeed,:estHead,:tagID])
+        add = hcat(t, aveHeds, aveSpds, birdWindow.(t),birdWSpeed.(t),fill(EFilesAll[g][1:(end-4)],length(t))) |> DataFrame
+        rename!(add, [:Time,:gribHead,:gribSpeed,:estHead,:estSpeed,:tagID])
         outPt = vcat(outPt, add)
     end
 end
-
-
 
 gribD = gribSelect.(sel.DT, sel.Lat, sel.Lon)
 ##
@@ -295,18 +303,19 @@ sel.EHead = atan.(sel.X,sel.Y)
 # plot(sqrt.(sel.X.^2 + sel.Y.^2), sqrt.(sel.U.^2 + sel.V.^2), seriestype = :scatter)
 sel.ESpd = sqrt.(sel.X.^2 + sel.Y.^2)
 sel.WSpd = sqrt.(sel.U.^2 + sel.V.^2)
-CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/gribSelected.csv", sel)
+CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/gribSelectedProper.csv", outPt)
 ##
-@rput sel
+@rput outPt
 R"""
-# library(circular)
+library(circular)
 library(ggplot2)
-res<-cor.circular(sel$WindHead, sel$EHead, test = T)
+res<-cor.circular(outPt$estHead,outPt$gribHead, test = T)
+res
 # res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
-ggplot(sel, aes(x = WindHead, y = EHead)) +
+ggplot(outPt, aes(x = EHead, y = gribHead)) +
     geom_point() #+
     # geom_line(aes(x=-3:3,y=-3:3))
-# res
+res
 # spres <- circular::cor.test(sel$ESpd, sel$WSpd)
 """
 ## 
@@ -316,3 +325,9 @@ plot(sel.WindHead, sel.EHead, seriestype = scatter)
 
 plot(sel.WindHead,sel.Head, seriestype = scatter)
 plot(sel.ESpd,sel.WSpd, seriestype = scatter)
+
+plot(outPt.estHead,outPt.gribHead,seriestype=scatter)
+plot!(-3:3,-3:3)
+
+plot(outPt.gribSpeed,outPt.estSpeed,seriestype=scatter)
+plot!(0:15,0:15)
