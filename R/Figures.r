@@ -21,10 +21,11 @@ library(wGribDat)
 library(circglmbayes)
 library(lme4)
 library(ncdf4)
-# install.packages("CircStats")
+# install.packages("CircMLE")
 library(CircStats)
 library(Cairo)
 library(extrafont)
+library(CircMLE)
 options(timeout = 800)
 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -95,12 +96,13 @@ allTraj$relH <- allTraj$aveHd - allTraj$trjHd
 
 # figure locations
 if(Sys.info()['sysname'] == "Darwin"){
-  # figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
-  figLoc <- "/Documents/GitHub/PhD/Olfactory/"
+  figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
+  # figLoc <- "/Documents/GitHub/PhD/Olfactory/"
 } else {
-  # figLoc <- "F:/UTokyoDrive/PhD/Figures/Olfactory/"
-  figLoc <- "F:/Documents/GitHub/PhD/Olfactory/"
+  figLoc <- "F:/UTokyoDrive/PhD/Figures/Olfactory/"
+  # figLoc <- "F:/Documents/GitHub/PhD/Olfactory/"
 }
+WindDat$WSpd <- sqrt(WindDat$X^2 + WindDat$Y^2)
 
 # LESS THAN 10KM
 ggplot(WindDat[WindDat$distTo < 10,]) + 
@@ -111,7 +113,7 @@ ggplot(WindDat[WindDat$distTo < 10,]) +
         family = "Arial"), axis.text = element_text(size = 12, family = "Arial"))
 
 one2Ten <- vector(mode="list",length=5)
-distGaps <- seq(0,50,10)
+distGaps <- seq(0,40,10)
 distGapsL <- distGaps+10
 signif.ceiling <- function(x, n){
   pow <- floor( log10( abs(x) ) ) + 1 - n
@@ -122,10 +124,12 @@ signif.ceiling <- function(x, n){
 }
 for(b in 1:length(distGaps)){
     RaylT <- r.test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
-    if(RaylT$p.value > 0.05){
+    tst<-HR_test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
+    # if(RaylT$p.value > 0.05){
+    if(tst[2] > 0.05){
         one2Ten[[b]] <- ggplot(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],]) + 
           geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
-          coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Side","Tail"), limits = c(-pi,pi)) + 
+          coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
           theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
               family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
           labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p > 0.05", sep = ""))
@@ -133,7 +137,7 @@ for(b in 1:length(distGaps)){
         roseplt <- ggplot(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],]) + 
             geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
             # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]), linetype = 1, colour = "red") +
-            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Side","Tail"), limits = c(-pi,pi)) + 
+            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
             theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
         one2Ten[[b]] <- roseplt + geom_segment(x = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]),
@@ -145,10 +149,89 @@ for(b in 1:length(distGaps)){
     }
     # Cairo(width=8, height = 8, file = paste(figLoc,"RelHead",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
     print(one2Ten[[b]])
+    ggsave(paste(figLoc,"RelHeadHermansRasson",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
+      width = 3, units = "in")
+}
+(watson.wheeler.test(WindDat$RelHead[WindDat$distTo < 10], group = WindDat$yrID[WindDat$distTo < 10]))
+relNos <- WindDat[WindDat$distTo < 10 & WindDat$distTo > 2,] %>% group_by(yrID) %>% dplyr::summarise(n=n())
+watson.wheeler.test(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID %in% relNos$yrID[relNos$n > 10]],
+  group = WindDat$yrID[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID %in% relNos$yrID[relNos$n > 10]])
+
+indivPlots = vector(mode="list",length=length(relNos$yrID[relNos$n > 10]))
+for(b in 1:length(relNos$yrID[relNos$n > 10])){
+  RaylT <- r.test(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID == relNos$yrID[relNos$n > 10][b]])
+    if(RaylT$p.value > 0.05){
+        indivPlots[[b]] <- ggplot(WindDat[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID == relNos$yrID[relNos$n > 10][b],]) + 
+          geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+          coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+          theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+              family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+          labs(title = as.character(relNos$yrID[relNos$n > 10][b]))
+    } else {
+        roseplt <- ggplot(WindDat[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID == relNos$yrID[relNos$n > 10][b],]) + 
+            geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+            # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]), linetype = 1, colour = "red") +
+            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+            theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+        indivPlots[[b]] <- roseplt + geom_segment(x = circ.mean(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID == relNos$yrID[relNos$n > 10][b]]),
+          xend = circ.mean(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID == relNos$yrID[relNos$n > 10][b]]),
+          y = 0, yend = max(ggplot_build(roseplt)$data[[1]]$count)*RaylT$r.bar, colour = "#fd8d3c", lineend="round",
+          arrow = arrow(length = unit(.25, "cm"))) +
+          labs(title = as.character(relNos$yrID[relNos$n > 10][b]))
+  }
+}
+indivHeads <- vector(mode="list",length=length(relNos$yrID[relNos$n > 10]))
+for(b in 1:length(indivHeads)){
+  RaylT <- r.test(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID == relNos$yrID[relNos$n > 10][b]])
+    if(RaylT$p.value < 0.05){
+      indivHeads[[b]] = cbind(circ.mean(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID == relNos$yrID[relNos$n > 10][b]]),
+        RaylT$r.bar, relNos$yrID[relNos$n > 10][b])
+    }
+}
+indivHeads[sapply(indivHeads, is.null)] <- NULL
+indivHeads <- data.frame(matrix(unlist(indivHeads), nrow=length(indivHeads), byrow=TRUE))
+colnames(indivHeads) <- c("AveHead","Rbar","yrID")
+ggplot(indivHeads) +
+  geom_segment(aes(x = as.numeric(AveHead), xend=as.numeric(AveHead),y=0,yend=as.numeric(Rbar),colour=yrID), lineend="round",
+          arrow = arrow(length = unit(.25, "cm"))) + coord_polar(start = pi)+ 
+  scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + scale_y_continuous(name=expression(bar(r))) +
+  theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA),
+    text = element_text(size = 10,
+    family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+ggsave(paste(figLoc,"RelHead",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
+      width = 3, units = "in")
+
+
+length(indivPlots)
+ggarrange(indivPlots[[1]],indivPlots[[2]],indivPlots[[3]],indivPlots[[4]])
+ggarrange(indivPlots[[5]],indivPlots[[6]],indivPlots[[7]],indivPlots[[8]])
+ggarrange(indivPlots[[9]],indivPlots[[10]],indivPlots[[11]],indivPlots[[12]],indivPlots[[13]])
+
+for(b in 1:length(distGaps)){
+    RaylT <- r.test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
+    roseplt <- ggplot(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],]) + 
+        geom_point(aes(x = RelHead, y = WSpd)) + scale_y_continuous(name = "Count") +
+        coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+        theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+            family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+    one2Ten[[b]] <- roseplt + geom_segment(x = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]),
+      xend = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]),
+      y = 0, yend = max(ggplot_build(roseplt)$data[[1]]$count)*RaylT$r.bar, colour = "#fd8d3c", lineend="round",
+      arrow = arrow(length = unit(.25, "cm"))) +
+      labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p < ",as.character(signif.ceiling(RaylT$p.value,3)),sep=""))
+    print(one2Ten[[b]])
     ggsave(paste(figLoc,"RelHead",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".eps",sep=""), device="eps", dpi = 300, height = 3.5,
       width = 3, units = "in")
 }
 
+ggplot(WindDat[WindDat$distTo < 10,]) + 
+        geom_point(aes(x = RelHead, y = WSpd)) + scale_y_continuous(name = "Wind speed (m/s)") +
+        coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+        theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+            family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+ggsave(paste(figLoc,"Less10Spd.svg",sep=""), device="svg", dpi = 300, height = 5,
+      width = 5, units = "in")
 
 ggplot(WindDat[WindDat$rtChg < 0,]) + 
   geom_histogram(aes(x = RelHead), colour = "black", bins = 100, fill = "#d9d9d9") + scale_y_continuous(name = "Count") + coord_polar() +
@@ -178,8 +261,8 @@ rose.diag(WindDat$RelHead[WindDat$distTo < 10],50,prop=3)
 r.test(WindDat$RelHead[WindDat$distTo < 10])
 r.test(WindDat$RelHead[WindDat$distTo < 1])
 
-circ.mean(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20])
-r.test(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20])
+circ.mean(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 20])
+r.test(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 20])
 circ.mean(WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30])
 circ.mean(WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40])
 
@@ -207,8 +290,8 @@ watson.two(WindDat$RelHead[WindDat$distTo >= 1 & WindDat$distTo < 2], WindDat$Re
 watson.two(WindDat$RelHead[WindDat$distTo >= 2 & WindDat$distTo < 3], WindDat$RelHead[WindDat$distTo >= 3 & WindDat$distTo < 4],plot=T,alpha=0.05)
 watson.two(WindDat$RelHead[WindDat$distTo >= 2 & WindDat$distTo < 3], WindDat$RelHead[WindDat$distTo >= 4 & WindDat$distTo < 5],plot=T,alpha=0.05)
 
-watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20],plot=T,alpha=0.05)
-watson.two(WindDat$RelHead[WindDat$distTo >= 10 & WindDat$distTo < 20], WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30],plot=T,alpha=0.05)
+watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 20],plot=T,alpha=0.05)
+watson.two(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 20], WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30],plot=T,alpha=0.05)
 watson.two(WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30], WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40],plot=T,alpha=0.05)
 
 
@@ -262,11 +345,12 @@ for(b in 1:length(dispDistPlots)){
   dispDistPlots[[b]]$yrID <- rep(indivWinds[b], nrow(dispDistPlots[[b]]))
 }
 allDispDist <- bind_rows(dispDistPlots)
-ggplot(allDispDist[allDispDist$dist < 40,], aes(x = dist, y = disp, colour = yrID)) + geom_point() + geom_vline(xintercept=10, linetype="dotted") +
+ggplot(allDispDist[allDispDist$dist < 40,], aes(x = dist, y = disp, fill = yrID)) + geom_line() + geom_area(alpha=.2) + geom_vline(xintercept=10, linetype="dashed") +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
             family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_x_continuous(name="Distance to next foraging (km)") +
-    scale_y_continuous(name = "Angular dispersal")
-
+    scale_y_continuous(name = "Angular dispersal") + scale_colour_discrete(name = "Tag ID and year")
+ggsave(paste(figLoc,"DispersalOverDistIndivs.svg",sep=""), device="svg", dpi = 300, height = 4,
+      width = 6, units = "in")
 
 
 breaks<-seq(from=0,to=round_any(max(WindDat$distTo),10,f=ceiling),by=10)
@@ -298,3 +382,48 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     scale_x_continuous(labels = c("140", "141", "142", "143", "144"), name = paste("Longitude (","\u00b0E",")", sep = ""))
 ggsave(paste(figLoc,"ExampleWind.svg",sep=""), device="svg", dpi = 300, height = 5,
       width = 5, units = "in")
+
+# RELATIVE HEADINGS AS BIRDS LEAVE COLONY
+one2Ten <- vector(mode="list",length=10)
+distGaps <- seq(0,450,50)
+distGapsL <- distGaps+50
+for(b in 1:length(distGaps)){
+    RaylT <- r.test(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]])
+    # tst<-HR_test(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]])
+    if(RaylT$p.value > 0.05){
+    # if(tst[2] > 0.05){
+        one2Ten[[b]] <- ggplot(WindDat[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b],]) + 
+          geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+          coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+          theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+              family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+          labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p > 0.05", sep = ""))
+    } else {
+        roseplt <- ggplot(WindDat[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b],]) + 
+            geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+            # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]]), linetype = 1, colour = "red") +
+            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+            theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+        one2Ten[[b]] <- roseplt + geom_segment(x = circ.mean(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]]),
+          xend = circ.mean(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]]),
+          y = 0, yend = max(ggplot_build(roseplt)$data[[1]]$count)*RaylT$r.bar, colour = "#fd8d3c", lineend="round",
+          arrow = arrow(length = unit(.25, "cm"))) +
+          labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p < ",as.character(signif.ceiling(RaylT$p.value,3)),sep=""))
+        # + geom_label(aes(x = pi/4, y = max(ggplot_build(roseplt)$data[[1]]$count)), label = paste("p value = ",as.character(signif(RaylT$p.value, 3)), sep = ""))
+    }
+    # Cairo(width=8, height = 8, file = paste(figLoc,"RelHead",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
+    print(one2Ten[[b]])
+    ggsave(paste(figLoc,"RelHeadLeaving",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
+      width = 3, units = "in")
+}
+
+allList <- bind_rows(ListD)
+allList$levRet <- c(allList$levRet[!is.na(allList$levRet)],allList$levRet19[!is.na(allList$levRet19)])
+WindDat$levRet <- NA
+WindDat$tripL <- NA
+for(b in 1:nrow(WindDat)){
+  ind=which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])
+  WindDat$levRet[b] <- allList$levRet[ind]
+  WindDat$tripL[b] <- allList$tripL[ind]
+}
