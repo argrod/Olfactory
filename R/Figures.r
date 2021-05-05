@@ -20,7 +20,7 @@ library(wGribDat)
 # devtools::install_github("keesmulder/circglmbayes")
 library(circglmbayes)
 library(lme4)
-library(ncdf4)
+# library(ncdf4)
 # install.packages("CircMLE")
 library(CircStats)
 library(Cairo)
@@ -195,13 +195,13 @@ indivHeads <- data.frame(matrix(unlist(indivHeads), nrow=length(indivHeads), byr
 colnames(indivHeads) <- c("AveHead","Rbar","yrID")
 ggplot(indivHeads) +
   geom_segment(aes(x = as.numeric(AveHead), xend=as.numeric(AveHead),y=0,yend=as.numeric(Rbar),colour=yrID), lineend="round",
-          arrow = arrow(length = unit(.25, "cm"))) + coord_polar(start = pi)+ 
+          arrow = arrow(length = unit(.25, "cm")), size=1.5) + coord_polar(start = pi)+ 
   scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + scale_y_continuous(name=expression(bar(r))) +
   theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA),
-    text = element_text(size = 10,
-    family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
-ggsave(paste(figLoc,"RelHead",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
-      width = 3, units = "in")
+    text = element_text(size = 12,
+    family = "Arial"), axis.text = element_text(size = 12, family = "Arial")) + scale_colour_discrete(name="Tag ID")
+ggsave(paste(figLoc,"RelHeadIndivs.svg",sep=""), device="svg", dpi = 300, height = 10,
+      width = 10, units = "in")
 
 
 length(indivPlots)
@@ -442,9 +442,8 @@ allList$levRet <- c(allList$levRet[!is.na(allList$levRet)],allList$levRet19[!is.
 WindDat$levRet <- NA
 WindDat$tripL <- NA
 for(b in 1:nrow(WindDat)){
-  ind=which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])
-  WindDat$levRet[b] <- allList$levRet[ind]
-  WindDat$tripL[b] <- allList$tripL[ind]
+  WindDat$levRet[b] <- allList$levRet[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
+  WindDat$tripL[b] <- allList$tripL[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
 }
 
 
