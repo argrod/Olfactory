@@ -26,6 +26,7 @@ library(CircStats)
 library(Cairo)
 library(extrafont)
 library(CircMLE)
+library(ggspatial)
 options(timeout = 800)
 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -370,7 +371,7 @@ ggsave(paste(figLoc,"DistRelDensity.eps",sep=""), device="eps", dpi = 300, heigh
 
 WindDat$WSpd <- sqrt(WindDat$X^2 + WindDat$Y^2)
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-    coord_sf(xlim = c(140, 144), ylim = c(39, 42.5)) + geom_path(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],], aes(x = lon, y = lat)) +
+    coord_sf(xlim = c(140, 144), ylim = c(39, 42.5)) + geom_path(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],], aes(x = lon, y = lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1,], aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
   geom_spoke(data = WindDat[WindDat$yrID == indivWinds[6],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")),
   radius = .5*(WindDat$WSpd[WindDat$yrID == indivWinds[6]]/max(WindDat$WSpd[WindDat$yrID == indivWinds[6]]))) +
   scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
@@ -382,6 +383,24 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     scale_x_continuous(labels = c("140", "141", "142", "143", "144"), name = paste("Longitude (","\u00b0E",")", sep = ""))
 ggsave(paste(figLoc,"ExampleWind.svg",sep=""), device="svg", dpi = 300, height = 5,
       width = 5, units = "in")
+
+a=8
+sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a],]
+ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    coord_sf(xlim = c(141, 145), ylim = c(39, 43)) + geom_path(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a],], aes(x = lon, y = lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$forage == 1,], aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
+  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[a],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = .5*(WindDat$WSpd[WindDat$yrID == indivWinds[a]]/max(WindDat$WSpd[WindDat$yrID == indivWinds[a]]))) +
+  geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,300)],xend=sbst$lon[seq(2,nrow(sbst),300)],
+    y=sbst$lat[seq(1,nrow(sbst)-1,300)],yend=sbst$lat[seq(2,nrow(sbst),300)]),arrow = arrow(length = unit(0.1,"inches"))) +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 8,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+    annotation_scale(location = 'br') 
++
+    scale_y_continuous(breaks = c(39,40,41,42), labels = c("39","40","41","42"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
+    scale_x_continuous(labels = c("140", "141", "142", "143", "144"), name = paste("Longitude (","\u00b0E",")", sep = ""))
+
 
 # RELATIVE HEADINGS AS BIRDS LEAVE COLONY
 one2Ten <- vector(mode="list",length=10)
@@ -427,3 +446,48 @@ for(b in 1:nrow(WindDat)){
   WindDat$levRet[b] <- allList$levRet[ind]
   WindDat$tripL[b] <- allList$tripL[ind]
 }
+
+
+allTraj <- bind_rows(outTraj)
+allTraj$distTo <- allTraj$distTo*10^-3
+allTraj$relH <- allTraj$aveHd - allTraj$trjHd
+allTraj$relH[allTraj$relH < pi] = allTraj$relH[allTraj$relH < pi] + 2*pi
+allTraj$relH[allTraj$relH > pi] = allTraj$relH[allTraj$relH > pi] - 2*pi
+allTraj <- na.omit(allTraj)
+one2TenTr <- vector(mode="list",length=5)
+distGaps <- seq(0,8,2)
+distGapsL <- distGaps+2
+for(b in 1:length(distGaps)){
+    RaylT <- r.test(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]])
+    # tst<-HR_test(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]])
+    if(RaylT$p.value > 0.05){
+    # if(tst[2] > 0.05){
+        one2TenTr[[b]] <- ggplot(allTraj[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b],]) + 
+          geom_histogram(aes(x = relH), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+          coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+          theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+              family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+          labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p > 0.05", sep = ""))
+    } else {
+        roseplt <- ggplot(allTraj[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b],]) + 
+            geom_histogram(aes(x = relH), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+            # geom_vline(xintercept = circ.mean(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]]), linetype = 1, colour = "red") +
+            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+            theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+        one2TenTr[[b]] <- roseplt + geom_segment(x = circ.mean(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]]),
+          xend = circ.mean(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]]),
+          y = 0, yend = max(ggplot_build(roseplt)$data[[1]]$count)*RaylT$r.bar, colour = "#fd8d3c", lineend="round",
+          arrow = arrow(length = unit(.25, "cm"))) +
+          labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p < ",as.character(signif.ceiling(RaylT$p.value,3)),sep=""))
+        # + geom_label(aes(x = pi/4, y = max(ggplot_build(roseplt)$data[[1]]$count)), label = paste("p value = ",as.character(signif(RaylT$p.value, 3)), sep = ""))
+    }
+    # Cairo(width=8, height = 8, file = paste(figLoc,"relH",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
+    # print(one2Ten[[b]])
+    # ggsave(paste(figLoc,"relHHermansRasson",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
+    #   width = 3, units = "in")
+}
+one2TenTr[[4]]
+
+ggplot(allTraj, aes(x = relH, y = distTo)) + geom_point() + coord_polar()
+
