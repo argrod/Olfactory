@@ -1,3 +1,4 @@
+# remotes::install_github("ropensci/rerddap")
 library(rerddap)
 library(splitr)
 library(dplyr)
@@ -20,8 +21,11 @@ library(wGribDat)
 # devtools::install_github("keesmulder/circglmbayes")
 library(circglmbayes)
 library(lme4)
-library(ncdf4)
+require(devtools)
+# install_version("ncdf4", version = "1.16", repos = "http://cran.us.r-project.org")
+# library(ncdf4)
 # install.packages("gdalUtils")
+# devtools::install_github("mdsumner/ncdf4")
 library(gdalUtils)
 library(CircStats)
 library(Cairo)
@@ -1665,3 +1669,99 @@ tst <- watson.wheeler.test(list(WindDat$RelHead[WindDat$distTo < 4 & WindDat$dis
 summary(tst)
 tst[[4]]
 # MANN-WHITNEY TEST FOR ANGULAR DISPERSION
+
+
+# GENERATE KDE
+################################################################################
+############################ FORAGING BEHAVIOUR KDE ############################
+################################################################################
+colnames(ForDat)
+colnames(ForDat19)
+ForAll <- data.frame(DT = c(ForDat$DT, ForDat19$DT),
+    Lat = c(ForDat[,2], ForDat19[,2]),
+    Lon = c(ForDat[,3], ForDat19[,3]),
+    tkb = c(ForDat[,4], ForDat19[,4]),
+    dv = c(ForDat[,5], ForDat19[,5]),
+    tagID = c(ForDat[,6], ForDat19[,6]),
+    year = c(rep("2018", nrow(ForDat)), rep("2019", nrow(ForDat19))),
+    levret = c(ForDat$levRet, ForDat19$levRet19),
+    sex = c(ForDat$Sex, ForDat19$Sex),
+    fBeh = c(ForDat$fBeh, ForDat19$fBeh),
+    tripL = c(ForDat$tripL, ForDat19$tripL))
+
+# create a SpatialPoints dataframe
+spFD <- SpatialPointsDataFrame(cbind(ForAll$Lon,ForAll$Lat),proj4string=CRS('+proj=longlat'), data = ForAll[,c(1, 4:ncol(ForAll))])
+# convert to UTM
+UTMDat <- spTransform(spFD, CRS("+proj=utm +zone=54 +datum=WGS84"))
+# split by year
+spFD18 <- SpatialPointsDataFrame(cbind(ForDat$Lon,ForDat$Lat),proj4string=CRS('+proj=longlat'), data = ForDat[,c(1, 4:ncol(ForDat))])
+UTMDat18 <- spTransform(spFD18, CRS("+proj=utm +zone=54 +datum=WGS84"))
+spFD19 <-SpatialPointsDataFrame(cbind(ForDat19$Lon,ForDat19$Lat),proj4string=CRS('+proj=longlat'), data = ForDat19[,c(1, 4:ncol(ForDat19))])
+UTMDat19 <- spTransform(spFD19, CRS("+proj=utm +zone=54 +datum=WGS84"))
+
+# LDE based on sex (split by year)
+#2018
+sud18 <- kernelUD(UTMDat18[,18], h = 30*10^3)
+image(sud18)
+sud18.names <- names(sud18)
+ud18 <- lapply(sud18, function(x) lapply(c(25,50,75,95), function(y) try(getverticeshr(x, y))))
+sapply(1:length(ud18), function(i) {
+    row.names(ud18[[i]]) <<- sud18.names[i]
+})
+sudF_poly18 <- Reduce(rbind,ud18[[1]])
+# transform back to longlat
+sudF_pLonLat18 <- spTransform(sudF_poly18, CRS("+proj=longlat +datum=WGS84"))
+plot(sudF_poly18)
+plot(sudF_pLonLat18)
+sudM_poly18 <- Reduce(rbind,ud18[[2]])
+sudM_pLonLat18 <- spTransform(sudM_poly18, CRS("+proj=longlat +datum=WGS84"))
+plot(sudM_poly18)
+sudFdf18 <- fortify(sudF_pLonLat18)
+sudMdf18 <- fortify(sudM_pLonLat18)
+
+# test for each foraging trip
+# extract 8 day values across foraging trip dates
+
+range(D18$DT)
+for(g in 1:length(days)){
+  isol = ListD[[1]][format(ListD[[1]]$DT,"%Y-%m-%d") == days[g],]
+}
+xcoord <- c(min(D18$Lon), max(D18$Lon))
+ycoord <- c(min(D18$Lat), max(D18$Lat))
+trange <- format(range(D18$DT),"%Y-%m-%d")
+
+format(range(D18$DT),"%Y-%m-%d")
+ext <- griddap('erdMBchla8day',
+    time = trange, latitude = ycoord, longitude = xcoord)
+chlorDat <- ext[[2]]
+chlorMn <- aggregate(chlorDat, by = list(chlorDat$lat,chlorDat$lon,chlorDat$chlorophyll), FUN = mean,na.action=na.omit)
+chlorMn <- aggregate(chlorDat, by = list(chlorDat$lat, chlorDat$lon), FUN =mean,na.action=na.omit)
+
+chlorMn <- chlorDat %>% dplyr::group_by(lat,lon) %>% dplyr::summarise(mean=mean(chlorophyll,na.rm=T))
+
+ggplot(chlorMn,aes(x = lon,y=lat,fill=log(mean))) +
+  geom_raster(interpolate = F) +
+  scale_fill_gradientn(colours = mycolor, na.value = NA) +
+  theme_bw() + ylab("latitude") + xlab("longitude")
+
+chlorSp <- SpatialPointsDataFrame(cbind(chlorMn$lon,chlorMn$lat), chlorMn, proj4string=CRS("+proj=longlat"))
+D18sp <- SpatialPoints(cbind(D18$Lon, D18$Lat), proj4string=CRS("+proj=longlat"))
+chlorMn
+
+
+rerddap::info('erdMBchla8day')
+mycolor <- colors$temperature
+
+over(D18sp, ext)
+
+ggplot(data = ext$data, aes(x = lon, y = lat, fill = log(chlorophyll))) +
+    geom_raster(interpolate = FALSE) +
+    scale_fill_gradientn(colours = mycolor, na.value = NA) +
+    theme_bw() + ylab("latitude") + xlab("longitude")
+
+dataInfo <- rerddap::info("erdMWchla1day")
+
+unique(ext$lat)
+ext[2]$lat
+as.data.frame(ext)
+ext[[2]]
