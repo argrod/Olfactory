@@ -346,9 +346,8 @@ for(b in 1:length(dispDistPlots)){
   dispDistPlots[[b]]$yrID <- rep(indivWinds[b], nrow(dispDistPlots[[b]]))
 }
 allDispDist <- bind_rows(dispDistPlots)
-ggplot(allDispDist[allDispDist$dist < 40,], aes(x = dist, y = disp, fill = yrID)) + geom_line() + geom_area(alpha=.2) + geom_vline(xintercept=10, linetype="dashed") +
-    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
-            family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_x_continuous(name="Distance to next foraging (km)") +
+ggplot(allDispDist[allDispDist$dist < 10,], aes(x = dist, y = disp, colour = yrID)) + geom_line() +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + scale_x_continuous(name="Distance to next foraging (km)") +
     scale_y_continuous(name = "Angular dispersal") + scale_colour_discrete(name = "Tag ID and year")
 ggsave(paste(figLoc,"DispersalOverDistIndivs.svg",sep=""), device="svg", dpi = 300, height = 4,
       width = 6, units = "in")
@@ -490,3 +489,11 @@ one2TenTr[[4]]
 
 ggplot(allTraj, aes(x = relH, y = distTo)) + geom_point() + coord_polar()
 
+ggplot(WindDat[WindDat$distTo < 0,]) + 
+            geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+            # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]), linetype = 1, colour = "red") +
+            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading (degrees)", breaks = c(seq(-pi+pi/4,pi,pi/4)), labels = as.character(seq(-pi+pi/4,pi,pi/4)*(180/pi)), limits = c(-pi,pi)) + 
+            theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+ggsave(paste(figLoc,"EmptyWindPlot.svg",sep=""), device="svg", dpi = 300, height = 3.5,
+      width = 3, units = "in")

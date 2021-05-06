@@ -1758,6 +1758,7 @@ D18ChlorLoc$chlorophyll <- NA
 for(b in 1:nrow(D18ChlorLoc)){
   D18ChlorLoc$chlorophyll[b] <- chlorMn$mean[chlorMn$lat == D18ChlorLoc$latSeq[b] & chlorMn$lon == D18ChlorLoc$lonSeq[b]]
 }
+which(chlorMn$lat == D18ChlorLoc$latSeq[b] & chlorMn$lon == D18ChlorLoc$lonSeq[b])
 
 chlorMn$lat[D18ChlorLoc$latSeq[b],roll='nearest']
 
