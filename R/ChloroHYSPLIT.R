@@ -1726,18 +1726,15 @@ range(D18$DT)
 for(g in 1:length(days)){
   isol = ListD[[1]][format(ListD[[1]]$DT,"%Y-%m-%d") == days[g],]
 }
-xcoord <- c(min(D18$Lon), max(D18$Lon))
-ycoord <- c(min(D18$Lat), max(D18$Lat))
+xcoord <- c(round(min(D18$Lon)/0.025)*0.025, round(max(D18$Lon)/0.025)*0.025)
+ycoord <- c(round(min(D18$Lat)/0.025)*0.025, round(max(D18$Lat)/0.025)*0.025)
 trange <- format(range(D18$DT),"%Y-%m-%d")
 
-format(range(D18$DT),"%Y-%m-%d")
 ext <- griddap('erdMBchla8day',
     time = trange, latitude = ycoord, longitude = xcoord)
 chlorDat <- ext[[2]]
-chlorMn <- aggregate(chlorDat, by = list(chlorDat$lat,chlorDat$lon,chlorDat$chlorophyll), FUN = mean,na.action=na.omit)
-chlorMn <- aggregate(chlorDat, by = list(chlorDat$lat, chlorDat$lon), FUN =mean,na.action=na.omit)
-
 chlorMn <- chlorDat %>% dplyr::group_by(lat,lon) %>% dplyr::summarise(mean=mean(chlorophyll,na.rm=T))
+mycolor <- colors$temperature
 
 ggplot(chlorMn,aes(x = lon,y=lat,fill=log(mean))) +
   geom_raster(interpolate = F) +
@@ -1746,11 +1743,23 @@ ggplot(chlorMn,aes(x = lon,y=lat,fill=log(mean))) +
 
 chlorSp <- SpatialPointsDataFrame(cbind(chlorMn$lon,chlorMn$lat), chlorMn, proj4string=CRS("+proj=longlat"))
 D18sp <- SpatialPoints(cbind(D18$Lon, D18$Lat), proj4string=CRS("+proj=longlat"))
-chlorMn
-
-
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+round(D18$Lat[1]/0.025)*0.025
 rerddap::info('erdMBchla8day')
-mycolor <- colors$temperature
+
+library(data.table)
+D18ChlorLoc <- D18[c("Lat","Lon","Forage","Sex","tripL")]
+D18ChlorLoc$latSeq <- round(D18ChlorLoc$Lat/0.025)*0.025
+D18ChlorLoc$lonSeq <- round(D18ChlorLoc$Lon/0.025)*0.025
+D18ChlorLoc$chlorophyll <- NA
+for(b in 1:nrow(D18ChlorLoc)){
+  D18ChlorLoc$chlorophyll[b] <- chlorMn$mean[chlorMn$lat == D18ChlorLoc$latSeq[b] & chlorMn$lon == D18ChlorLoc$lonSeq[b]]
+}
+
+chlorMn$lat[D18ChlorLoc$latSeq[b],roll='nearest']
 
 over(D18sp, ext)
 
