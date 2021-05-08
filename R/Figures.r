@@ -27,6 +27,7 @@ library(Cairo)
 library(extrafont)
 library(CircMLE)
 library(ggspatial)
+library(png)
 options(timeout = 800)
 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -55,7 +56,12 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     UTMN = c(D18$UTMN, D19$UTMN))
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
+# allD$forBeh <- NA
+# allD$forBeh[allD$dv == 1] <- "Dive"
+# allD$forBeh[allD$tkb == 1] <- "Surf"
 japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
+# distances <- allD %>% filter(forage==1) %>% group_by(tagID, forBeh, Year) %>% dplyr::summarise(mxdist=median(distFk))
+# distances %>% group_by(forBeh,Year) %>% dplyr::summarise(mean(mxdist))
 # FORAGING SPOT DISPERSALS
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
@@ -492,8 +498,36 @@ ggplot(allTraj, aes(x = relH, y = distTo)) + geom_point() + coord_polar()
 ggplot(WindDat[WindDat$distTo < 0,]) + 
             geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
             # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]), linetype = 1, colour = "red") +
-            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading (degrees)", breaks = c(seq(-pi+pi/4,pi,pi/4)), labels = as.character(seq(-pi+pi/4,pi,pi/4)*(180/pi)), limits = c(-pi,pi)) + 
+            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading (degrees)", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
             theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
 ggsave(paste(figLoc,"EmptyWindPlot.svg",sep=""), device="svg", dpi = 300, height = 3.5,
       width = 3, units = "in")
+
+
+# calculate proportion of wind estimates vs gps durations
+# tagYrs <- unique(WindDat$yrID)
+# sumsts <- NA
+# for(g in 1:length(ListD)){
+#   sel <- WindDat[WindDat$yrID==tagYrs[g],]
+#   # check if correct tag and year
+#   if(paste(ListD[[g]]$tagID[1],format(ListD[[g]]$DT[1],"%Y"),sep="") == tagYrs[g]){
+#     timepoint<-ListD[[g]]$DT
+#     tsel <- seq(ListD[[g]]$DT[1], ListD[[g]]$DT[nrow(ListD[[g]])], by = 60)
+#     dtFull <- as.numeric(difftime(ListD[[g]]$DT[2:nrow(ListD[[g]])],ListD[[g]]$DT[1:(nrow(ListD[[g]])-1)],units="secs"))
+#     # find data that line up to the new timepoints
+#     select <- NA
+#     for(b in 1:length(tsel)){
+#         choose <- which(timepoint >= (tsel[b] - (median(dtFull)/2)) & timepoint <= (tsel[b] + (median(dtFull)/2)))
+#         if(length(choose) != 0){
+#             if(length(choose) > 1){
+#                 select[b] <- choose[which.min(abs(tsel[b] - timepoint[choose]))]
+#             } else {
+#                 select[b] <- choose
+#             }
+#         }
+#     }
+#     timeSel <- timepoint[na.omit(select)]
+#     sumsts[g] <- sum(sel$DT %in% timeSel)/length(timeSel)
+#   }
+# }
