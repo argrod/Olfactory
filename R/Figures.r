@@ -113,9 +113,9 @@ ggplot(WindDat[WindDat$distTo < 10,]) +
     theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
         family = "Arial"), axis.text = element_text(size = 12, family = "Arial"))
 
-one2Ten <- vector(mode="list",length=5)
-distGaps <- seq(0,40,10)
-distGapsL <- distGaps+10
+one2Ten <- NA
+distGaps <- seq(0,9,1)
+distGapsL <- distGaps+1
 signif.ceiling <- function(x, n){
   pow <- floor( log10( abs(x) ) ) + 1 - n
   y <- ceiling(x / 10 ^ pow) * 10^pow
@@ -128,12 +128,12 @@ for(b in 1:length(distGaps)){
     tst<-HR_test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
     # if(RaylT$p.value > 0.05){
     if(tst[2] > 0.05){
-        one2Ten[[b]] <- ggplot(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],]) + 
-          geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
-          coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
-          theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
-              family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
-          labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p > 0.05", sep = ""))
+        # one2Ten[[b]] <- ggplot(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],]) + 
+        #   geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+        #   coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+        #   theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        #       family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+        #   labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p > 0.05", sep = ""))
     } else {
         roseplt <- ggplot(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],]) + 
             geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
@@ -141,18 +141,26 @@ for(b in 1:length(distGaps)){
             coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
             theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
-        one2Ten[[b]] <- roseplt + geom_segment(x = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]),
-          xend = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]),
-          y = 0, yend = max(ggplot_build(roseplt)$data[[1]]$count)*RaylT$r.bar, colour = "#fd8d3c", lineend="round",
-          arrow = arrow(length = unit(.25, "cm"))) +
-          labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p < ",as.character(signif.ceiling(RaylT$p.value,3)),sep=""))
-        # + geom_label(aes(x = pi/4, y = max(ggplot_build(roseplt)$data[[1]]$count)), label = paste("p value = ",as.character(signif(RaylT$p.value, 3)), sep = ""))
+        one2Ten[[b]] <- circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
+        # <- roseplt + geom_segment(x = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]),
+        #   xend = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]),
+        #   y = 0, yend = max(ggplot_build(roseplt)$data[[1]]$count)*RaylT$r.bar, colour = "#fd8d3c", lineend="round",
+        #   arrow = arrow(length = unit(.25, "cm"))) +
+        #   labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p < ",as.character(signif.ceiling(RaylT$p.value,3)),sep=""))
+        # # + geom_label(aes(x = pi/4, y = max(ggplot_build(roseplt)$data[[1]]$count)), label = paste("p value = ",as.character(signif(RaylT$p.value, 3)), sep = ""))
     }
     # Cairo(width=8, height = 8, file = paste(figLoc,"RelHead",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
-    print(one2Ten[[b]])
-    ggsave(paste(figLoc,"RelHeadHermansRasson",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
-      width = 3, units = "in")
+    # print(one2Ten[[b]])
+    # ggsave(paste(figLoc,"RelHeadHermansRasson",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
+    #   width = 3, units = "in")
 }
+
+ggplot(data.frame(dist=distGaps,aveHd=one2Ten), aes(x = aveHd, y = distGaps)) + geom_point(pch=21, colour="black",fill="deepskyblue") +
+  coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+            theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + scale_y_continuous(name="Distance to next foraging (km)")
+ggsave(paste(figLoc,"0-10Aves.svg",sep=""), device="svg", dpi = 300, height = 5,
+      width = 5, units = "in")
 (watson.wheeler.test(WindDat$RelHead[WindDat$distTo < 10], group = WindDat$yrID[WindDat$distTo < 10]))
 relNos <- WindDat[WindDat$distTo < 10 & WindDat$distTo > 2,] %>% group_by(yrID) %>% dplyr::summarise(n=n())
 watson.wheeler.test(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 2 & WindDat$yrID %in% relNos$yrID[relNos$n > 10]],
@@ -298,25 +306,52 @@ watson.two(WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30], WindDat$
 
 
 lengths<-seq(from=0,to=max(WindDat$distTo)-1, by = 1)
-lengthsL <- lengths+1 
-binDat <- data.frame(dist = lengthsL, aveHd = unlist(lapply(1:length(lengths), function(x) circ.mean(WindDat$RelHead[WindDat$distTo >= lengths[x] & WindDat$distTo < lengthsL[x]]))),
-  disp = unlist(lapply(1:length(lengths), function(x) circ.disp(WindDat$RelHead[WindDat$distTo >= lengths[x] & WindDat$distTo < lengthsL[x]])$var)))
-binDat <- binDat[!is.na(binDat$disp),]
+lengthsL <- lengths+1
+WindDat$trip <- NA
+WindDat$trip[WindDat$tripL == 1] <- "Short"
+WindDat$trip[WindDat$tripL > 1] <- "Long"
+shrt <- WindDat[WindDat$trip == "Short",]
+lng <- WindDat[WindDat$trip == "Long",]
+shrtbinDat <- data.frame(dist = lengthsL, aveHd = unlist(lapply(1:length(lengths), function(x) circ.mean(shrt$RelHead[shrt$distTo >= lengths[x] & shrt$distTo < lengthsL[x]]))),
+  disp = unlist(lapply(1:length(lengths), function(x) circ.disp(shrt$RelHead[shrt$distTo >= lengths[x] & shrt$distTo < lengthsL[x]])$var)))
+shrtbinDat <- shrtbinDat[!is.na(shrtbinDat$disp),]
+lngbinDat <- data.frame(dist = lengthsL, aveHd = unlist(lapply(1:length(lengths), function(x) circ.mean(lng$RelHead[lng$distTo >= lengths[x] & lng$distTo < lengthsL[x]]))),
+  disp = unlist(lapply(1:length(lengths), function(x) circ.disp(lng$RelHead[lng$distTo >= lengths[x] & lng$distTo < lengthsL[x]])$var)))
+lngbinDat <- lngbinDat[!is.na(lngbinDat$disp),]
 
 # PLOT AVE HEADINGS IN 10KM BLOCKS AS THEY LEAVE FK ISLAND
 leavelengths<-seq(from=0,to=max(WindDat$distFromFk)-1, by = 1)
 leavelengthsL <- leavelengths+1
-leaving <- WindDat[WindDat$RtChg < 0,]
-leaveDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(WindDat$RelHead[WindDat$distFromFk >= leavelengths[x] & WindDat$distFromFk < leavelengthsL[x]]))),
-  disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(WindDat$RelHead[WindDat$distFromFk >= leavelengths[x] & WindDat$distFromFk < leavelengthsL[x]])$var)),
-  uniP = unlist(lapply(1:length(leavelengths), function(x) r.test(WindDat$RelHead[WindDat$distFromFk >= leavelengths[x] & WindDat$distFromFk < leavelengthsL[x]])$p.value)))
-leaveDat <- leaveDat[!is.na(leaveDat$disp),]
+leavingshrt <- WindDat[WindDat$rtChg < 0 & WindDat$trip == "Short",]
+leaveShrtDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[x] & leavingshrt$distFromFk < leavelengthsL[x]]))),
+  disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[x] & leavingshrt$distFromFk < leavelengthsL[x]])$var)),
+  uniP = unlist(lapply(1:length(leavelengths), function(x) r.test(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[x] & leavingshrt$distFromFk < leavelengthsL[x]])$p.value)))
+leaveShrtDat <- leaveShrtDat[!is.na(leaveShrtDat$disp),]
+leavinglng <- WindDat[WindDat$rtChg < 0 & WindDat$trip == "Long",]
+leaveLngDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[x] & leavinglng$distFromFk < leavelengthsL[x]]))),
+  disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[x] & leavinglng$distFromFk < leavelengthsL[x]])$var)),
+  uniP = unlist(lapply(1:length(leavelengths), function(x) r.test(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[x] & leavinglng$distFromFk < leavelengthsL[x]])$p.value)))
+leaveLngDat <- leaveLngDat[!is.na(leaveLngDat$disp),]
 
-ggplot(leaveDat[leaveDat$uniP < 0.05,], aes(x = aveHd, y = dist)) + geom_point() + coord_polar(start=pi) + scale_x_continuous(name="Average heading",breaks=c(-pi,-pi/2,0,pi/2),labels=c("Head","Side","Tail","Side"), limits=c(-pi,pi)) +
+ggplot() + geom_point(data=leaveShrtDat[leaveShrtDat$uniP < 0.05,], aes(x = aveHd, y = dist, fill = "red"), pch = 21) +
+  geom_point(data=leaveLngDat[leaveLngDat$uniP < 0.05,], aes(x = aveHd, y = dist, fill = "deepskyblue"), pch = 21) + 
+  coord_polar(start=pi) + scale_x_continuous(name="Average heading",breaks=c(-pi,-pi/2,0,pi/2),labels=c("Head","Side","Tail","Side"), limits=c(-pi,pi)) +
   scale_y_continuous(name="Distance from nest site (km)") + theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
-    family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
-ggsave(paste(figLoc,"LeavingHeadings.eps",sep=""), device="eps", dpi = 300, height = 4,
-      width = 4, units = "in")
+    family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+  scale_fill_manual(name = "Trip length",values=c("red","deepskyblue"),labels=c("Long (2+ days)","Short (1 day)"))
+ggsave(paste(figLoc,"LeavingHeadings.svg",sep=""), device="svg", dpi = 300, height = 6,
+      width = 6, units = "in")
+
+# ggplot(leaveDat[leaveDat$uniP < 0.05,], aes(x = aveHd, y = dist, fill = tripL > 1)) + geom_point(pch=21) + coord_polar(start=pi) + scale_x_continuous(name="Average heading",breaks=c(-pi,-pi/2,0,pi/2),labels=c("Head","Side","Tail","Side"), limits=c(-pi,pi)) +
+#   scale_y_continuous(name="Distance from nest site (km)") + theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+#     family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+# colnames(WindDat)
+# ggplot(WindDat[WindDat$rtChg < 0,], aes(x = RelHead, y=distFromFk,fill=trip)) + geom_point(pch=21,colour = 'black') + coord_polar(start=pi)
+# ggplot(WindDat[WindDat$rtChg < 0,], aes(x = RelHead, fill = trip)) + geom_histogram(colour='black',bins=50,alpha=.6) + coord_polar(start=pi) +
+#   scale_y_continuous(name="Count") + theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+#     family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
+# ggsave(paste(figLoc,"LeavingHeadings.eps",sep=""), device="eps", dpi = 300, height = 4,
+#       width = 4, units = "in")
 ggplot(leaveDat[leaveDat$uniP < 0.05,], aes(y = disp, x = dist)) + geom_point() + scale_x_continuous(name="Distance from nest site (km)") +
   scale_y_continuous(name="Angular dispersal") + theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
     family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
@@ -436,15 +471,15 @@ for(b in 1:length(distGaps)){
       width = 3, units = "in")
 }
 
-allList <- bind_rows(ListD)
-allList$levRet <- c(allList$levRet[!is.na(allList$levRet)],allList$levRet19[!is.na(allList$levRet19)])
-WindDat$levRet <- NA
-WindDat$tripL <- NA
-for(b in 1:nrow(WindDat)){
-  WindDat$levRet[b] <- allList$levRet[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
-  WindDat$tripL[b] <- allList$tripL[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
-}
-
+# allList <- bind_rows(ListD)
+# allList$levRet <- c(allList$levRet[!is.na(allList$levRet)],allList$levRet19[!is.na(allList$levRet19)])
+# WindDat$levRet <- NA
+# WindDat$tripL <- NA
+# for(b in 1:nrow(WindDat)){
+#   WindDat$levRet[b] <- allList$levRet[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
+#   WindDat$tripL[b] <- allList$tripL[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
+# }
+# save(WindDat,file="F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
 
 allTraj <- bind_rows(outTraj)
 allTraj$distTo <- allTraj$distTo*10^-3
@@ -492,8 +527,10 @@ ggplot(allTraj, aes(x = relH, y = distTo)) + geom_point() + coord_polar()
 ggplot(WindDat[WindDat$distTo < 0,]) + 
             geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
             # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]), linetype = 1, colour = "red") +
-            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading (degrees)", breaks = c(seq(-pi+pi/4,pi,pi/4)), labels = as.character(seq(-pi+pi/4,pi,pi/4)*(180/pi)), limits = c(-pi,pi)) + 
+            coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks =c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
             theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
 ggsave(paste(figLoc,"EmptyWindPlot.svg",sep=""), device="svg", dpi = 300, height = 3.5,
       width = 3, units = "in")
+
+allD %>% group_by(tagID,Sex,Year) %>% dplyr::summarise(max(distTrav))
