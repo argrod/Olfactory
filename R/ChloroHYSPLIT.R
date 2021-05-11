@@ -780,10 +780,10 @@ WindDat$timeTo <- NA
 WindDat$distTo <- NA
 allD$forage[is.na(allD$forage)] <- 0
 tags <- unique(WindDat$ID)
-for(b in 1:nrow(WindDat)){
-  if(any(allD$forage[allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y") & allD$DT > WindDat$DT[b]] == 1)){
-    point <- which(allD$lat == WindDat$Lat[b] & allD$lon == WindDat$Lon[b] & allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y"))
-    forInd <- min(which(allD$forage[point:max(which(allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y")))] == 1)) + point - 1
+for(b in 1:nrow(WindDat)){ # for each row in WindDat
+  if(any(allD$forage[allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y") & allD$DT > WindDat$DT[b]] == 1)){ # if there are any foraging points after timepoint
+    point <- which(allD$lat == WindDat$Lat[b] & allD$lon == WindDat$Lon[b] & allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y")) # find the timepoint of the next foraging points
+    forInd <- min(which(allD$forage[point:max(which(allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y")))] == 1)) + point - 1 # select the minimum (i.e. the next one)
     WindDat$timeTo[b] <- as.numeric(difftime(allD$DT[point+forInd],WindDat$DT[b], units="secs"))
     WindDat$distTo[b] <- sqrt((allD$UTMN[forInd] - allD$UTMN[point])^2 + (allD$UTME[forInd] - allD$UTME[point])^2)*10^-3
   }
@@ -1734,9 +1734,14 @@ ext <- griddap('erdMBchla8day',
     time = trange, latitude = ycoord, longitude = xcoord)
 chlorDat <- ext[[2]]
 chlorMn <- chlorDat %>% dplyr::group_by(lat,lon) %>% dplyr::summarise(mean=mean(chlorophyll,na.rm=T))
+ext19 <- griddap('erdMBchla8day',
+  time=format(range(D19$DT),"%Y-%m-%d"), latitude = c(round(min(D19$Lat)/0.025)*0.025, round(max(D19$Lat)/0.025)*0.025),
+  longitude=c(round(min(D19$Lon)/0.025)*0.025, round(max(D19$Lon)/0.025)*0.025))
+chlorDat19 <- ext19[[2]]
+chlorMn19 <- chlorDat19 %>% dplyr::group_by(lat,lon) %>% dplyr::summarise(mean=mean(chlorophyll,na.rm=T))
 mycolor <- colors$temperature
 
-ggplot(chlorMn,aes(x = lon,y=lat,fill=log(mean))) +
+ggplot(chlorMn19,aes(x = lon,y=lat,fill=log(mean))) +
   geom_raster(interpolate = F) +
   scale_fill_gradientn(colours = mycolor, na.value = NA) +
   theme_bw() + ylab("latitude") + xlab("longitude")
@@ -1756,22 +1761,27 @@ D18ChlorLoc$latSeq <- round(D18ChlorLoc$Lat/0.025)*0.025
 D18ChlorLoc$lonSeq <- round(D18ChlorLoc$Lon/0.025)*0.025
 D18ChlorLoc$chlorophyll <- NA
 for(b in 1:nrow(D18ChlorLoc)){
-  D18ChlorLoc$chlorophyll[b] <- chlorMn$mean[chlorMn$lat == D18ChlorLoc$latSeq[b] & chlorMn$lon == D18ChlorLoc$lonSeq[b]]
+  D18ChlorLoc$chlorophyll[b] <- chlorMn$mean[dplyr::near(chlorMn$lat,D18ChlorLoc$latSeq[b]) & dplyr::near(chlorMn$lon,D18ChlorLoc$lonSeq[b])]
 }
-which(chlorMn$lat == D18ChlorLoc$latSeq[b] & chlorMn$lon == D18ChlorLoc$lonSeq[b])
 
-chlorMn$lat[D18ChlorLoc$latSeq[b],roll='nearest']
+D19ChlorLoc <- D19[c("Lat","Lon","Forage","Sex","tripL")]
+D19ChlorLoc$latSeq <- round(D19ChlorLoc$Lat/0.025)*0.025
+D19ChlorLoc$lonSeq <- round(D19ChlorLoc$Lon/0.025)*0.025
+D19ChlorLoc$chlorophyll <- NA
+for(b in 1:nrow(D19ChlorLoc)){
+  D19ChlorLoc$chlorophyll[b] <- chlorMn19$mean[dplyr::near(chlorMn19$lat,D19ChlorLoc$latSeq[b]) & dplyr::near(chlorMn19$lon,D19ChlorLoc$lonSeq[b])]
+}
 
-over(D18sp, ext)
+ggplot(D18ChlorLoc) + geom_histogram(aes(x = log(chlorophyll), fill = as.factor(Forage)),position="dodge")
 
 ggplot(data = ext$data, aes(x = lon, y = lat, fill = log(chlorophyll))) +
     geom_raster(interpolate = FALSE) +
     scale_fill_gradientn(colours = mycolor, na.value = NA) +
-    theme_bw() + ylab("latitude") + xlab("longitude")
+    theme_bw() + ylab("latitude") + xlab("longitude") + 
+    geom_path(data = D18,aes(x = Lon,y=Lat))
 
 dataInfo <- rerddap::info("erdMWchla1day")
 
-unique(ext$lat)
-ext[2]$lat
-as.data.frame(ext)
-ext[[2]]
+
+## FIND DISTANCE FROM PRECEEDING FORAGING POINT
+summary(WindDat)

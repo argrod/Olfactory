@@ -309,7 +309,10 @@ watson.two(WindDat$RelHead[WindDat$distTo < 10], WindDat$RelHead[WindDat$distTo 
 watson.two(WindDat$RelHead[WindDat$distTo < 10 & WindDat$distTo > 20], WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30],plot=T,alpha=0.05)
 watson.two(WindDat$RelHead[WindDat$distTo >= 20 & WindDat$distTo < 30], WindDat$RelHead[WindDat$distTo >= 30 & WindDat$distTo < 40],plot=T,alpha=0.05)
 
-
+ggplot(ListD[[6]]) + 
+  geom_path(aes(x = Lon, y = Lat)) + geom_point(data=ListD[[6]][ListD[[6]]$Forage == 1,],aes(x=Lon,y=Lat), pch = 21, fill = "red") +
+  geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    coord_sf(xlim = c(140, 144), ylim = c(39, 42.5))
 
 lengths<-seq(from=0,to=max(WindDat$distTo)-1, by = 1)
 lengthsL <- lengths+1
@@ -338,6 +341,11 @@ leaveLngDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(le
   disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[x] & leavinglng$distFromFk < leavelengthsL[x]])$var)),
   uniP = unlist(lapply(1:length(leavelengths), function(x) r.test(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[x] & leavinglng$distFromFk < leavelengthsL[x]])$p.value)))
 leaveLngDat <- leaveLngDat[!is.na(leaveLngDat$disp),]
+# leaving <- WindDat[WindDat$rtChg < 0 ,]
+# leaveDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leaving$RelHead[leaving$distFromFk >= leavelengths[x] & leaving$distFromFk < leavelengthsL[x]]))),
+#   disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leaving$RelHead[leaving$distFromFk >= leavelengths[x] & leaving$distFromFk < leavelengthsL[x]])$var)),
+#   uniP = unlist(lapply(1:length(leavelengths), function(x) r.test(leaving$RelHead[leaving$distFromFk >= leavelengths[x] & leaving$distFromFk < leavelengthsL[x]])$p.value)))
+# leaveDat <- leaveDat[!is.na(leaveDat$disp),]
 
 ggplot() + geom_point(data=leaveShrtDat[leaveShrtDat$uniP < 0.05,], aes(x = aveHd, y = dist, fill = "red"), pch = 21) +
   geom_point(data=leaveLngDat[leaveLngDat$uniP < 0.05,], aes(x = aveHd, y = dist, fill = "deepskyblue"), pch = 21) + 
@@ -347,6 +355,8 @@ ggplot() + geom_point(data=leaveShrtDat[leaveShrtDat$uniP < 0.05,], aes(x = aveH
   scale_fill_manual(name = "Trip length",values=c("red","deepskyblue"),labels=c("Long (2+ days)","Short (1 day)"))
 ggsave(paste(figLoc,"LeavingHeadings.svg",sep=""), device="svg", dpi = 300, height = 6,
       width = 6, units = "in")
+
+ggplot() + geom_point(data = leaveLngDat[leaveLngDat$uniP < 0.05,], aes(x = dist, y= uniP))
 
 # ggplot(leaveDat[leaveDat$uniP < 0.05,], aes(x = aveHd, y = dist, fill = tripL > 1)) + geom_point(pch=21) + coord_polar(start=pi) + scale_x_continuous(name="Average heading",breaks=c(-pi,-pi/2,0,pi/2),labels=c("Head","Side","Tail","Side"), limits=c(-pi,pi)) +
 #   scale_y_continuous(name="Distance from nest site (km)") + theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
@@ -400,29 +410,74 @@ WindDat$bin10 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = aligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")
-  geom_density(alpha=.2,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), geom="line",position="identity") +# coord_polar(start=pi) +
-  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("Density") + theme_bw() + theme(panel.grid = element_blank()) +
+  geom_density(alpha=.2,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), size=1.5, geom="line",position="identity") +# coord_polar(start=pi) +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
-  scale_colour_manual(name="Distance to foraging (km)", values = rev(brewer.pal(9,"YlOrRd")), labels=c("0 - 10","10 - 20","20 - 30","30 - 40","40 - 50","50 - 60","60 - 70","70 - 80","80 - 90"))
-ggsave(paste(figLoc,"DistRelDensity.eps",sep=""), device="eps", dpi = 300, height = 4,
+  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"YlOrRd")), labels=c("0 - 10","10 - 20","20 - 30","30 - 40","40 - 50","50 - 60","60 - 70","70 - 80","80 - 90")) +
+  scale_y_continuous(name="Proportion across all birds (%)", breaks=seq(0,0.3,.1),labels=seq(0,30,10))
+ggsave(paste(figLoc,"DistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 4,
       width = 6, units = "in")
 
-
+sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],]
 WindDat$WSpd <- sqrt(WindDat$X^2 + WindDat$Y^2)
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-    coord_sf(xlim = c(140, 144), ylim = c(39, 42.5)) + geom_path(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],], aes(x = lon, y = lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1,], aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
+    geom_path(data=ListD[[6]][ListD[[6]]$DT > as.POSIXct("2018/09/08 10:20:00") & ListD[[6]]$DT > as.POSIXct("2018/09/08 10:30:00"),], aes(x = Lon, y = Lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1 & 
+      allD$DT > as.POSIXct("2018/09/08 10:20:00") & allD$DT > as.POSIXct("2018/09/08 10:30:00"),],
+    aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
   geom_spoke(data = WindDat[WindDat$yrID == indivWinds[6],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")),
   radius = .5*(WindDat$WSpd[WindDat$yrID == indivWinds[6]]/max(WindDat$WSpd[WindDat$yrID == indivWinds[6]]))) +
   scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
+  geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,200)],xend=sbst$lon[seq(2,nrow(sbst),200)],
+    y=sbst$lat[seq(1,nrow(sbst)-1,200)],yend=sbst$lat[seq(2,nrow(sbst),200)]),arrow = arrow(length = unit(0.1,"inches"))) +
   theme_bw() + theme(panel.grid = element_blank()) +
     theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 8,
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
-    annotation_scale(location = 'br') +
+    annotation_scale(location = 'br')
+     +
     scale_y_continuous(breaks = c(39,40,41,42), labels = c("39","40","41","42"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
     scale_x_continuous(labels = c("140", "141", "142", "143", "144"), name = paste("Longitude (","\u00b0E",")", sep = ""))
-ggsave(paste(figLoc,"ExampleWind.svg",sep=""), device="svg", dpi = 300, height = 5,
-      width = 5, units = "in")
+ggsave(paste(figLoc,"ExampleWind.svg",sep=""), device="svg", dpi = 300, height = 6,
+      width = 6, units = "in")
+
+sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),]
+ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    coord_sf(xlim = c(142.3, 142.7), ylim = c(39.5, 39.75)) +
+    geom_path(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),],aes(x=lon,y=lat)) +
+  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[a] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
+    aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")), alpha = .6,
+    radius = .3*(WindDat$WSpd[WindDat$yrID == indivWinds[a] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpd[WindDat$yrID == indivWinds[a]]))) +  
+  geom_point(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) +
+  geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,50)],xend=sbst$lon[seq(2,nrow(sbst),50)],
+    y=sbst$lat[seq(1,nrow(sbst)-1,50)],yend=sbst$lat[seq(2,nrow(sbst),50)]),arrow = arrow(length = unit(0.08,"inches"))) +
+  scale_x_continuous(name="Lon", breaks=seq(142.3,142.7,.2)) +
+  scale_y_continuous(name="Lat", breaks=seq(39.5,39.7,.2)) +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
+  scale_fill_manual(name = "Foraging points", values = "deepskyblue", labels="") +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + 
+    annotation_scale(location = 'br')
+ggsave(paste(figLoc,"ExampleWindNearForage.svg",sep=""), device="svg", dpi = 300, height = 6,
+      width = 6, units = "in")
+
+ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    coord_sf(xlim = c(140, 144), ylim = c(39, 42.5)) +
+    geom_path(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],],aes(x=lon,y=lat)) +
+  geom_point(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) + 
+  scale_x_continuous(name="Lon", breaks=seq(140,144,1)) +
+  scale_y_continuous(name="Lat", breaks=seq(39,42.5,1)) +
+  scale_fill_manual(name = "Foraging points", values = "deepskyblue", labels="") +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + 
+    annotation_scale(location = 'br')
+ggsave(paste(figLoc,"ExampleForageAll.svg",sep=""), device="svg", dpi = 300, height = 6,
+      width = 6, units = "in")
+    
+    
+a <- 5
+WindDat[WindDat$yrID == indivWinds[a] & WindDat$distTo < 10 & (WindDat$RelHead < -2.6 | WindDat$RelHead > 2.6),c(1:3,26)]
 
 a=8
 sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a],]
@@ -567,3 +622,5 @@ ggsave(paste(figLoc,"EmptyWindPlot.svg",sep=""), device="svg", dpi = 300, height
 #   }
 # }
 allD %>% group_by(tagID,Sex,Year) %>% dplyr::summarise(max(distTrav))
+
+foragePoints
