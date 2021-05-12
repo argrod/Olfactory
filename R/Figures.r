@@ -356,7 +356,11 @@ ggplot() + geom_point(data=leaveShrtDat[leaveShrtDat$uniP < 0.05,], aes(x = aveH
 ggsave(paste(figLoc,"LeavingHeadings.svg",sep=""), device="svg", dpi = 300, height = 6,
       width = 6, units = "in")
 
-ggplot() + geom_point(data = leaveLngDat[leaveLngDat$uniP < 0.05,], aes(x = dist, y= uniP))
+ggplot() + geom_point(data = leaveShrtDat[leaveShrtDat$uniP < 0.05,], aes(x = dist, y= uniP))
+
+ggplot(WindDat[WindDat$tripL <= 1 & WindDat$distFromFk < 300,]) + geom_histogram(aes(x = RelHead)) + coord_polar(start=pi) +
+  scale_x_continuous(limits=c(-pi,pi))
+
 
 # ggplot(leaveDat[leaveDat$uniP < 0.05,], aes(x = aveHd, y = dist, fill = tripL > 1)) + geom_point(pch=21) + coord_polar(start=pi) + scale_x_continuous(name="Average heading",breaks=c(-pi,-pi/2,0,pi/2),labels=c("Head","Side","Tail","Side"), limits=c(-pi,pi)) +
 #   scale_y_continuous(name="Distance from nest site (km)") + theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
@@ -498,23 +502,23 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
 
 
 # RELATIVE HEADINGS AS BIRDS LEAVE COLONY
-one2Ten <- vector(mode="list",length=10)
-distGaps <- seq(0,450,50)
-distGapsL <- distGaps+50
+one2Ten <- vector(mode="list",length=5)
+distGaps <- seq(0,40,10)
+distGapsL <- distGaps+10
 for(b in 1:length(distGaps)){
     RaylT <- r.test(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]])
-    # tst<-HR_test(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]])
-    if(RaylT$p.value > 0.05){
-    # if(tst[2] > 0.05){
+    tst<-HR_test(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]])
+    # if(RaylT$p.value > 0.05){
+    if(tst[2] > 0.05){
         one2Ten[[b]] <- ggplot(WindDat[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b],]) + 
-          geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+          geom_histogram(aes(x = RelHead), colour = "black", bins = 30, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
           coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
           theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
               family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
           labs(title = paste(as.character(distGaps[b])," - ",as.character(distGapsL[b]), "km, p > 0.05", sep = ""))
     } else {
         roseplt <- ggplot(WindDat[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b],]) + 
-            geom_histogram(aes(x = RelHead), colour = "black", bins = 50, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
+            geom_histogram(aes(x = RelHead), colour = "black", bins = 30, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
             # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]]), linetype = 1, colour = "red") +
             coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
             theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
@@ -528,7 +532,7 @@ for(b in 1:length(distGaps)){
     }
     # Cairo(width=8, height = 8, file = paste(figLoc,"RelHead",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
     print(one2Ten[[b]])
-    ggsave(paste(figLoc,"RelHeadLeaving",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
+    ggsave(paste(figLoc,"RelHeadLeavingHR",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
       width = 3, units = "in")
 }
 
