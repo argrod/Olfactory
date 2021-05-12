@@ -1569,13 +1569,47 @@ TrackDisp <- function(DT, lat, lon, hrs){
 #     }, error = function(e){c(NA)})
 # }
 # bring in dispersal data
-if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
-} else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
-}
+# if(Sys.info()['sysname'] == "Darwin"){
+#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
+# } else {
+#     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+# }
 summary(disp1[[1]])
 disp1[[1]]$partDisp
+
+# test the average headings for birds as they approach foraging spots and compare with dispersals
+allD$yrID <- paste(allD$Year,allD$tagID,sep="")
+# calculate changes in location for northing and easting
+allD$Ndiff <- c(NA, diff(allD$UTMN))
+allD$Ediff <- c(NA, diff(allD$UTME))
+# make sure the first change in location for each tag is NA (because no preceeding data)
+for(b in unique(allD$yrID)){
+  allD[min(which(allD$yrID == b)),c("Ndiff","Ediff")] <- NA
+}
+for(b in 1:length(forSt)){
+  bf <- min(which(allD$DT >= (allD$DT[forSt[b]] - lubridate::hours(2)) & allD$yrID == allD$yrID[forSt[b]]))
+  for(g in bf:forSt[b]){
+    # calculate headings
+    rbind(atan2(allD$Ndiff[g],allD$Ediff[g]), # bird heading
+      atan2(allD$UTMN[forSt[b]] - allD$UTMN[g], allD$UTME[forSt[b]] - allD$UTME[g]), # heading to next foraging point
+      allD$spTrav[g], # speed travelled
+      allD$tripL[g],
+      allD$Sex[g],
+      over(SpatialPoints(cbind(allD$lon[g],allD$lat[g]),proj4string=CRS('+proj=longlat')),
+        SpatialPoints(cbind(disp2[[b]]$partPoly$lon,disp2[[b]]$partPoly$lat),proj4string=CRS('+proj=longlat'))))
+      )
+  }
+}
+
+plot(allD$lon[g],allD$lat[g],xlim=c(142.5,142.8),ylim=c(39.94,39.96))
+plot(SpatialPoints(cbind(disp2[[b]]$partPoly$lon,disp2[[b]]$partPoly$lat),proj4string=CRS('+proj=longlat')),add=T)
+
+plot(disp2[[b]]$partPoly$lon,disp2[[b]]$partPoly$lat)
+summary(disp2[[b]])
+xlim(142.5,142.8)
+
+plot(allD$lon[allD$DT > (allD$DT[forSt[b]] - lubridate::hours(2)) & allD$DT <= allD$DT[forSt[b]] & allD$yrID == allD$yrID[forSt[b]]],
+  allD$lat[allD$DT > (allD$DT[forSt[b]] - lubridate::hours(2)) & allD$DT <= allD$DT[forSt[b]] & allD$yrID == allD$yrID[forSt[b]]])
 
 tgYr <- allD[forSt,c("tagID","Year")]
 for(b in 1:length(disp1)){
