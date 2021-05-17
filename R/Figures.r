@@ -31,11 +31,13 @@ library(png)
 options(timeout = 800)
 
 if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/Temp2018.RData")
+    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("F:/UTokyoDrive/PhD/Data/Temp2018.RData")
+    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("F:/UTokyoDrive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "F:/UTokyoDrive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D18 <- bind_rows(Dat)
 D19 <- bind_rows(Dat19)
@@ -49,6 +51,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     spTrav = c(D18$spTrav, D19$spTrav),
     recalSp = c(D18$recalSp, D19$recalSp),
     distFk = c(D18$distFromFk, D19$distFromFk),
+    tripN = c(D18$tripN, D19$tripN),
     tripL = c(D18$tripL, D19$tripL),
     tkb = c(D18$tkb, D19$tkb),
     dv = c(D18$dv, D19$dv),
