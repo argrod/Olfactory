@@ -1598,13 +1598,18 @@ forDispTrav = vector(mode="list",length=length(disp1))
 for(b in 1:length(forSt)){
   inds <- which(allD$DT > allD$DT[forSt[b]] - lubridate::hours(1) & allD$DT < allD$DT[forSt[b]] & allD$tagID == allD$tagID[forSt[b]])
   if(length(inds)!= 0){
-    # find the incoming heading
-    atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds])
-    plot(disp3[[b]]$partPoly$lon,disp3[[b]]$partPoly$lat,type='l')
-    # find headings to foraging spot
-    c(allD$UTMN[forSt[b]],allD$UTME[forSt[b]])
+    # create disps as polygon (use 2 hour before)
+    poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 1],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 1]))),ID="1"),
+      sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 2],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 2]))),ID="2"),
+      sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 3],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 3]))),ID="3")),proj4string=CRS("+proj=longlat"))
+    # put togather relative heading, points within polygons, speed, areas
+    forDispTrav[[b]] <- data.frame(hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]), inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]),
+      inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]),
+      inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]),spTrav = allD$spTrav[inds], area1 = rep(raster::area(poly[1]),length(inds)),
+      area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)))
   }
 }
+save(forDispTrav,file="F:/UTokyoDrive/PhD/Data/splitr/WithinDisp.RData")
 
 ggplot() +
   geom_polygon(data=disp3[[b]]$partPoly[disp3[[b]]$partPoly$hour==1,],aes(x=lon,y=lat,fill=factor(hour)),alpha=.3)+
