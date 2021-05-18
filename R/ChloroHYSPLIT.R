@@ -1595,6 +1595,8 @@ if(allD$forage[nrow(allD)] == 1){
   forEd <- c(forEd, nrow(allD))
 }
 forDispTrav = vector(mode="list",length=length(disp1))
+allD$tkb[is.na(allD$tkb)] <- 0
+allD$dv[is.na(allD$dv)] <- 0
 for(b in 1:length(forSt)){
   inds <- which(allD$DT > allD$DT[forSt[b]] - lubridate::hours(1) & allD$DT < allD$DT[forSt[b]] & allD$tagID == allD$tagID[forSt[b]])
   if(length(inds)!= 0){
@@ -1602,14 +1604,30 @@ for(b in 1:length(forSt)){
     poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 1],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 1]))),ID="1"),
       sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 2],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 2]))),ID="2"),
       sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 3],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 3]))),ID="3")),proj4string=CRS("+proj=longlat"))
+    # add in the foraging behaviour
+    forType <- NA
+    if(allD$tkb[forSt[b]] == 1 & allD$dv[forSt[b]] == 0){
+      forType <- "ss"
+    } else if (allD$tkb[forSt[b]] == 0 & allD$dv[forSt[b]] == 1){
+      forType <- "fd"
+    } else {
+      forType <- "both"
+    }
     # put togather relative heading, points within polygons, speed, areas
     forDispTrav[[b]] <- data.frame(hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]), inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]),
       inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]),
       inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]),spTrav = allD$spTrav[inds], area1 = rep(raster::area(poly[1]),length(inds)),
-      area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)))
+      area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)),tripL = allD$tripL[inds], forType = rep(forType, length(inds)), yrID = paste(allD$tagID[inds],allD$Year[inds],sep=""),sex=allD$Sex[inds],
+      distFk = allD$distFk[inds], ID = rep(forSt[b],length(inds)))
   }
 }
 save(forDispTrav,file="F:/UTokyoDrive/PhD/Data/splitr/WithinDisp.RData")
+
+allforDisp <- bind_rows(forDispTrav)
+
+grpd <- allforDisp %>% group_by(factor(ID)) 
+
+sum(~is.na(grpd$inDisp1))
 
 ggplot() +
   geom_polygon(data=disp3[[b]]$partPoly[disp3[[b]]$partPoly$hour==1,],aes(x=lon,y=lat,fill=factor(hour)),alpha=.3)+
