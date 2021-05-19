@@ -1580,11 +1580,11 @@ TrackDisp <- function(DT, lat, lon, hrs){
 # }
 
 # FORAGING SPOT DISPERSALS
-if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
-} else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
-}
+# if(Sys.info()['sysname'] == "Darwin"){
+#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
+# } else {
+#     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+# }
 # calculate foraging starts/ends
 allD$forage[is.na(allD$forage)] <- 0
 forSt <- which(diff(allD$forage) == 1) + 1
@@ -1595,13 +1595,6 @@ forEd <- which(diff(allD$forage) == -1)
 if(allD$forage[nrow(allD)] == 1){
   forEd <- c(forEd, nrow(allD))
 }
-
-# FORAGING SPOT DISPERSALS
-# if(Sys.info()['sysname'] == "Darwin"){
-#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
-# } else {
-#     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
-# }
 # forDispTrav = vector(mode="list",length=length(disp1))
 # allD$tkb[is.na(allD$tkb)] <- 0
 # allD$dv[is.na(allD$dv)] <- 0
@@ -1622,14 +1615,16 @@ if(allD$forage[nrow(allD)] == 1){
 #       forType <- "both"
 #     }
 #     # put togather relative heading, points within polygons, speed, areas
-#     forDispTrav[[b]] <- data.frame(hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]), inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]),
-#       inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]),
-#       inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]),spTrav = allD$spTrav[inds], area1 = rep(raster::area(poly[1]),length(inds)),
-#       area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)),tripL = allD$tripL[inds], forType = rep(forType, length(inds)), yrID = paste(allD$tagID[inds],allD$Year[inds],sep=""),sex=allD$Sex[inds],
-#       distFk = allD$distFk[inds], ID = rep(forSt[b],length(inds)))
+    forDispTrav[[b]] <- data.frame(hd = c(NA, atan2(diff(allD$UTMN[inds]),diff(allD$UTME[inds]))),
+      hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]),
+      inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]),
+      inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]),
+      inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]),spTrav = allD$spTrav[inds], area1 = rep(raster::area(poly[1]),length(inds)),
+      area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)),tripL = allD$tripL[inds], forType = rep(forType, length(inds)), yrID = paste(allD$tagID[inds],allD$Year[inds],sep=""),sex=allD$Sex[inds],
+    #       distFk = allD$distFk[inds], ID = rep(forSt[b],length(inds)), distToFor = sqrt((allD$UTMN[forSt[b]] - allD$UTMN[inds])^2+(allD$UTME[forSt[b]] - allD$UTME[inds])^2))
 #   }
-}
-# save(forDispTrav,file="F:/UTokyoDrive/PhD/Data/splitr/WithinDisp.RData")
+# }
+# save(forDispTrav,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/WithinDisp.RData")
 # read in analysed data
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/WithinDisp.RData")
@@ -1638,6 +1633,25 @@ if(Sys.info()['sysname'] == "Darwin"){
 }
 
 allforDisp <- bind_rows(forDispTrav)
+allforDisp$inDisp1 <- allforDisp$inDisp1[is.na(allforDisp$inDisp1)] <- 0
+allforDisp$inDisp2 <- allforDisp$inDisp2[is.na(allforDisp$inDisp2)] <- 0
+allforDisp$inDisp3 <- allforDisp$inDisp3[is.na(allforDisp$inDisp3)] <- 0
+allforDisp$chgHd <- c(NA,diff(allforDisp$hdTofor))
+allforDisp$chgHd[which(allforDisp$chgHd < -pi)] <- allforDisp$chgHd[which(allforDisp$chgHd < -pi)] + (2*pi)
+allforDisp$chgHd[which(allforDisp$chgHd > pi)] <- allforDisp$chgHd[which(allforDisp$chgHd > pi)] - 2*pi
+allforDisp$chgHd[which(diff(allforDisp$ID)!= 0)+1] <- NA
+# check the difference in relative headings
+
+ggplot(allforDisp) +
+  geom_point(aes(x = chgHd, y = distToFor)) +
+  coord_polar()
+hist(allforDisp$chgHd)
+
+colnames(allforDisp)
+
+plot(allforDisp$distToFor, allforDisp$inDisp3)
+
+
 
 grpd <- allforDisp %>% group_by(factor(ID)) 
 
