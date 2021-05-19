@@ -38,11 +38,13 @@ if(Sys.info()['sysname'] == "Darwin"){
     exec_loc <- "C:/hysplit/"
 }
 if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/Temp2018.RData")
+    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("F:/UTokyoDrive/PhD/Data/Temp2018.RData")
+    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("F:/UTokyoDrive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "F:/UTokyoDrive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D18 <- bind_rows(Dat)
 D19 <- bind_rows(Dat19)
@@ -56,6 +58,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     spTrav = c(D18$spTrav, D19$spTrav),
     recalSp = c(D18$recalSp, D19$recalSp),
     distFk = c(D18$distFromFk, D19$distFromFk),
+    tripN = c(D18$tripN, D19$tripN),
     tripL = c(D18$tripL, D19$tripL),
     tkb = c(D18$tkb, D19$tkb),
     dv = c(D18$dv, D19$dv),
@@ -1107,7 +1110,7 @@ disp <- create_dispersion_model() %>%
     exec_dir = paste(exec_loc, "exec", sep = "")
   ) %>%
     run_model() %>% get_output_tbl()
-disp %>% dispersion_plot()
+disp1 %>% dispersion_plot()
 disp
 hist(disp$height)
 
@@ -1575,9 +1578,13 @@ TrackDisp <- function(DT, lat, lon, hrs){
 # } else {
 #     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
 # }
-summary(disp1[[1]])
-disp1[[1]]$partDisp
 
+# FORAGING SPOT DISPERSALS
+if(Sys.info()['sysname'] == "Darwin"){
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
+} else {
+    load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+}
 # calculate foraging starts/ends
 allD$forage[is.na(allD$forage)] <- 0
 forSt <- which(diff(allD$forage) == 1) + 1
@@ -1590,11 +1597,60 @@ if(allD$forage[nrow(allD)] == 1){
 }
 
 # FORAGING SPOT DISPERSALS
-if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
-} else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+# if(Sys.info()['sysname'] == "Darwin"){
+#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
+# } else {
+#     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+# }
+# forDispTrav = vector(mode="list",length=length(disp1))
+# allD$tkb[is.na(allD$tkb)] <- 0
+# allD$dv[is.na(allD$dv)] <- 0
+# for(b in 1:length(forSt)){
+#   inds <- which(allD$DT > allD$DT[forSt[b]] - lubridate::hours(1) & allD$DT < allD$DT[forSt[b]] & allD$tagID == allD$tagID[forSt[b]])
+#   if(length(inds)!= 0){
+#     # create disps as polygon (use 2 hour before)
+#     poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 1],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 1]))),ID="1"),
+#       sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 2],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 2]))),ID="2"),
+#       sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 3],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 3]))),ID="3")),proj4string=CRS("+proj=longlat"))
+#     # add in the foraging behaviour
+#     forType <- NA
+#     if(allD$tkb[forSt[b]] == 1 & allD$dv[forSt[b]] == 0){
+#       forType <- "ss"
+#     } else if (allD$tkb[forSt[b]] == 0 & allD$dv[forSt[b]] == 1){
+#       forType <- "fd"
+#     } else {
+#       forType <- "both"
+#     }
+#     # put togather relative heading, points within polygons, speed, areas
+#     forDispTrav[[b]] <- data.frame(hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]), inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]),
+#       inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]),
+#       inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]),spTrav = allD$spTrav[inds], area1 = rep(raster::area(poly[1]),length(inds)),
+#       area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)),tripL = allD$tripL[inds], forType = rep(forType, length(inds)), yrID = paste(allD$tagID[inds],allD$Year[inds],sep=""),sex=allD$Sex[inds],
+#       distFk = allD$distFk[inds], ID = rep(forSt[b],length(inds)))
+#   }
 }
+# save(forDispTrav,file="F:/UTokyoDrive/PhD/Data/splitr/WithinDisp.RData")
+# read in analysed data
+if(Sys.info()['sysname'] == "Darwin"){
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/WithinDisp.RData")
+} else {
+    load("F:/UTokyoDrive/PhD/Data/splitr/WithinDisp.RData")
+}
+
+allforDisp <- bind_rows(forDispTrav)
+
+grpd <- allforDisp %>% group_by(factor(ID)) 
+
+sum(~is.na(grpd$inDisp1))
+
+ggplot() +
+  geom_polygon(data=disp3[[b]]$partPoly[disp3[[b]]$partPoly$hour==1,],aes(x=lon,y=lat,fill=factor(hour)),alpha=.3)+
+  geom_point(data=allD[inds,],aes(x = lon,y=lat))
+
+over(disp3[[b]]$partPoly[disp3[[b]]$partPoly$hour==1,],SpatialPoints(cbind(allD$lon[inds],allD$lat[inds],proj4string=CRS('+proj=longlat'))))
+
+over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds],proj4string=CRS('+proj=longlat'))),SpatialPoints(cbind(disp3[[b]]$partPoly$lon[disp3[[b]]$partPoly$hour==1],disp3[[b]]$partPoly$lat[disp3[[b]]$partPoly$hour==1])))
+SpatialPolygons(disp3[[b]]$partPoly)
 # test the average headings for birds as they approach foraging spots and compare with dispersals
 allD$yrID <- paste(allD$Year,allD$tagID,sep="")
 # calculate changes in location for northing and easting
