@@ -16,6 +16,7 @@ library(maptools)
 library(StreamMetabolism)
 library(RColorBrewer)
 library(reshape)
+# install.packages("circular", repos="http://R-Forge.R-project.org")
 library(circular)
 library(wGribDat)
 # devtools::install_github("keesmulder/circglmbayes")
@@ -1577,6 +1578,23 @@ TrackDisp <- function(DT, lat, lon, hrs){
 summary(disp1[[1]])
 disp1[[1]]$partDisp
 
+# calculate foraging starts/ends
+allD$forage[is.na(allD$forage)] <- 0
+forSt <- which(diff(allD$forage) == 1) + 1
+if(allD$forage[1] == 1){
+  forSt <- c(1, forSt)
+}
+forEd <- which(diff(allD$forage) == -1)
+if(allD$forage[nrow(allD)] == 1){
+  forEd <- c(forEd, nrow(allD))
+}
+
+# FORAGING SPOT DISPERSALS
+if(Sys.info()['sysname'] == "Darwin"){
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
+} else {
+    load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+}
 # test the average headings for birds as they approach foraging spots and compare with dispersals
 allD$yrID <- paste(allD$Year,allD$tagID,sep="")
 # calculate changes in location for northing and easting
@@ -1590,7 +1608,7 @@ for(b in 1:length(forSt)){
   bf <- min(which(allD$DT >= (allD$DT[forSt[b]] - lubridate::hours(2)) & allD$yrID == allD$yrID[forSt[b]]))
   for(g in bf:forSt[b]){
     # calculate headings
-    rbind(atan2(allD$Ndiff[g],allD$Ediff[g]), # bird heading
+    cbind(atan2(allD$Ndiff[g],allD$Ediff[g]), # bird heading
       atan2(allD$UTMN[forSt[b]] - allD$UTMN[g], allD$UTME[forSt[b]] - allD$UTME[g]), # heading to next foraging point
       allD$spTrav[g], # speed travelled
       allD$tripL[g],
