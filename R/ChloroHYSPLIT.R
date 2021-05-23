@@ -1560,19 +1560,17 @@ TrackDisp <- function(DT, lat, lon, hrs){
   outpt <- list("DispModel" = dispersion_model,"partDisp" = dispersion_tbl, "partPoly" = hulls)
 }
 
-# disp1 <- vector(mode="list",length=length(forSt))
-# disp2 <- vector(mode="list",length=length(forSt))
-# disp3 <- vector(mode="list",length=length(forSt))
-# forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
-# for(b in 1:length(forSt)){
-    disp1[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
-    disp2[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
-    disp3[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
-# }
-# bring in dispersal data
+disp1 <- vector(mode="list",length=length(forSt))
+disp2 <- vector(mode="list",length=length(forSt))
+disp3 <- vector(mode="list",length=length(forSt))
+forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
+for(b in 560:length(forSt)){
+    disp1[[b]] <- TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    disp2[[b]] <- TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    disp3[[b]] <- TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+}
+save(disp1,disp2,disp3,forSt,allD,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
+# # bring in dispersal data
 # if(Sys.info()['sysname'] == "Darwin"){
 #     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
 # } else {
@@ -1626,8 +1624,8 @@ for(b in 1:length(forSt)){
   }
 }
 
-poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(outpt$partPoly$lon[outpt$partPoly$hour == 1],outpt$partPoly$lat[outpt$partPoly$hour == 1]))),ID="1")))
-
+tst <- disp1[[b]]
+poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(tst$partPoly$lon[tst$partPoly$hour == 1],tst$partPoly$lat[tst$partPoly$hour == 1]))),ID="1")))
 
 ggplot() +
   geom_path(data=allD[inds,],aes(x=lon,y=lat)) +
