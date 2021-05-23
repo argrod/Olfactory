@@ -1560,22 +1560,24 @@ TrackDisp <- function(DT, lat, lon, hrs){
   outpt <- list("DispModel" = dispersion_model,"partDisp" = dispersion_tbl, "partPoly" = hulls)
 }
 
-disp1 <- vector(mode="list",length=length(forSt))
-disp2 <- vector(mode="list",length=length(forSt))
-disp3 <- vector(mode="list",length=length(forSt))
-forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
-for(b in 560:length(forSt)){
-    disp1[[b]] <- TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    disp2[[b]] <- TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    disp3[[b]] <- TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-}
-save(disp1,disp2,disp3,forSt,allD,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
-# # bring in dispersal data
-# if(Sys.info()['sysname'] == "Darwin"){
-#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
-# } else {
-#     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+# disp1 <- vector(mode="list",length=length(forSt))
+# disp2 <- vector(mode="list",length=length(forSt))
+# disp3 <- vector(mode="list",length=length(forSt))
+# forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
+# for(b in 1:length(forSt)){
+    disp1[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    }, error = function(e){c(NA)})
+    disp2[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    }, error = function(e){c(NA)})
+    disp3[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    }, error = function(e){c(NA)})
 # }
+# bring in dispersal data
+if(Sys.info()['sysname'] == "Darwin"){
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
+} else {
+    load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+}
 
 # FORAGING SPOT DISPERSALS
 # if(Sys.info()['sysname'] == "Darwin"){
@@ -1584,15 +1586,22 @@ save(disp1,disp2,disp3,forSt,allD,file="/Volumes/GoogleDrive/My Drive/PhD/Data/s
 #     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
 # }
 # calculate foraging starts/ends
-allD$forage[is.na(allD$forage)] <- 0
-forSt <- which(diff(allD$forage) == 1) + 1
-if(allD$forage[1] == 1){
-  forSt <- c(1, forSt)
-}
-forEd <- which(diff(allD$forage) == -1)
-if(allD$forage[nrow(allD)] == 1){
-  forEd <- c(forEd, nrow(allD))
-}
+# allD$forage[is.na(allD$forage)] <- 0
+# forSt <- which(diff(allD$forage) == 1) + 1
+# if(allD$forage[1] == 1){
+#   forSt <- c(1, forSt)
+# }
+# forEd <- which(diff(allD$forage) == -1)
+# if(allD$forage[nrow(allD)] == 1){
+#   forEd <- c(forEd, nrow(allD))
+# }
+
+# find out which ones are not empty
+toRm <- sapply(disp1, function(x) nrow(x$partPoly)) > 0
+# remove empties
+forSt <- forSt[toRm]
+disp1 <- length(disp1[toRm])
+
 forDispTrav = vector(mode="list",length=length(disp1))
 allD$tkb[is.na(allD$tkb)] <- 0
 allD$dv[is.na(allD$dv)] <- 0
@@ -1613,24 +1622,28 @@ for(b in 1:length(forSt)){
       forType <- "both"
     }
     # put togather relative heading, points within polygons, speed, areas
-    forDispTrav[[b]] <- data.frame(hd = c(NA, atan2(diff(allD$UTMN[inds]),diff(allD$UTME[inds]))),
-      hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]),
-      inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]),
-      inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]),
-      inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]),
-      spTrav = allD$spTrav[inds], area1 = rep(raster::area(poly[1]),length(inds)),
-      area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)),tripL = allD$tripL[inds], forType = rep(forType, length(inds)), yrID = paste(allD$tagID[inds],allD$Year[inds],sep=""),sex=allD$Sex[inds],
-          distFk = allD$distFk[inds], ID = rep(forSt[b],length(inds)), distToFor = sqrt((allD$UTMN[forSt[b]] - allD$UTMN[inds])^2+(allD$UTME[forSt[b]] - allD$UTME[inds])^2))
+    if(nrow(disp1[[b]]$partPoly) > 0){
+      forDispTrav[[b]] <- data.frame(hd = c(NA, atan2(diff(allD$UTMN[inds]),diff(allD$UTME[inds]))),
+        hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]),
+        inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]),
+        inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]),
+        inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]),
+        spTrav = allD$spTrav[inds], area1 = rep(raster::area(poly[1]),length(inds)),
+        area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)),tripL = allD$tripL[inds], forType = rep(forType, length(inds)), yrID = paste(allD$tagID[inds],allD$Year[inds],sep=""),sex=allD$Sex[inds],
+            distFk = allD$distFk[inds], ID = rep(forSt[b],length(inds)), distToFor = sqrt((allD$UTMN[forSt[b]] - allD$UTMN[inds])^2+(allD$UTME[forSt[b]] - allD$UTME[inds])^2))
+    } else {
+      forDispTrav[[b]] <- NA
+    }
   }
 }
 
-tst <- disp1[[b]]
-poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(tst$partPoly$lon[tst$partPoly$hour == 1],tst$partPoly$lat[tst$partPoly$hour == 1]))),ID="1")))
-
+b=1896
+inds <- which(allD$DT > allD$DT[forSt[b]] - lubridate::hours(1) & allD$DT < allD$DT[forSt[b]] & allD$tagID == allD$tagID[forSt[b]])
+poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(disp1[[b]]$partPoly$lon[disp1[[b]]$partPoly$hour == 1],disp1[[b]]$partPoly$lat[disp1[[b]]$partPoly$hour == 1]))),ID="1")))
 ggplot() +
   geom_path(data=allD[inds,],aes(x=lon,y=lat)) +
   geom_polygon(data=poly,aes(x=long,y=lat))
-
+8i
 # save(forDispTrav,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/WithinDisp.RData")
 # read in analysed data
 if(Sys.info()['sysname'] == "Darwin"){
@@ -1638,6 +1651,9 @@ if(Sys.info()['sysname'] == "Darwin"){
 } else {
     load("F:/UTokyoDrive/PhD/Data/splitr/WithinDisp.RData")
 }
+
+forDispTrav <- 
+which(is.na(forDispTrav))
 
 allforDisp <- bind_rows(forDispTrav)
 allforDisp$inDisp1 <- allforDisp$inDisp1[is.na(allforDisp$inDisp1)] <- 0
