@@ -497,17 +497,17 @@ allTraj <- bind_rows(outTraj)
 allTraj$relH <- allTraj$aveHd - allTraj$trjHd
 # allTraj$relH <- allTraj$relH + pi
 fr <- ggplot(allTraj[allTraj$proxim=="20+" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar()
+  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
 nr<-ggplot(allTraj[allTraj$proxim=="<1" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar()
+  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
 Ten20<-ggplot(allTraj[allTraj$proxim=="1-5" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar()
+  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
 Twenty30<-ggplot(allTraj[allTraj$proxim=="5-10" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar()
+  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
 Thirty40<-ggplot(allTraj[allTraj$proxim=="10-15" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar()
+  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
 Forty50<-ggplot(allTraj[allTraj$proxim=="15-20" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar()
+  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
 ggarrange(nr, Ten20, Twenty30, Thirty40, Forty50, ncol= 3, nrow = 2, labels = c("<1km", "1-5km", "5-10km","10-15km","15-20km"))
 
 
@@ -1565,12 +1565,12 @@ TrackDisp <- function(DT, lat, lon, hrs){
 # disp3 <- vector(mode="list",length=length(forSt))
 # forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
 # for(b in 1:length(forSt)){
-    disp1[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
-    disp2[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
-    disp3[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
-    }, error = function(e){c(NA)})
+    # disp1[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(1),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    # }, error = function(e){c(NA)})
+    # disp2[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(2),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    # }, error = function(e){c(NA)})
+    # disp3[[b]] <- tryCatch({TrackDisp(allD$DT[forSt[b]] - lubridate::hours(3),allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
+    # }, error = function(e){c(NA)})
 # }
 # bring in dispersal data
 if(Sys.info()['sysname'] == "Darwin"){
@@ -1597,10 +1597,10 @@ if(Sys.info()['sysname'] == "Darwin"){
 # }
 
 # find out which ones are not empty
-toRm <- sapply(disp1, function(x) nrow(x$partPoly)) > 0
-# remove empties
-forSt <- forSt[toRm]
-disp1 <- length(disp1[toRm])
+# toRm <- sapply(disp1, function(x) nrow(x$partPoly)) > 0
+# # remove empties
+# forSt <- forSt[toRm]
+# disp1 <- length(disp1[toRm])
 
 forDispTrav = vector(mode="list",length=length(disp1))
 allD$tkb[is.na(allD$tkb)] <- 0
@@ -1608,10 +1608,11 @@ allD$dv[is.na(allD$dv)] <- 0
 for(b in 1:length(forSt)){
   inds <- which(allD$DT > allD$DT[forSt[b]] - lubridate::hours(1) & allD$DT < allD$DT[forSt[b]] & allD$tagID == allD$tagID[forSt[b]])
   if(length(inds)!= 0){
+    if(nrow(disp1[[b]]$partPoly) > 0){
     # create disps as polygon (use 2 hour before)
-    poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 1],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 1]))),ID="1"),
-      sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 2],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 2]))),ID="2"),
-      sp::Polygons(list(sp::Polygon(cbind(disp2[[b]]$partPoly$lon[disp2[[b]]$partPoly$hour == 3],disp2[[b]]$partPoly$lat[disp2[[b]]$partPoly$hour == 3]))),ID="3")),proj4string=CRS("+proj=longlat"))
+    poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(disp1[[b]]$partPoly$lon[disp1[[b]]$partPoly$hour == 1],disp1[[b]]$partPoly$lat[disp1[[b]]$partPoly$hour == 1]))),ID="1"),
+      sp::Polygons(list(sp::Polygon(cbind(disp1[[b]]$partPoly$lon[disp1[[b]]$partPoly$hour == 2],disp1[[b]]$partPoly$lat[disp1[[b]]$partPoly$hour == 2]))),ID="2"),
+      sp::Polygons(list(sp::Polygon(cbind(disp1[[b]]$partPoly$lon[disp1[[b]]$partPoly$hour == 3],disp1[[b]]$partPoly$lat[disp1[[b]]$partPoly$hour == 3]))),ID="3")),proj4string=CRS("+proj=longlat"))
     # add in the foraging behaviour
     forType <- NA
     if(allD$tkb[forSt[b]] == 1 & allD$dv[forSt[b]] == 0){
@@ -1621,13 +1622,14 @@ for(b in 1:length(forSt)){
     } else {
       forType <- "both"
     }
+    # calculate headings of dispersal objects: disp points - foraging spot
+
     # put togather relative heading, points within polygons, speed, areas
-    if(nrow(disp1[[b]]$partPoly) > 0){
-      forDispTrav[[b]] <- data.frame(hd = c(NA, atan2(diff(allD$UTMN[inds]),diff(allD$UTME[inds]))),
-        hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]),
-        inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]),
-        inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]),
-        inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]),
+      forDispTrav[[b]] <- data.frame(hd = c(NA, atan2(diff(allD$UTMN[inds]),diff(allD$UTME[inds]))), # headings
+        hdTofor = atan2(allD$UTMN[forSt[b]] - allD$UTMN[inds],allD$UTME[forSt[b]] - allD$UTME[inds]), # heading to foraging point
+        inDisp1 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[1]), # within 1 hr disp
+        inDisp2 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[2]), # within 2 hr disp
+        inDisp3 = over(SpatialPoints(cbind(allD$lon[inds],allD$lat[inds]),proj4string=CRS("+proj=longlat")),poly[3]), # within 3 hr disp
         spTrav = allD$spTrav[inds], area1 = rep(raster::area(poly[1]),length(inds)),
         area2 = rep(raster::area(poly[2]),length(inds)),area3=rep(raster::area(poly[3]),length(inds)),tripL = allD$tripL[inds], forType = rep(forType, length(inds)), yrID = paste(allD$tagID[inds],allD$Year[inds],sep=""),sex=allD$Sex[inds],
             distFk = allD$distFk[inds], ID = rep(forSt[b],length(inds)), distToFor = sqrt((allD$UTMN[forSt[b]] - allD$UTMN[inds])^2+(allD$UTME[forSt[b]] - allD$UTME[inds])^2))
@@ -1637,13 +1639,13 @@ for(b in 1:length(forSt)){
   }
 }
 
-b=1896
+b=1020
 inds <- which(allD$DT > allD$DT[forSt[b]] - lubridate::hours(1) & allD$DT < allD$DT[forSt[b]] & allD$tagID == allD$tagID[forSt[b]])
 poly <- SpatialPolygons(list(sp::Polygons(list(sp::Polygon(cbind(disp1[[b]]$partPoly$lon[disp1[[b]]$partPoly$hour == 1],disp1[[b]]$partPoly$lat[disp1[[b]]$partPoly$hour == 1]))),ID="1")))
 ggplot() +
   geom_path(data=allD[inds,],aes(x=lon,y=lat)) +
   geom_polygon(data=poly,aes(x=long,y=lat))
-8i
+
 # save(forDispTrav,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/WithinDisp.RData")
 # read in analysed data
 if(Sys.info()['sysname'] == "Darwin"){
@@ -1652,7 +1654,7 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("F:/UTokyoDrive/PhD/Data/splitr/WithinDisp.RData")
 }
 
-forDispTrav <- 
+forDispTrav <- forDispTrav[!is.na(forDispTrav)]
 which(is.na(forDispTrav))
 
 allforDisp <- bind_rows(forDispTrav)
@@ -1664,6 +1666,7 @@ allforDisp$chgHd[which(allforDisp$chgHd < -pi)] <- allforDisp$chgHd[which(allfor
 allforDisp$chgHd[which(allforDisp$chgHd > pi)] <- allforDisp$chgHd[which(allforDisp$chgHd > pi)] - 2*pi
 allforDisp$chgHd[which(diff(allforDisp$ID)!= 0)+1] <- NA
 # check the difference in relative headings
+sum(allforDisp$inDisp3)
 
 hist(allforDisp$hd)
 
