@@ -1579,28 +1579,78 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
 }
 
-# FORAGING SPOT DISPERSALS
-# if(Sys.info()['sysname'] == "Darwin"){
-#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
-# } else {
-#     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
-# }
-# calculate foraging starts/ends
-# allD$forage[is.na(allD$forage)] <- 0
-# forSt <- which(diff(allD$forage) == 1) + 1
-# if(allD$forage[1] == 1){
-#   forSt <- c(1, forSt)
-# }
-# forEd <- which(diff(allD$forage) == -1)
-# if(allD$forage[nrow(allD)] == 1){
-#   forEd <- c(forEd, nrow(allD))
+# FORAGING TRAJECTORIES (BACKWARD)
+allD$forage[is.na(allD$forage)] <- 0
+forSt <- which(diff(allD$forage) == 1) + 1
+if(allD$forage[1] == 1){
+  forSt <- c(1, forSt)
+}
+forEd <- which(diff(allD$forage) == -1)
+if(allD$forage[nrow(allD)] == 1){
+  forEd <- c(forEd, nrow(allD))
+}
+allD$yrID <- paste(allD$Year,allD$tagID)
+indivs <- unique(allD$yrID)
+# add in a distance to next forage point
+allD$distToN <- NA
+for(b in 1:length(forSt)){
+  if(b == 1){
+    allD$distN[1:(forSt[b]-1)] <- sqrt((allD$UTMN[1:(forSt[b]-1)] - allD$UTMN[forSt[b]])^2 + (allD$UTME[1:(forSt[b]-1)] - allD$UTME[forSt[b]])^2)
+  } else {
+    allD$distN[(forSt[b-1]+1):(forSt[b]-1)] <- sqrt((allD$UTMN[(forSt[b-1]+1):(forSt[b]-1)] - allD$UTMN[forSt[b]])^2 + (allD$UTME[(forSt[b-1]+1):(forSt[b]-1)] - allD$UTME[forSt[b]])^2)
+  }
+}
+TrackTraj <- function(DT, lat, lon, hrs){
+  time <- format(DT - lubridate::hours(9), "%Y-%m-%d") # convert to UTC
+  hr <- format(DT, "%H")
+  trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = lat,
+    lon = lon,
+    height = 20,
+    duration = hrs,
+    days = time,
+    daily_hours = hr,
+    direction = "backward",
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model()
+  return(trajectory_model %>% get_output_tbl())
+}
+forTraj <- vector(mode="list",length=length(forSt))
+forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
+# for(b in 2:length(forSt)){
+#   # find the index of the first 
+#   }
+#   ind <- which(allD$DT[forSt[b]] - )
+#     forTraj[[b]] <- TrackTraj(allD$DT[forSt[b]],allD$lat[forSt[b]],allD$lon[forSt[b]], 3)
 # }
 
-# find out which ones are not empty
-# toRm <- sapply(disp1, function(x) nrow(x$partPoly)) > 0
-# # remove empties
-# forSt <- forSt[toRm]
-# disp1 <- length(disp1[toRm])
+DayTraj <- function(day, lat, lon, dur, hr){
+  trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = lat,
+    lon = lon,
+    height = 20,
+    duration = dur,
+    days = day,
+    daily_hours = hr,
+    direction = "backward",
+    met_type = "reanalysis",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model()
+  return(trajectory_model %>% get_output_tbl())
+}
+# generate trajectories arriving at FkIsland
+allDays <- unique(format(allD$DT,"%Y-%m-%d"))
+tracks <- vector(mode="list",length=length(allDays))
+for(b in 2:length(allDays)){
+  tracks[[b]] <- DayTraj(allDays[b],FkOshi$Lat,FkOshi$Lon,6,c(0:6))
+}
 
 forDispTrav = vector(mode="list",length=length(disp1))
 allD$tkb[is.na(allD$tkb)] <- 0
