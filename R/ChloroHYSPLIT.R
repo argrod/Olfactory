@@ -30,6 +30,8 @@ require(devtools)
 library(gdalUtils)
 library(CircStats)
 library(Cairo)
+# install.packages("bpnreg")
+library(bpnreg)
 options(timeout = 800)
 # load in data 
 if(Sys.info()['sysname'] == "Darwin"){
@@ -95,7 +97,7 @@ TrackDisp <- function(DT, lat, lon, hrs){
 }
 TrackTraj <- function(DT, lat, lon, hrs){
   time <- format(DT - lubridate::hours(9), "%Y-%m-%d") # convert to UTC
-  hr <- format(DT, "%H")
+  hr <- format(DT - lubridate::hours(9), "%H")
   trajectory_model <-
   create_trajectory_model() %>%
   add_trajectory_params(
@@ -150,45 +152,45 @@ levy <- function(x,mu){
 outTraj <- vector(mode = "list", length = length(ListD))
 for(b in 1:length(ListD)){
   sel<-ListD[[b]]
-  sel$ForPoint <- 0
+  sel$ForPoint <- 0 # find foraging points
   sel$ForPoint[sel$tkb==1 | sel$dv == 1] <- 1
   sel$tToFor <- NA
   sel$tToFor[sel$ForPoint == 1] = 0
   sel$dToFor <- NA
   sel$dToFor[sel$ForPoint == 1] = 0
-  forStart <- which(diff(sel$ForPoint == 1) == 1) + 1
+  forStart <- which(diff(sel$ForPoint == 1) == 1) + 1 # find foraging points
   if(sel$ForPoint[1] == 1){
     forStart <- c(1, forStart)
   }
   forEnd <- which(diff(sel$ForPoint == 1) == -1) + 1
   for(starts in which(sel$ForPoint == 0)){
-    if(any(sel$ForPoint[starts:nrow(sel)] == 1)){
+    if(any(sel$ForPoint[starts:nrow(sel)] == 1)){ # time and distance to next foraging spot
       sel$tToFor[starts] <- difftime(sel$DT[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))], sel$DT[starts], units = "secs")
       sel$dToFor[starts] <- sqrt((sel$UTMN[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))] - sel$UTMN[starts])^2 + (sel$UTME[starts-1+min(which(sel$ForPoint[starts:nrow(sel)] == 1))] - sel$UTME[starts])^2)
     }
   }
   # remove non-flight values
   sel <- sel[which(sel$spTrav > 15),]
-  # colnames(sel)
-  sel$tdiff <- c(NA, difftime(sel$DT[2:nrow(sel)], sel$DT[1:(nrow(sel) - 1)], units = 'secs'))
-  # decide outgoing/incoming
+  sel$tdiff <- c(NA, difftime(sel$DT[2:nrow(sel)], sel$DT[1:(nrow(sel) - 1)], units = 'secs')) # time differences
+  # decide outgoing/incoming as per Shiomi 2012
   sel$appSpd <- c(NA, diff(sel[,grepl("Fk", names(sel))]))/sel$tdiff # approach speed to Fk Island
   sel$rtChg <- NA
   for(c in 1:nrow(sel)){
     sel$rtChg[c] <- mean(sel$appSpd[sel$DT >= sel$DT[c] & sel$DT <= (sel$DT[c] + lubridate::hours(1))]/as.numeric(sel$tdiff[sel$DT >= sel$DT[c] & sel$DT <= (sel$DT[c] + lubridate::hours(1))]))
   }
   # sel <- sel[which(sel$rtChg < 0),]
-  UDsts <- StLCalc(sel$DT,sel$UTMN,sel$UTME)
+  UDsts <- StLCalc(sel$DT,sel$UTMN,sel$UTME) # split data into steps with no gaps > fs + 10s and with changes in sign of x and y components
   dt <- difftime(UDsts$end,UDsts$start,units="secs")
   aveHead <- NA
   trajHead <- NA
   trajSpd <- NA
   for(ind in 1:nrow(UDsts)){
+    # avearge heading of bird within step
     aveHead[ind] <- atan2(mean(diff(sel$UTMN[UDsts$strtInd[ind]:UDsts$endInd[ind]])), mean(diff(sel$UTME[UDsts$strtInd[ind]:UDsts$endInd[ind]])))
-    trajs <- tryCatch({
+    trajs <- tryCatch({ #calculate trajectories
       TrackTraj(sel$DT[UDsts$strtInd[ind]], sel$Lat[UDsts$strtInd[ind]], sel$Lon[UDsts$strtInd[ind]], 6)
     }, error = function(e){NA})
-    if(is.na(trajs)){
+    if(all(is.na(trajs) | is.null(trajs))){
       trajHead[ind] <- NA
       trajSpd[ind] <- NA
     } else {
@@ -200,16 +202,16 @@ for(b in 1:length(ListD)){
   }
   outTraj[[b]] <- data.frame(DT = sel$DT[UDsts$strtInd], aveHd = aveHead, trjHd = trajHead, trjSpd = trajSpd, lat = sel$Lat[UDsts$strtInd], lon = sel$Lon[UDsts$strtInd], timeTo = sel$tToFor[UDsts$strtInd], distTo = sel$dToFor[UDsts$strtInd], rtChg = sel$rtChg[UDsts$strtInd])
 }
-ind=205
-plot(sel$Lon[which(sel$DT==UDsts$start[ind]):which(sel$DT==UDsts$end[ind])],sel$Lat[which(sel$DT==UDsts$start[ind]):which(sel$DT==UDsts$end[ind])],type='l')
-points(trajs$lon,trajs$lat)
+# ind=205
+# plot(sel$Lon[which(sel$DT==UDsts$start[ind]):which(sel$DT==UDsts$end[ind])],sel$Lat[which(sel$DT==UDsts$start[ind]):which(sel$DT==UDsts$end[ind])],type='l')
+# points(trajs$lon,trajs$lat)
 
-ind<-100
-ggplot(ListD[[1]][UDsts$strtInd[ind]:UDsts$endInd[ind],], aes(x=Lon,y=Lat)) +
-  geom_path() +
-  geom_point(data = outTraj[[1]][ind,], aes(x = lon, y = lat))
-  geom_spoke(data = outTraj[[1]][ind,], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
-  radius = scales::rescale(outTraj[[1]]$trjSpd[ind], c(.2, .8)))
+# ind<-100
+# ggplot(ListD[[1]][UDsts$strtInd[ind]:UDsts$endInd[ind],], aes(x=Lon,y=Lat)) +
+#   geom_path() +
+#   geom_point(data = outTraj[[1]][ind,], aes(x = lon, y = lat))
+#   geom_spoke(data = outTraj[[1]][ind,], aes(x = lon, y = lat, colour = trjSpd, angle = trjHd), arrow = arrow(length = unit(0.05,"inches")),
+#   radius = scales::rescale(outTraj[[1]]$trjSpd[ind], c(.2, .8)))
 
 plot(trajs$lon,trajs$lat)
 for(b in 1:length(outTraj)){
@@ -222,14 +224,14 @@ for(b in 1:length(outTraj)){
   }
   outTraj[[b]]$cumDist <- dist
 }
-# save(outTraj,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChg.RData")
+# save(outTraj,file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 sel <- allD[allD$forage == 1,]
 ggplot(sel, aes(x = lon, y = lat)) + geom_point()
 # LOAD IN THE STEP LENGTHS TRAJECTORIES
 if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChg.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/StepsTrajTimeChg.RData")
+    load("F:/UTokyoDrive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 }
 # save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
 # LOAD IN THE LISTED DATA
@@ -496,19 +498,23 @@ for(b in 1:length(outTraj)){
 allTraj <- bind_rows(outTraj)
 allTraj$relH <- allTraj$aveHd - allTraj$trjHd
 # allTraj$relH <- allTraj$relH + pi
-fr <- ggplot(allTraj[allTraj$proxim=="20+" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
-nr<-ggplot(allTraj[allTraj$proxim=="<1" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
-Ten20<-ggplot(allTraj[allTraj$proxim=="1-5" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
-Twenty30<-ggplot(allTraj[allTraj$proxim=="5-10" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
-Thirty40<-ggplot(allTraj[allTraj$proxim=="10-15" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
-Forty50<-ggplot(allTraj[allTraj$proxim=="15-20" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
-  geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
-ggarrange(nr, Ten20, Twenty30, Thirty40, Forty50, ncol= 3, nrow = 2, labels = c("<1km", "1-5km", "5-10km","10-15km","15-20km"))
+Thirty40 <- ggplot(allTraj[allTraj$distTo>=30 & allTraj$distTo<(40*10^3) & allTraj$rtChg < 0,], aes(x = relH)) +
+  geom_histogram() + coord_polar(start=pi) + scale_x_continuous(limits=c(-pi,pi))
+One5<-ggplot(allTraj[allTraj$distTo>=(0*10^3) & allTraj$distTo<(5*10^3) & allTraj$rtChg < 0,], aes(x = relH)) +
+  geom_histogram() + coord_polar(start=pi) + scale_x_continuous(limits=c(-pi,pi))
+Five10<-ggplot(allTraj[allTraj$distTo>=(5*10^3) & allTraj$distTo<(10*10^3) & allTraj$rtChg < 0,], aes(x = relH)) +
+  geom_histogram() + coord_polar(start=pi) + scale_x_continuous(limits=c(-pi,pi))
+nr<-ggplot(allTraj[allTraj$proxim=="<1" & allTraj$rtChg < 0,], aes(x = relH)) +
+  geom_histogram() + coord_polar(start=pi) + scale_x_continuous(limits=c(-pi,pi))
+Ten20<-ggplot(allTraj[allTraj$distTo>=(10*10^3) & allTraj$distTo<(20*10^3) & allTraj$rtChg < 0,], aes(x = relH)) +
+  geom_histogram() + coord_polar(start=pi) + scale_x_continuous(limits=c(-pi,pi))
+Twenty30<-ggplot(allTraj[allTraj$distTo>=(20*10^3) & allTraj$distTo<(30*10^3) & allTraj$rtChg < 0,], aes(x = relH)) +
+  geom_histogram() + coord_polar(start=pi) + scale_x_continuous(limits=c(-pi,pi))
+# Thirty40<-ggplot(allTraj[allTraj$proxim=="10-15" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
+#   geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
+# Forty50<-ggplot(allTraj[allTraj$proxim=="15-20" & allTraj$rtChg < 0,], aes(x = relH*(180/pi))) +
+#   geom_histogram() + coord_polar(start=180) + scale_x_continuous(limits=c(0,360))
+ggarrange(Thirty40, Twenty30, Ten20, Five10, One5, ncol= 3, nrow = 2, labels = c("30-40km", "20-30km", "10-20km","5-10km","1-5km"))
 
 
 p1 <- ggplot(allTraj[allTraj$rtChg<0,]) + geom_point(aes(x = aveHd, y = log10(distTo)), colour = "red")+ coord_polar(start = pi)
@@ -819,6 +825,7 @@ for(b in 1:length(windFiles19)){
     WindDat19 <- rbind(WindDat19, toAdd)
   }
 }
+ggplot(WindDat,aes(x=Head-atan2(Y,X)*(180/pi),y=Lat)) + geom_point() + coord_polar()
 WindDat19$DT <- as.POSIXct(WindDat19$DT, format = "%Y-%m-%d %H:%M:%OS")
 WindDat19$timeTo <- NA
 WindDat19$distTo <- NA
@@ -843,14 +850,15 @@ if(Sys.info()['sysname'] == "Darwin"){
   load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat.RData")
   load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat19.RData")
 }
+colnames(WindDat)
 # remove data points after the last foraging points
 WindDat <- WindDat[!is.na(WindDat$distTo),]
 WindDat19 <- WindDat19[!is.na(WindDat19$distTo),]
-WindDat$WHd <- atan2(WindDat$X,WindDat$Y)
+WindDat$WHd <- atan2(WindDat$Y,WindDat$X)
 WindDat$RelHead <- WindDat$Head-WindDat$WHd
 WindDat$RelHead[WindDat$RelHead < -pi] <- WindDat$RelHead[WindDat$RelHead < -pi] + 2*pi
 WindDat$RelHead[WindDat$RelHead > pi] <- WindDat$RelHead[WindDat$RelHead > pi] - 2*pi
-WindDat19$WHd <- atan2(WindDat19$X,WindDat19$Y)
+WindDat19$WHd <- atan2(WindDat19$Y,WindDat19$X)
 WindDat19$RelHead <- WindDat19$Head-WindDat19$WHd
 WindDat19$RelHead[WindDat19$RelHead < -pi] <- WindDat19$RelHead[WindDat19$RelHead < -pi] + 2*pi
 WindDat19$RelHead[WindDat19$RelHead > pi] <- WindDat19$RelHead[WindDat19$RelHead > pi] - 2*pi
@@ -868,7 +876,7 @@ WindDat$yrID <- NA
 for(b in 1:nrow(WindDat)){
   WindDat$yrID[b] <- paste(totalDat$tagID[which(totalDat$DT > WindDat$DT[b] - lubridate::minutes(1) & totalDat$DT < WindDat$DT[b] + lubridate::minutes(1) & totalDat$Lat == WindDat$Lat[b] & totalDat$Lon == WindDat$Lon[b])], format(totalDat$DT[which(totalDat$DT > WindDat$DT[b] - lubridate::minutes(1) & totalDat$DT < WindDat$DT[b] + lubridate::minutes(1) & totalDat$Lat == WindDat$Lat[b] & totalDat$Lon == WindDat$Lon[b])],format="%Y"),sep="")
 }
-# save(WindDat,file="F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
+# save(WindDat,file="/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
 # LOAD WIND DATA
 if(Sys.info()['sysname'] == "Darwin"){
   load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
@@ -876,6 +884,39 @@ if(Sys.info()['sysname'] == "Darwin"){
   load("F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
 }
 
+# bayesian circular mixed-effects model
+# remove data after last forage
+tillFor <- WindDat[!is.na(WindDat$distTo),]
+tillFor<-tillFor[,-which(names(tillFor) %in% "timeTo")]
+
+which(is.na(WindDat$timeTo))
+colnames(WindDat)
+
+tillFor$RelHead <- numeric(tillFor$RelHead)
+tillFor$distTo <- numeric(tillFor$distTo)
+tillFor$WSpd <- numeric(tillFor$WSpd)
+tillFor$distFromFk <- numeric(tillFor$distFromFk)
+tillFor$yrID <- factor(tillFor$yrID)
+tillFor$Subject <- NA
+indivs <- unique(tillFor$yrID)
+for(b in 1:20){
+  tillFor$Subject[tillFor$yrID == indivs[b]]<-b
+}
+tillFor$Subject <- as.numeric(tillFor$Subject)
+levels(tillFor$yrID) <- 1:length(unique(tillFor$yrID))
+
+bpnme(Error.rad ~ Maze + Trial.type + (1|Subject),data =  Maps, its = 100)
+
+typeof(Maps$Subject)
+typeof(tillFor$Subject)
+
+tst <- bpnme(RelHead ~ distTo + WSpd + distFromFk + (1|Subject), tillFor,its=100)
+tst<-bpnreg::bpnme(WindDat$RelHead ~ WindDat$distTo + (1|WindDat$yrID),data=WindDat,its=100)
+bpnr(RelHead ~ distTo, WindDat)
+
+which(is.na(WindDat))
+
+WindDat[110139,]
 
 ggplot(WindDat, aes(y = distTo, x = Head)) + geom_point() + coord_polar()
 ggplot(WindDat, aes(y = distTo, x = WHd)) + geom_point() + coord_polar()
@@ -928,15 +969,15 @@ ggplot(mnW, aes(y = 10*as.numeric(bin10), x = grp.mean)) +
 
 # bin data every 10 km
 WindDat$bin10 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
-png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/DistRelDensity.png",width=800,height=800)
-ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = aligned, colour = bin10)) +
-  # geom_histogram(alpha=.2,fill=NA,position="dodge")
-  geom_density(alpha=.2,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), geom="line",position="identity") +
-  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("Density") + theme_bw() + theme(panel.grid = element_blank()) +
-  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 20,
-        family = "Arial"), axis.text = element_text(size = 20, family = "Arial")) + 
-  scale_colour_manual(name="Dist to foraging (km)", values = rev(brewer.pal(9,"YlOrRd")))
-dev.off()
+# png("/Volumes/GoogleDrive/My Drive/PhD/Notes/WindNotes/DistRelDensity.png",width=800,height=800)
+# ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = aligned, colour = bin10)) +
+#   # geom_histogram(alpha=.2,fill=NA,position="dodge")
+#   geom_density(alpha=.2,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), geom="line",position="identity") +
+#   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("Density") + theme_bw() + theme(panel.grid = element_blank()) +
+#   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 20,
+#         family = "Arial"), axis.text = element_text(size = 20, family = "Arial")) + 
+#   scale_colour_manual(name="Dist to foraging (km)", values = rev(brewer.pal(9,"YlOrRd")))
+# dev.off()
 
 ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, fill = bin10)) +#max(WindDat$distTo),], aes(x = aligned, colour = bin10)) +
   geom_density(alpha=.4) + scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("Density") + theme_bw() + theme(panel.grid = element_blank()) +
@@ -1592,7 +1633,7 @@ if(allD$forage[nrow(allD)] == 1){
 allD$yrID <- paste(allD$Year,allD$tagID)
 indivs <- unique(allD$yrID)
 # add in a distance to next forage point
-allD$distToN <- NA
+allD$distN <- NA
 for(b in 1:length(forSt)){
   if(b == 1){
     allD$distN[1:(forSt[b]-1)] <- sqrt((allD$UTMN[1:(forSt[b]-1)] - allD$UTMN[forSt[b]])^2 + (allD$UTME[1:(forSt[b]-1)] - allD$UTME[forSt[b]])^2)
@@ -1600,9 +1641,10 @@ for(b in 1:length(forSt)){
     allD$distN[(forSt[b-1]+1):(forSt[b]-1)] <- sqrt((allD$UTMN[(forSt[b-1]+1):(forSt[b]-1)] - allD$UTMN[forSt[b]])^2 + (allD$UTME[(forSt[b-1]+1):(forSt[b]-1)] - allD$UTME[forSt[b]])^2)
   }
 }
+
 TrackTraj <- function(DT, lat, lon, hrs){
   time <- format(DT - lubridate::hours(9), "%Y-%m-%d") # convert to UTC
-  hr <- format(DT, "%H")
+  hr <- format(round(DT - lubridate::hours(9), units="hours"),format = "%H")
   trajectory_model <-
   create_trajectory_model() %>%
   add_trajectory_params(
@@ -1619,6 +1661,60 @@ TrackTraj <- function(DT, lat, lon, hrs){
   run_model()
   return(trajectory_model %>% get_output_tbl())
 }
+# get backwards air trajectories for 1 hour prior to 15 km from next for point (Shiomi speed)
+preForTraj <- vector(mode="list",length=length(forSt))
+for(b in 1:length(forSt)){
+  if(b == 1){
+    if(any(allD$distN[1:forSt[b]] > 4.5*10^3)){
+      ind <- min(which(allD$distN[1:forSt[b]]<5*10^3))
+      preForTraj[[b]] <- tryCatch({TrackTraj(allD$DT[ind],allD$lat[ind],allD$lon[ind],1)
+      }, error = function(e){NA})
+    } 
+  } else {
+    if(any(allD$distN[(forSt[b-1]+1):(forSt[b]-1)] > 4.5*10^3)){
+      ind <- min(which(allD$distN[(forSt[b-1]+1):forSt[b]]<5*10^3)) + forSt[b-1]
+      preForTraj[[b]] <- tryCatch({TrackTraj(allD$DT[ind],allD$lat[ind],allD$lon[ind],1)
+      }, error = function(e){NA})
+    }
+  }
+}
+# remove foraging points without 5km tracks before
+forSt5 <- forSt[!is.na(preForTraj)]
+preForTraj <- preForTraj[!is.na(preForTraj)]
+
+# calculate the headings
+for(b in 1:length(forSt)){
+  if(is.null(preForTraj[[b]])){
+
+  } else {
+    ind <- min(which(allD$distN[(forSt[b-1]+1):forSt[b]]<5*10^3)) + forSt[b-1]
+    birdHead <- atan2(diff(allD$UTMN[ind:forSt[b]]),diff(allD$UTME[ind:forSt[b]]))
+    (circ.mean(birdHead) - head)*(180/pi)
+    utmTraj <- spTransform(SpatialPoints(cbind(preForTraj[[b]]$lon,preForTraj[[b]]$lat),proj4string=CRS("+proj=longlat")),CRS("+proj=utm +zone=54 +datum=WGS84"))
+    utme <- coordinates(utmTraj)[,1]
+    utmn <- coordinates(utmTraj)[,2]
+    head <- atan2(diff(rev(utmn)),diff(rev(utme)))
+
+    cbind(utme,utmn)
+  }
+}
+
+plot(1,1,xlim=c(1,5),ylim=c(1,5))
+points(2,4)
+
+atan2(2-1,4-1) * (180/pi)
+
+
+plot(utme[1],utmn[1])
+lines(c(utme[1],utme[1]),c(4*10^6,6*10^6))
+points(utme[2],utmn[2])
+atan2(diff(rev(utmn)),diff(rev(utme)))*(180/pi)
+atan2(diff((utmn)),diff((utme)))*(180/pi)
+
+ggplot() +
+  geom_path(data=allD[(forSt[b-1]+1:forSt[b]),],aes(x=lon,y=lat)) +
+  geom_point(preForTraj[[b]],aes(x=lon,y=lat,colour=factor()))
+
 forTraj <- vector(mode="list",length=length(forSt))
 forInfo <- data.frame("DT"=NA,"StInd"=NA,"Beh5"=NA)
 # for(b in 2:length(forSt)){
@@ -1645,13 +1741,56 @@ DayTraj <- function(day, lat, lon, dur, hr){
   run_model()
   return(trajectory_model %>% get_output_tbl())
 }
-# generate trajectories arriving at FkIsland
-allDays <- unique(format(allD$DT,"%Y-%m-%d"))
-tracks <- vector(mode="list",length=length(allDays))
-for(b in 2:length(allDays)){
-  tracks[[b]] <- DayTraj(allDays[b],FkOshi$Lat,FkOshi$Lon,6,c(0:6))
-}
 
+trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = 39.40229,
+    lon = 141.9982,
+    height = 20,
+    duration = 12,
+    days = "2018-08-29",
+    daily_hours = c(15,18,21,24),
+    direction = "backward",
+    met_type = "gdas1",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model()
+trajectory_model %>% trajectory_plot()
+
+# generate trajectories arriving at FkIsland
+allDays <- unique(format(allD$DT - lubridate::days(1),"%Y-%m-%d"))
+tracks <- vector(mode="list",length=length(allDays))
+for(b in 1:length(allDays)){
+  tracks[[b]] <- tryCatch({DayTraj(allDays[b], FkOshi$Lat, FkOshi$Lon,6,seq(3,21,1))
+  }, error = function(e){NA})
+}
+sum(is.na(tracks))
+tracks[[13]]$traj_dt
+tracks[[13]] %>% trajectory_plot()
+
+tracks <- tracks[!is.na(tracks)]
+# find the land trajectories
+for(b in 1:length(tracks)){
+  dt = tracks[[b]] %>% group_by(run) %>% dplyr::summarise(traj_dt[1])
+  locs <- spTransform(SpatialPoints(cbind(tracks[[b]]$lon,tracks[[b]]$lat),proj4string=CRS("+proj=longlat")),CRS("+proj=utm +zone=54 +datum=WGS84"))
+  tracks[[b]]$UTME <- coordinates(locs)[,1]
+  tracks[[b]]$UTMN <- coordinates(locs)[,2]
+  tracks[[b]] %>% group_by(run) %>% dplyr::summarise(head=atan2(diff(UTMN[rev(abs(hour_along))]),diff(UTME[rev(abs(hour_along))])))
+  plot(UTME[rev(tracks[[b]]$hour_along)],UTMN[rev(tracks[[b]]$hour_along)],type='p')
+  plot(UTME,UTMN,type="p")
+  plot(tracks[[b]]$lon,tracks[[b]]$lat,type="p")
+  heading = atan2()
+}
+order(rev(tst$hour_along))
+cbind(tst$hour_along,tst$UTMN,tst$UTMN[order(tst$hour_along)])
+
+ggplot() +
+  geom_point(data=tst, aes(x=lon,y=lat,colour=factor(hour_along))) +
+  geom_point(data=FkOshi,aes(x=Long,y=Lat),pch=3)
+
+tst %>% dplyr::summarise((UTMN[rev(abs(hour_along))]))
+tst[,c("UTMN","hour_along")]
 forDispTrav = vector(mode="list",length=length(disp1))
 allD$tkb[is.na(allD$tkb)] <- 0
 allD$dv[is.na(allD$dv)] <- 0
@@ -1992,3 +2131,39 @@ dataInfo <- rerddap::info("erdMWchla1day")
 
 ## FIND DISTANCE FROM PRECEEDING FORAGING POINT
 summary(WindDat)
+
+
+colnames(allD)
+colnames(WindDat)
+inds <- which(allD$tagID == WindDat$ID[1] & allD$DT > (WindDat$DT[1] - lubridate::minutes(25)) & allD$DT < (WindDat$DT[1] + lubridate::minutes(25)))
+
+headings <- atan2(diff(allD$UTMN[inds]),diff(allD$UTME[inds]))
+range(allD$DT[inds])
+
+WindDat$DT[1]
+WindDat$Head[1] * (180/pi)
+atan2(mean(sin(headings)),mean(cos(headings)))
+
+WindDat$brdHd <- NA
+for(b in 1:nrow(WindDat)){
+  inds <- which(allD$tagID == WindDat$ID[b] & allD$DT > (WindDat$DT[b] - lubridate::minutes(25)) & allD$DT < (WindDat$DT[b] + lubridate::minutes(25)))
+  WindDat$brdHd[b] <- circ.mean(atan2(diff(allD$UTMN[inds]),diff(allD$UTME[inds])))
+}
+
+# add average travel speeds
+WindDat$spTrav <- NA
+for(b in 1:nrow(WindDat)){
+  inds <- which(allD$tagID == WindDat$ID[b] & allD$DT > (WindDat$DT[b] - lubridate::minutes(25)) & allD$DT < (WindDat$DT[b] + lubridate::minutes(25)))
+  WindDat$spTrav[b] <- mean(allD$spTrav[inds])
+}
+
+plot(WindDat$Head,WindDat$brdHd)
+
+
+# add 1min average headings
+WindDat$fminHd <- NA
+for(b in 1:nrow(WindDat)){
+  inds <- which(allD$tagID == WindDat$ID[b] & allD$DT > (WindDat$DT[b] - lubridate::seconds(5)) & allD$DT < (WindDat$DT[b] + lubridate::minutes(5)))
+  WindDat$fminHd[b] <- atan2(sum(diff(allD$UTMN[inds])),sum(diff(allD$UTME[inds])))
+}
+plot(WindDat$Head,WindDat$fminHd)
