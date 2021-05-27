@@ -1645,10 +1645,26 @@ DayTraj <- function(day, lat, lon, dur, hr){
   run_model()
   return(trajectory_model %>% get_output_tbl())
 }
+
+  trajectory_model <-
+  create_trajectory_model() %>%
+  add_trajectory_params(
+    lat = 39.40229,
+    lon = 141.9982,
+    height = 20,
+    duration = 12,
+    days = "2018-08-29",
+    daily_hours = c(18,21),
+    direction = "backward",
+    met_type = "gdas1",
+    met_dir = paste(exec_loc, "met", sep = ""),
+    exec_dir = paste(exec_loc, "exec", sep = "")) %>%
+  run_model()
+
 # generate trajectories arriving at FkIsland
 allDays <- unique(format(allD$DT,"%Y-%m-%d"))
 tracks <- vector(mode="list",length=length(allDays))
-for(b in 2:length(allDays)){
+for(b in 1:length(allDays)){
   tracks[[b]] <- DayTraj(allDays[b],FkOshi$Lat,FkOshi$Lon,6,c(0:6))
 }
 
