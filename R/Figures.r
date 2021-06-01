@@ -85,9 +85,9 @@ if(allD$forage[nrow(allD)] == 1){
 
 # LOAD IN THE STEP LENGTHS TRAJECTORIES
 if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChg.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/StepsTrajTimeChg.RData")
+    load("F:/UTokyoDrive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 }
 # save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
 # LOAD IN THE LISTED DATA
@@ -189,13 +189,27 @@ for(b in 1:length(distGaps)){
 }
 # apply(distGaps, function(x) watson.wheeler.test(WindDat$RelHead[WindDat$distTo >= x & WindDat$distTo < (x+1)]))
 
-ggplot(WindDat, aes(x = RelHead, y = WSpd, fill = tripL > 2)) + geom_point(pch =21) + coord_polar(start = pi) +
+ggplot(WindDat, aes(x = spTrav, y = WSpd)) + geom_point() +# coord_polar(start = pi) +
+  # scale_colour_gradient(name = expression(paste("Wind speed (",ms^{-1},")")),low="blue",high="red") +
+  scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
+  theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,family = "Arial"),
+    axis.text = element_text(size = 8, family = "Arial")) + scale_y_continuous(name=expression(paste("Ground speed (",ms^{-1},")",sep="")))
+
+ggplot(WindDat[WindDat$distTo > 100,], aes(x = fminHd, y = WSpd, fill = tripL > 2)) + geom_point(pch =21) + coord_polar(start = pi) +
   scale_fill_manual(name = "Foraging \ntrip length", breaks=c(TRUE,FALSE), labels=c("Long (2+ days)","Short (<2 days)"), values=c("red","deepskyblue")) +
   scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
   theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,family = "Arial"),
     axis.text = element_text(size = 8, family = "Arial")) + scale_y_continuous(name=expression(paste("Estimated wind speeds (",ms^{-1},")",sep="")))
 ggsave(paste(figLoc,"SpeedAngles.svg",sep=""), device="svg", dpi = 300, height = 5,
       width = 5, units = "in")
+
+ggplot(WindDat[WindDat$distTo > 50,], aes(x = fminRelHd, y = WSpd)) + geom_point() + coord_polar(start=pi)
+ggplot(WindDat[WindDat$DT < as.POSIXct("2019/01/01"),], aes(x = DT, y = WSpd)) + geom_point()
+
+
+WindDat$fminRelHd <- WindDat$fminHd - WindDat$WHd
+WindDat$fminRelHd[WindDat$fminRelHd < -pi] <- WindDat$fminRelHd[WindDat$fminRelHd < -pi] + 2*pi
+WindDat$fminRelHd[WindDat$fminRelHd > pi] <- WindDat$fminRelHd[WindDat$fminRelHd > pi] - 2*pi
 
 ggplot(data.frame(dist=distGaps[!is.na(avRelHd)],aveHd=avRelHd[!is.na(avRelHd)]), aes(x = aveHd, y = dist)) + geom_point(pch=21, colour="black",fill="deepskyblue") +
   coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
@@ -680,6 +694,7 @@ for(b in 1:length(distGaps)){
 allTraj <- bind_rows(outTraj)
 allTraj$distTo <- allTraj$distTo*10^-3
 allTraj$relH <- allTraj$aveHd - allTraj$trjHd
+
 allTraj$relH[allTraj$relH < pi] = allTraj$relH[allTraj$relH < pi] + 2*pi
 allTraj$relH[allTraj$relH > pi] = allTraj$relH[allTraj$relH > pi] - 2*pi
 allTraj <- na.omit(allTraj)
@@ -769,6 +784,19 @@ ggplot(data.frame(inters, cirDistEst), aes(x = inters, y = rbar)) + geom_line() 
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial"))
 ggsave(paste(figLoc,"dispDist.svg",sep=""), device="svg", dpi = 300, height = 5,
       width = 5, units = "in")
+
+WindDat$fminRelH <- WindDat$fminHd-WindDat$WHd
+
+plot(WindDat$fminRelH, WindDat$RelHead)
+
+plot(WindDat$fminHd-WindDat$WHd,WindDat$Head-WindDat$WHd)
+
+
+WindDat$fminRelH[WindDat$fminRelH < -pi] <- WindDat$fminRelH[WindDat$fminRelH < -pi] + 2*pi
+WindDat$fminRelH[WindDat$fminRelH > pi] <- WindDat$fminRelH[WindDat$fminRelH > pi] - 2*pi
+ggplot(WindDat[WindDat$distTo<50,],aes(y=distTo, x = fminRelH)) + geom_point() + coord_polar(start=pi)
+
+
 
 
 plot(inters[aveHDistEst$n>30],aveHDistEst$rbar[aveHDistEst$n>30])
@@ -887,8 +915,8 @@ spdval <- ggplotRegression(splm) +
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=expression(paste("Estimated wind speed (",ms^{-1},")"))) + scale_x_continuous(name=expression(paste("JMA wind speed (",ms^{-1},")")))
 
-ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"))
-ggsave(paste(figLoc,"windVal.svg",sep=""), device="svg", dpi = 300, height = 5,
+ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-3,vjust=2)
+ggsave(paste(figLoc,"windVal.svg",sep=""), device="svg", dpi = 300, height = 7,
       width = 3.5, units = "in")
 
 # calculate the relative heading to next foraging spot
@@ -912,5 +940,15 @@ ggsave(paste(figLoc,"groundWindSpeed.svg",sep=""), device="svg", dpi = 300, heig
 # mean est wind speeds for quadrant
 
 
-ggplot(WindDat[WindDat$distTo < 20,], aes(x = distTo, y = WSpd)) + geom_point()
-hist(WindDat$WSpd)
+inters <- seq(52.5, 2.5, by=-1)
+# create a circular class from RelHead
+avHCirc <- circular(WindDat$fminHd, unit = "radians",rotation="counter")
+
+avDistEst <- bind_rows(lapply(inters, function(x) circ.disp(avHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5)])))
+avDistEst$p.value <- unlist(lapply(inters, function(x) r.test(avHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5)])$p.value))
+
+ggplot(data.frame(inters,avDistEst), aes(x = inters, y = rbar)) + geom_point()
+
+
+ggplot(WindDat, aes(x=RelHead,y=WSpd,colour=distFromFk>10)) + geom_point()+coord_polar(start=pi)
+

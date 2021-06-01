@@ -186,7 +186,7 @@ for(b in 1:length(ListD)){
   trajSpd <- NA
   for(ind in 1:nrow(UDsts)){
     # avearge heading of bird within step
-    aveHead[ind] <- atan2(mean(diff(sel$UTMN[UDsts$strtInd[ind]:UDsts$endInd[ind]])), mean(diff(sel$UTME[UDsts$strtInd[ind]:UDsts$endInd[ind]])))
+    aveHead[ind] <- atan2(mean(sum(sel$UTMN[UDsts$strtInd[ind]:UDsts$endInd[ind]])), mean(sum(sel$UTME[UDsts$strtInd[ind]:UDsts$endInd[ind]])))
     trajs <- tryCatch({ #calculate trajectories
       TrackTraj(sel$DT[UDsts$strtInd[ind]], sel$Lat[UDsts$strtInd[ind]], sel$Lon[UDsts$strtInd[ind]], 6)
     }, error = function(e){NA})
@@ -2167,3 +2167,35 @@ for(b in 1:nrow(WindDat)){
   WindDat$fminHd[b] <- atan2(sum(diff(allD$UTMN[inds])),sum(diff(allD$UTME[inds])))
 }
 plot(WindDat$Head,WindDat$fminHd)
+
+# find the dispersal of headings as birds approach foraging
+allD$forage[which(allD$forage==TRUE)] <- 1
+allD$forage[is.na(allD$forage)] <- 0
+forSt <- which(diff(allD$forage) == 1) + 1
+if(allD$forage[1] == 1){
+  forSt <- c(1, forSt)
+}
+disps <- vector(mode="list",length=length(forSt))
+for(b in 1:length(forSt)){
+  inds <- which(allD$tagID == allD$tagID[forSt[b]] & allD$Year == allD$Year[forSt[b]] & allD$DT > (allD$DT[forSt[b]] - lubridate::hours(1)) & allD$DT < allD$DT[forSt[b]])
+  dists = sqrt((allD$UTMN[forSt[b]] - allD$UTMN[inds])^2 + (allD$UTME[forSt[b]] - allD$UTME[inds])^2)
+  heads = atan2(diff(allD$UTMN[inds]),diff(allD$UTME[inds]))
+  if(any(WindDat$DT %in% allD$DT[inds] & WindDat$yrID %in% paste(allD$tagID[inds],allD$Year[inds],sep=""))){
+    wrow = which(WindDat$DT %in% allD$DT[inds] & WindDat$yrID %in% paste(allD$tagID[inds],allD$Year[inds],sep=""))
+  } else {
+    wrow = NA
+  }
+  disps[[b]] <- list(dists,heads,wrow)
+}
+
+
+
+tstr <- lm.circular(WindDat$RelHead[WindDat$distTo>0], WindDat$distTo[WindDat$distTo>0], init = rep(0,1),type="c-l")
+summary(tstr)
+
+tstr$fitted
+
+circular(WindDat$RelHead)
+
+colnames(WindDat)
+summary(WindDat$nxtForDur)
