@@ -2153,7 +2153,7 @@ for(b in 1:nrow(WindDat)){
 # add average travel speeds
 WindDat$spTrav <- NA
 for(b in 1:nrow(WindDat)){
-  inds <- which(allD$tagID == WindDat$ID[b] & allD$DT > (WindDat$DT[b] - lubridate::minutes(25)) & allD$DT < (WindDat$DT[b] + lubridate::minutes(25)))
+  inds <- which(allD$tagID == WindDat$ID[b] & allD$DT > (WindDat$DT[b] - lubridate::seconds(5)) & allD$DT < (WindDat$DT[b] + lubridate::seconds(5)))
   WindDat$spTrav[b] <- mean(allD$spTrav[inds])
 }
 
