@@ -124,8 +124,8 @@ ggplot(WindDat[WindDat$distTo < 10,]) +
         family = "Arial"), axis.text = element_text(size = 12, family = "Arial"))
 
 one2Ten <- vector(mode="list", length = length(distGaps))
-distGaps <- seq(0,9,1)
-distGapsL <- distGaps+1
+distGaps <- seq(0,40,10)
+distGapsL <- distGaps+10
 signif.ceiling <- function(x, n){
   pow <- floor( log10( abs(x) ) ) + 1 - n
   y <- ceiling(x / 10 ^ pow) * 10^pow
@@ -134,11 +134,13 @@ signif.ceiling <- function(x, n){
   y
 }
 avRelHd <- NA
+pvals<-NA
 for(b in 1:length(distGaps)){
     RaylT <- r.test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
-    # tst<-HR_test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
-    if(RaylT$p.value > 0.05){
-    # if(tst[2] > 0.01){
+    tst<-HR_test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
+    # if(RaylT$p.value > 0.05){
+    pvals[b] <- tst[2]
+    if(tst[2] > 0.01){
       res <- ggplot(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],]) +
         geom_histogram(aes(x = RelHead), bins = round(nrow(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],])/2))
       ggplot_build(res)$data
@@ -174,6 +176,7 @@ for(b in 1:length(distGaps)){
     rm(tst)
 }
 summary(allD)
+save(pvals,avRelHd,one2Ten, file="F:/UTokyoDrive/PhD/Data/WindCalc/headings.RData")
 
 distGaps <- seq(0,190,10)
 distGapsL <- distGaps+10
