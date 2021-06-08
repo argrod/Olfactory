@@ -2199,3 +2199,10 @@ circular(WindDat$RelHead)
 
 colnames(WindDat)
 summary(WindDat$nxtForDur)
+
+
+# try modelling
+# offset is just the absolute value of Rel Wind Head when -pi:pi
+WindDat$offset <- abs(WindDat$RelHead)
+
+plot(WindDat$distTo,WindDat$offset)
