@@ -2206,3 +2206,23 @@ summary(WindDat$nxtForDur)
 WindDat$offset <- abs(WindDat$RelHead)
 
 plot(WindDat$distTo,WindDat$offset)
+
+# go through each wind traj
+uniqs <- unique(WindDat$yrID)
+nos <- vector(mode = "list",length=length(uniqs))
+for(b in 1:length(uniqs)){
+  sel <- WindDat[WindDat$yrID == uniqs[b],]
+  # time differences
+  tds <- diff(sel$DT)
+  # separations
+  seps <- which(tds > 65)
+  seps <- c(1, seps+1, nrow(sel))
+  for(g in 1:length(seps)){
+    if(g == 1){
+      if(seps[b+1]-seps[b] > 12){
+
+      }
+    }
+  }
+}
+

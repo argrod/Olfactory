@@ -729,14 +729,18 @@ for(b in 1:length(distGaps)){
       width = 3, units = "in")
 }
 
-# allList <- bind_rows(ListD)
-# allList$levRet <- c(allList$levRet[!is.na(allList$levRet)],allList$levRet19[!is.na(allList$levRet19)])
+allList <- bind_rows(ListD)
+allList$levRet <- c(allList$levRet[!is.na(allList$levRet)],allList$levRet19[!is.na(allList$levRet19)])
 # WindDat$levRet <- NA
 # WindDat$tripL <- NA
 # for(b in 1:nrow(WindDat)){
 #   WindDat$levRet[b] <- allList$levRet[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
 #   WindDat$tripL[b] <- allList$tripL[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
 # }
+WindDat$tripN <- NA
+for(b in 1:nrow(WindDat)){
+  WindDat$tripN[b] <- allD$tripN[which(allD$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allD$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allD$tagID,format(allD$DT,"%Y"),sep="") == WindDat$yrID[b])]
+}
 # save(WindDat,file="F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
 
 allTraj <- bind_rows(outTraj)
