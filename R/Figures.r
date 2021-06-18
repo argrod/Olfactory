@@ -467,14 +467,28 @@ traceplot(fit.RelH)
 plot(WindDat$RelHead ~ WindDat$distFromFk)
 WindDat <- WindDat[,-which(names(WindDat) %in% c("timeTo","forHd","spTrav","minHd"))]
 WindDat$yrIDnm <- as.numeric(factor(WindDat$yrID))
-testr <- bpnme(pred.I = circular(RelHead) ~ as.numeric(distFromFk) + (1|yrIDnm) + as.numeric(WSpd), data = WindDat,
-  its = 10000, burn = 1000, n.lag = 3)
+testr <- bpnme(pred.I = RelHead ~ distFromFk + WSpd + (1|yrIDnm), data = WindDat[1:20,], its = 10000, burn = 1000, n.lag = 3)
+WindDat$offset
+tstr <- lm(offset ~ distTo + distFromFk + WSpd, data = WindDat)
+summary(tstr)
+plot(tstr)
 
 fit.Maps <- bpnme(pred.I = Error.rad ~ Maze + Trial.type + L.c + (1|Subject), data = Maps, its = 10000, burn = 1000, n.lag = 3, seed = 101)
 
 traceplot(testr)
 summary(WindDat)
 
+# try building GAM
+library(tidyverse)
+set.seed(123)
+trSize <- floor(nrow(WindDat) * .8)
+trset <- sample(seq_len(nrow(WindDat)), size = trSize)
+train.set <- WindDat[trset,]
+test.set <- WindDat[-trset,]
+library(mgcv)
+gamWind <- gam(offset ~ distTo + WSpd + s(yrIDnm, bs = 're'), data = train.set, method = "REML")
+summary(gamWind)
+plot(gamWind)
 summary(WindDat)
 
 allLeavePlt <- ggplot() + geom_point(data=leaveShrtDat[leaveShrtDat$hrP < 0.01,], aes(x = aveHd, y = dist, fill = "red"), pch = 21) +

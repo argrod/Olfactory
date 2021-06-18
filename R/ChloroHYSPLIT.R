@@ -2220,3 +2220,63 @@ summary(tstr)
 ggplot(WindDat[WindDat$distTo < 50,], aes(x = distTo, y = offset*(180/pi),colour=(tripL > 2))) + geom_point()
 
 ggplot(WindDat[WindDat$distTo < 20,], aes(x = RelHead, y = distTo)) + geom_point() + coord_polar(start=pi)
+# go through each wind traj
+uniqs <- unique(WindDat$yrID)
+nos <- vector(mode = "list",length=length(uniqs))
+for(b in 1:length(uniqs)){
+  sel <- WindDat[WindDat$yrID == uniqs[b],]
+  # time differences
+  tds <- diff(sel$DT)
+  # separations
+  seps <- which(tds > 65)
+  seps <- c(1, seps+1, nrow(sel))
+  for(g in 1:length(seps)){
+    if(g == 1){
+      if(seps[b+1]-seps[b] > 12){
+
+      }
+    }
+  }
+}
+
+
+for(b in 1:length(Dat)){
+  Dat[[b]]$x <- c(diff(Dat[[b]]$UTME),NA)
+  Dat[[b]]$y <- c(diff(Dat[[b]]$UTMN),NA)
+  Dat[[b]]$tdiff <- c(as.numeric(difftime(Dat[[b]]$DT[2:nrow(Dat[[b]])],Dat[[b]]$DT[1:(nrow(Dat[[b]])-1)],units="secs")),NA)
+}
+for(b in 1:length(Dat19)){
+  Dat19[[b]]$x <- c(diff(Dat19[[b]]$UTME),NA)
+  Dat19[[b]]$y <- c(diff(Dat19[[b]]$UTMN),NA)
+  Dat19[[b]]$tdiff <- c(as.numeric(difftime(Dat19[[b]]$DT[2:nrow(Dat19[[b]])],Dat19[[b]]$DT[1:(nrow(Dat19[[b]])-1)],units="secs")),NA)
+}
+
+D18 <- bind_rows(Dat)
+D19 <- bind_rows(Dat19)
+allD <- data.frame(DT=c(D18$DT, D19$DT),
+    lat = c(D18$Lat, D19$Lat),
+    lon = c(D18$Lon, D19$Lon),
+    tagID = c(D18$tagID, D19$tagID),
+    Day = c(D18$Day, D19$Day),
+    Sex = c(D18$Sex, D19$Sex),
+    distTrav = c(D18$recalDist, D19$recalDist),
+    spTrav = c(D18$spTrav, D19$spTrav),
+    recalSp = c(D18$recalSp, D19$recalSp),
+    distFk = c(D18$distFromFk, D19$distFromFk),
+    tripN = c(D18$tripN, D19$tripN),
+    tripL = c(D18$tripL, D19$tripL),
+    tkb = c(D18$tkb, D19$tkb),
+    dv = c(D18$dv, D19$dv),
+    UTME = c(D18$UTME, D19$UTME),
+    UTMN = c(D18$UTMN, D19$UTMN),
+    x = c(D18$x,D19$x),
+    y = c(D18$y,D19$y),
+    tdiff = c(D18$tdiff,D19$tdiff))
+allD$Year <- format(allD$DT, format = "%Y")
+allD$forage <- allD$dv == 1 | allD$tkb == 1
+allD$yrID <- paste(allD$Year, allD$tagID, sep = "")
+flyD <- allD[allD$spTrav > 15,]
+uniqs <- unique(flyD$yrID)
+for(b in 1:length(uniqs)){
+  sel <- flyD[]
+}
