@@ -1057,3 +1057,27 @@ ggplot(WindDat, aes(x=RelHead,y=WSpd,colour=distFromFk>10)) + geom_point()+coord
 WindDat$diffOf <- pi - abs(WindDat$RelHead)
 WindDat$diffOf[WindDat$diffOf < ]
 ggplot(WindDat[WindDat$distTo < 25,], aes(y = (pi-abs(RelHead))*(180/pi), x = distTo)) + geom_point()
+
+# produce a figure to illustrate the wind estimation method
+WindDat %>% group_by(yrID) %>% dplyr::summarise(n=n())
+plot(WindDat$DT[WindDat$yrID == "7_S12018" & format(WindDat$DT,"%Y-%m-%d") == as.POSIXct("2018-09-01",tz="")],WindDat$tripL[WindDat$yrID == "7_S12018" & format(WindDat$DT,"%Y-%m-%d") == as.POSIXct("2018-09-01",tz="")])
+
+WindDat$DT[WindDat$yrID == "7_S12018" & WindDat$DT > as.POSIXct("2018-09-01 11:00:00",tz="") & WindDat$DT < as.POSIXct("2018-09-01 12:00:00",tz="")]
+
+# run the minute detection method for 7_S12018 for center at 3118
+egDat <- data.frame(spd=r,hed=d)
+ggplot(egDat, aes(x = cos(hed), y = sin(hed))) + geom_point() + coord_polar() + scale_x_continuous(limits=c(-pi,pi)) +
+  geom_segment(aes(x = meangd, xend = meangd, y=0, yend = mean(spd)), colour = "black", arrow=arrow(length=unit(.5,'cm'))) +
+  geom_segment(aes(x = WindDat$Head[6762], xend = WindDat$Head[6762], y = 0, yend = WindDat$WSpd[6762]), colour = "blue") +
+  geom_segment(aes(x = atan2(Y[end]-Y[st],X[end]-X[st]), xend = atan2(Y[end]-Y[st],X[end]-X[st]),
+    y = 0, yend = mean(spd)))
+
+
+# Using raster
+ggplot(egDat, aes(x=hed, y=spd) ) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+  scale_x_continuous(expand = c(0, 0), limits = c(-pi,pi)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(
+    legend.position='none'
+  ) + coord_polar()
