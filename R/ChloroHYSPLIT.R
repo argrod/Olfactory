@@ -2208,6 +2208,19 @@ WindDat$offset <- abs(WindDat$RelHead)
 
 plot(WindDat$distTo,WindDat$offset)
 
+# install.packages("glmmsr")
+library(MASS)
+tstr <- lmer(offset ~ distTo + WSpd + (1|yrID), WindDat)
+summary(tstr)
+colnames(WindDat)
+tstr <- lmer(offset ~ distTo + WSpd + (1|yrID),data= WindDat)
+
+tstr <- lmer(offset ~ distTo + WSpd + (1 | yrID), WindDat)
+summary(tstr)
+
+ggplot(WindDat[WindDat$distTo < 50,], aes(x = distTo, y = offset*(180/pi),colour=(tripL > 2))) + geom_point()
+
+ggplot(WindDat[WindDat$distTo < 20,], aes(x = RelHead, y = distTo)) + geom_point() + coord_polar(start=pi)
 # go through each wind traj
 uniqs <- unique(WindDat$yrID)
 nos <- vector(mode = "list",length=length(uniqs))

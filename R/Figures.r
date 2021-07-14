@@ -467,14 +467,28 @@ traceplot(fit.RelH)
 plot(WindDat$RelHead ~ WindDat$distFromFk)
 WindDat <- WindDat[,-which(names(WindDat) %in% c("timeTo","forHd","spTrav","minHd"))]
 WindDat$yrIDnm <- as.numeric(factor(WindDat$yrID))
-testr <- bpnme(pred.I = circular(RelHead) ~ as.numeric(distFromFk) + (1|yrIDnm) + as.numeric(WSpd), data = WindDat,
-  its = 10000, burn = 1000, n.lag = 3)
+testr <- bpnme(pred.I = RelHead ~ distFromFk + WSpd + (1|yrIDnm), data = WindDat[1:20,], its = 10000, burn = 1000, n.lag = 3)
+WindDat$offset
+tstr <- lm(offset ~ distTo + distFromFk + WSpd, data = WindDat)
+summary(tstr)
+plot(tstr)
 
 fit.Maps <- bpnme(pred.I = Error.rad ~ Maze + Trial.type + L.c + (1|Subject), data = Maps, its = 10000, burn = 1000, n.lag = 3, seed = 101)
 
 traceplot(testr)
 summary(WindDat)
 
+# try building GAM
+library(tidyverse)
+set.seed(123)
+trSize <- floor(nrow(WindDat) * .8)
+trset <- sample(seq_len(nrow(WindDat)), size = trSize)
+train.set <- WindDat[trset,]
+test.set <- WindDat[-trset,]
+library(mgcv)
+gamWind <- gam(offset ~ distTo + WSpd + s(yrIDnm, bs = 're'), data = train.set, method = "REML")
+summary(gamWind)
+plot(gamWind)
 summary(WindDat)
 
 allLeavePlt <- ggplot() + geom_point(data=leaveShrtDat[leaveShrtDat$hrP < 0.01,], aes(x = aveHd, y = dist, fill = "red"), pch = 21) +
@@ -729,18 +743,14 @@ for(b in 1:length(distGaps)){
       width = 3, units = "in")
 }
 
-allList <- bind_rows(ListD)
-allList$levRet <- c(allList$levRet[!is.na(allList$levRet)],allList$levRet19[!is.na(allList$levRet19)])
+# allList <- bind_rows(ListD)
+# allList$levRet <- c(allList$levRet[!is.na(allList$levRet)],allList$levRet19[!is.na(allList$levRet19)])
 # WindDat$levRet <- NA
 # WindDat$tripL <- NA
 # for(b in 1:nrow(WindDat)){
 #   WindDat$levRet[b] <- allList$levRet[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
 #   WindDat$tripL[b] <- allList$tripL[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
 # }
-WindDat$tripN <- NA
-for(b in 1:nrow(WindDat)){
-  WindDat$tripN[b] <- allD$tripN[which(allD$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allD$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allD$tagID,format(allD$DT,"%Y"),sep="") == WindDat$yrID[b])]
-}
 # save(WindDat,file="F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
 
 allTraj <- bind_rows(outTraj)
@@ -1047,3 +1057,27 @@ ggplot(WindDat, aes(x=RelHead,y=WSpd,colour=distFromFk>10)) + geom_point()+coord
 WindDat$diffOf <- pi - abs(WindDat$RelHead)
 WindDat$diffOf[WindDat$diffOf < ]
 ggplot(WindDat[WindDat$distTo < 25,], aes(y = (pi-abs(RelHead))*(180/pi), x = distTo)) + geom_point()
+
+# produce a figure to illustrate the wind estimation method
+WindDat %>% group_by(yrID) %>% dplyr::summarise(n=n())
+plot(WindDat$DT[WindDat$yrID == "7_S12018" & format(WindDat$DT,"%Y-%m-%d") == as.POSIXct("2018-09-01",tz="")],WindDat$tripL[WindDat$yrID == "7_S12018" & format(WindDat$DT,"%Y-%m-%d") == as.POSIXct("2018-09-01",tz="")])
+
+WindDat$DT[WindDat$yrID == "7_S12018" & WindDat$DT > as.POSIXct("2018-09-01 11:00:00",tz="") & WindDat$DT < as.POSIXct("2018-09-01 12:00:00",tz="")]
+
+# run the minute detection method for 7_S12018 for center at 3118
+egDat <- data.frame(spd=r,hed=d)
+ggplot(egDat, aes(x = cos(hed), y = sin(hed))) + geom_point() + coord_polar() + scale_x_continuous(limits=c(-pi,pi)) +
+  geom_segment(aes(x = meangd, xend = meangd, y=0, yend = mean(spd)), colour = "black", arrow=arrow(length=unit(.5,'cm'))) +
+  geom_segment(aes(x = WindDat$Head[6762], xend = WindDat$Head[6762], y = 0, yend = WindDat$WSpd[6762]), colour = "blue") +
+  geom_segment(aes(x = atan2(Y[end]-Y[st],X[end]-X[st]), xend = atan2(Y[end]-Y[st],X[end]-X[st]),
+    y = 0, yend = mean(spd)))
+
+
+# Using raster
+ggplot(egDat, aes(x=hed, y=spd) ) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+  scale_x_continuous(expand = c(0, 0), limits = c(-pi,pi)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(
+    legend.position='none'
+  ) + coord_polar()
