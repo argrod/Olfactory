@@ -68,6 +68,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     UTMN = c(D18$UTMN, D19$UTMN))
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
+write.table(allD, file = "F:/UTokyoDrive/PhD/Data/allD.txt")
 japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 # functions to extract HYSPLIT model data
 find_hull <- function(df) df[chull(df$lon, df$lat), ]
@@ -2261,9 +2262,15 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     tdiff = c(D18$tdiff,D19$tdiff))
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
-allD$yrID <- paste(allD$Year, allD$tagID, sep = "")
-flyD <- allD[allD$spTrav > 15,]
+allD$yrID <- paste(as.character(allD$Year), as.character(allD$tagID), sep = "")
+flyD <- allD[allD$spTrav > 14.4,]
+flyD <- flyD[-is.na(flyD$yrID),]
 uniqs <- unique(flyD$yrID)
+WindOut <- vector(mode = "list", length = length(uniqs))
 for(b in 1:length(uniqs)){
-  sel <- flyD[]
+  sel <- flyD[flyD$yrID <- uniqs[b],]
+  # find sampling frequency
+  mean(sel$tdiff,na.rm=T)
+  # search through for gaps in sampling
+  sdiffs <- which(sel$tdiff > )
 }
