@@ -43,10 +43,12 @@ dir = atan2(diff(y),diff(x));
 [flight,fs,fe] = flightmask(spd,4,5);
 [ss,se] = getsection(1,300,60,fs,fe);
 
-[vw,wd,va] = windestimates(spd,dir,ss(1:end-1),se(1:end-1));
+[vw,wd,va,re sn,rwh] = windestimates(spd,dir,ss(1:end-1),se(1:end-1));
+
+plot(rwh/(180/pi))
 
 for b = 405:length(se)
-windestimates(spd,dir,ss(b),se(b));
+[vw,wd,va] = windestimates(spd,dir,ss(b),se(b));
 end
 
 ss(402:404)
