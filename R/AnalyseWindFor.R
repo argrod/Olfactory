@@ -487,3 +487,68 @@ plot <- ggplot(data = dispersion_tbl, aes(x = lon, y = lat, colour=as.factor(hou
 geom_polygon(data = hulls, alpha = 0.5) +
 labs(x = "Lon", y = "Lat")
 plot
+
+#################################################################
+#################### ANALYSE 2019 YONE DATA #####################
+#################################################################
+
+# bring in wind and foraging data
+if(Sys.info()['sysname'] == "Darwin"){
+    fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+} else {
+    fileloc <- "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+}
+
+files <- dir(fileloc)
+
+for(b in 1:length(files)){
+    if(b == 1){
+        dat <- read.delim(paste(fileloc,files[b], sep = ""), sep = ",", header = T)
+        dat$ID <- sub("Wind.*","",files[b])
+    } else {
+        toAdd <- read.delim(paste(fileloc,files[b], sep = ""), sep = ",", header = T)
+        toAdd$ID <- sub("Wind.*","",files[b])
+        dat <- rbind(dat,toAdd)
+    }
+}
+dat$time <- as.POSIXct(dat$time, format = "%d-%m-%Y %H:%M:%S", tz = "")
+dat$rwh <- dat$aveDir - dat$wDir
+dat$rwh[dat$aveDir == 0] <- NA
+dat$U <- dat$wSp*cos(dat$wDir)
+dat$V <- dat$wSp*sin(dat$wDir)
+
+ggplot(dat[dat$distTo < 10 & dat$forage != 1,]) + geom_point(aes(y = rwh, x = distTo)) + scale_x_continuous(limits=c(-180,180))
+hist(dat$distTo)
+
+# get the foraging start points
+fSt <- which(diff(dat$forage) == 1) + 1
+fEd <- which(diff(dat$forage) == -1)
+
+hist(fSt[2:length(fSt)] - fEd[1:(length(fSt)-1)])
+
+
+toRm <- which(as.numeric(difftime(dat$time[fSt[2:length(fSt)]],dat$time[fEd[1:(length(fSt)-1)]],units = "secs")) < 60*10)
+for(b in 1:length(toRm)){
+    dat[fEd[toRm[b]]:fSt[toRm[b] + 1], c("aveDir","wDir","wSp")] <- NA
+}
+
+toUse <- which(as.numeric(difftime(dat$time[fSt[2:length(fSt)]],dat$time[fEd[1:(length(fSt)-1)]],units = "secs")) > 60*10)
+
+b = 1
+
+ggplot(dat[fEd[toUse[b]]:fSt[toUse[b] + 1],]) + geom_path(aes(x = lon, y = lat)) + 
+
+difftime(dat$time[1:(nrow(dat)-1)],dat$time[2:nrow(dat)],units= "secs")
+
+
+difftime(dat$time[fEd[49]],dat$time[fSt[50]])
+
+for(b in 1:length(fSt)){
+    if(b == 1){
+        inds <- c(min(which(dat$ID[1:fSt[b]] == dat$ID[fSt[b]] & dat$forage[1:fSt[b]] == 0)),fSt[b] - 1)
+    } else {
+        inds <- c(min(which(dat$ID[fEd[b - 1]:fSt[b]] == dat$ID[fSt[b]] & dat$forage[fEd[b - 1]:fSt[b]] == 0)),fSt[b] - 1)
+    }
+}
+fSt[b]
+fEd[b]
