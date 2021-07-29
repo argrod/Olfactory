@@ -352,14 +352,46 @@ estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/
 # estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/2018/"
 cd(estLoc)
 EFiles = readdir(estLoc)
-EDat = []
+EDat = DataFrame()
 for b = 1:length(EFiles)
     if b == 1
         EDat = CSV.File(string(estLoc,EFiles[b]), header = true) |> DataFrame
         EDat.ID = fill("2019-"*EFiles[b][1:end-4],nrow(EDat))
+        rename!(EDat, [:DT,:Lat,:Lon,:Forage,:DistTo,:BirdHead,:WDir,:WSpeed,:ID]) 
     else Add = CSV.File(string(estLoc,EFiles[b]), header = true) |> DataFrame
-        Add.ID = fill("2019-"*EFiles[b][1:end-4],nrow(Add))
-        EDat = vcat(EDat, Add)
+        EDat = CSV.File(string(estLoc,EFiles[b]), header = true) |> DataFrame
+        EDat.ID = fill("2019-"*EFiles[b][1:end-4],nrow(EDat))
+        rename!(EDat, [:DT,:Lat,:Lon,:Forage,:DistTo,:BirdHead,:WDir,:WSpeed,:ID]) 
+    end
+    # remove non-wind calculated rows
+    EDat = EDat[.!(EDat.WSpeed .== 0),:]
+    # convert to DateTime
+    df = dateformat"d-m-y H:M:S"
+    EDat.DT = DateTime.(EDat.DT, df)
+    # select time points
+    compT = filter(:DT => x -> gribCond(x, 3, 25), EDat)
+    t = DateTime.(unique(gribT.(compT.DT)),"yyyymmddHH")
+    cd("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/")
+    gribLs = findGribPoints.(t)
+    aveHeds = zeros(length(t),1)
+    aveSpds = zeros(length(t),1)
+    for tPoint = 1:length(t)
+        gribD = gribSelect.(fill(t[tPoint],nrow(gribLs[tPoint])),gribLs[tPoint].lat,gribLs[tPoint].lon)
+        U = reduce(vcat,[x[1] for x in gribD])
+        V = reduce(vcat,[x[2] for x in gribD])
+        aveHeds[tPoint] = atan(mean(U),mean(V))
+        aveSpds[tPoint] = sqrt(mean(U)^2 + mean(V)^2)
+    end
+    # switch non-calculated wind speeds and directions to NaN
+    EDat.X = EDat.WSpeed.*(cos.(EDat.WDir./(180/pi)))
+    EDat.Y = EDat.WSpeed.*(sin.(EDat.WDir./(180/pi)))
+    if b == 1
+        outPt = DataFrame(hcat(t, aveHeds, aveSpds, birdWindow.(t),birdWSpeed.(t),fill(EFilesAll[b][1:(end-4)],length(t))), :auto)
+        rename!(outPt, [:Time,:gribHead,:gribSpeed,:estHead,:estSpeed,:tagID])
+    else
+        add = DataFrame(hcat(t, aveHeds, aveSpds, birdWindow.(t),birdWSpeed.(t),fill(EFilesAll[b][1:(end-4)],length(t))), :auto)
+        rename!(add, [:Time,:gribHead,:gribSpeed,:estHead,:estSpeed,:tagID])
+        outPt = vcat(outPt, add)
     end
 end
 
@@ -392,6 +424,7 @@ gribTimes = unique(gribT.(sel.DT))
 ## DOWNLOAD THE REQUIRED GRIBFILES
 R"""
 # save(list=c("gribsels","gribTimes"), file = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/2019YoneGribs.RData")
+load("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/2019YoneGribs.RData")
 options(timeout=800)
 dloadLoc  = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
 gribFls = list.files(dloadLoc,pattern="*grib2.bin")
@@ -404,15 +437,6 @@ for(b in 1:length(gribsels)){
 # load in the wind calculations
 estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
 cd(estLoc)
-EFiles = readdir(estLoc)
-# repeat for 2019
-estLoc19 = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
-# estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/2018/"
-cd(estLoc19)
-EFiles19 = readdir(estLoc19)
-EFiles19 = EFiles19[contains.(EFiles19,".csv")]
-EFilesAll = vcat(EFiles,EFiles19)
-
 
     # select time points
     compT = filter(:DT => x -> gribCond(x, 3, 25), EDat)
