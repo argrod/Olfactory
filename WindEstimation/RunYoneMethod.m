@@ -162,43 +162,52 @@ for b = 1:length(dat)
     dir = atan2(diff(y),diff(x));
     [flight,fs,fe] = flightmask(spd,4,5);
     [ss,se] = getsection(1,300,60,fs,fe);
-    [vw,wd,va,resn] = windestimates(spd,dir,ss,se);
-    aveDir = zeros(length(forage),1);
-    aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
-    wDir = zeros(length(forage),1);
+%     [vw,wd,va,resn] = windestimates(spd,dir,ss,se);
+    [vw,wd,va,resnorm,bh,rwh,wInd] = windestimates5(spd,dir,ss,se);
+    % create vector for wind values same length as lat lon
+    wSpd = NaN(length(lat),1);
+    wDir = NaN(length(lat),1);
+    vA = NaN(length(lat),1);
+    wSpd(wInd(~isnan(wInd))) = vw(~isnan(wInd));
     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
-    wSp = zeros(length(forage),1);
-    wSp(wInd(~isnan(wInd))) = vw(~isnan(wInd));
-    % find the foraging points
-    forSt = find(diff(forage) == 1) + 1;
-    forEd = find(diff(forage) == -1);
-    if forSt(1) > forEd(1)
-        forSt = [1; forSt];
-    end
-    if forEd(end) < forSt(end)
-        forEd = [forEd; length(forage)];
-    end
-    distTo = zeros(length(forage),1);
-    for nxt = 1:length(forSt)
-        if nxt == 1 && forSt(nxt) ~= 1
-            distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
-        else
-            distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
-        end
-    end
-    outW = table(time,lat,lon,forage,distTo,aveDir,wDir,wSp);
+    vA(wInd(~isnan(wInd))) = va(~isnan(wInd));
+%     aveDir = zeros(length(forage),1);
+%     aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
+%     wDir = zeros(length(forage),1);
+%     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
+%     wSp = zeros(length(forage),1);
+%     wSp(wInd(~isnan(wInd))) = vw(~isnan(wInd));
+%     % find the foraging points
+%     forSt = find(diff(forage) == 1) + 1;
+%     forEd = find(diff(forage) == -1);
+%     if forSt(1) > forEd(1)
+%         forSt = [1; forSt];
+%     end
+%     if forEd(end) < forSt(end)
+%         forEd = [forEd; length(forage)];
+%     end
+%     distTo = zeros(length(forage),1);
+%     for nxt = 1:length(forSt)
+%         if nxt == 1 && forSt(nxt) ~= 1
+%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
+%         else
+%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
+%         end
+%     end
+    outW = table(time,lat,lon,wSpd,wDir,vA);
     % output the data
-    writetable(outW, strcat(outloc,tags(b),"WindYone.txt"));
+    writetable(outW, strcat(outloc,"1sFix/",tags(b),"WindYone.txt"));
 end
 
 
 %% SUBSAMPLE
+
 datSub = dat;
-b=1;
-indeces = 1:5:length(dat{b,3});
-datSub{b,3} = datSub{b,3}(indeces);
-datSub{b,4} = datSub{b,4}(indeces);
-datSub{b,5} = datSub{b,5}(indeces);
+for b = 1:length(dat)
+    indeces = 1:5:length(dat{b,3});
+    datSub{b,3} = datSub{b,3}(indeces);
+    datSub{b,4} = datSub{b,4}(indeces);
+    datSub{b,5} = datSub{b,5}(indeces);
 
     [timeSub, latSub, lonSub] = gettimelatlon(datSub, b);
 %     forage = datSub{b,6};
@@ -209,30 +218,33 @@ datSub{b,5} = datSub{b,5}(indeces);
     dir = atan2(diff(y),diff(x));
     [flight,fs,fe] = flightmask(spd,4,5);
     [ssSub,seSub] = getsection(.2,300,60,fs,fe);
-    [vwSub,wdSub,vaSub,resnSub] = windestimates(spd,dir,ssSub,seSub);
-    aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
-    wDir = zeros(length(forage),1);
-    wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
-    wSp = zeros(length(forage),1);
-    wSp(wInd(~isnan(wInd))) = vw(~isnan(wInd));
+    [vwSub,wdSub,vaSub,resnSub,bh,rwh,wInd] = windestimates5(spd,dir,ssSub,seSub);
+    wSpd = NaN(length(latSub),1);
+    wDir = NaN(length(latSub),1);
+    vA = NaN(length(latSub),1);
+    wSpd(wInd(~isnan(wInd))) = vwSub(~isnan(wInd));
+    wDir(wInd(~isnan(wInd))) = wdSub(~isnan(wInd));
+    vA(wInd(~isnan(wInd))) = vaSub(~isnan(wInd));
     % find the foraging points
-    forSt = find(diff(forage) == 1) + 1;
-    forEd = find(diff(forage) == -1);
-    if forSt(1) > forEd(1)
-        forSt = [1; forSt];
-    end
-    if forEd(end) < forSt(end)
-        forEd = [forEd; length(forage)];
-    end
-    distTo = zeros(length(forage),1);
-    for nxt = 1:length(forSt)
-        if nxt == 1 && forSt(nxt) ~= 1
-            distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
-        else
-            distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
-        end
-    end
-    outW = table(timeSub,latSub,lonSub,distTo,aveDir,wDir,wSp);
+%     forSt = find(diff(forage) == 1) + 1;
+%     forEd = find(diff(forage) == -1);
+%     if forSt(1) > forEd(1)
+%         forSt = [1; forSt];
+%     end
+%     if forEd(end) < forSt(end)
+%         forEd = [forEd; length(forage)];
+%     end
+%     distTo = zeros(length(forage),1);
+%     for nxt = 1:length(forSt)
+%         if nxt == 1 && forSt(nxt) ~= 1
+%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
+%         else
+%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
+%         end
+%     end
+    outW = table(timeSub,latSub,lonSub,wSpd,wDir,vA);
+    writetable(outW, strcat(outloc,"5sFix/",tags(b),"WindYone.txt"));
+end
 
 %% RUN 2017 DATA
 if ismac()
