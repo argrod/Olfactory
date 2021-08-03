@@ -95,14 +95,23 @@ begin
 		for x in rmv
 			rest[tvs[x]:tve[x]] .= false
 		end
-		vs = findall(x -> x == 1, diff([0; diff(rest)]))
-		ve = findall(x -> x == -1, diff([0; diff(rest)]))
+		vs = findall(x -> x == -1, diff([0;rest]))
+		ve = findall(x -> x == 1, diff([rest;0]))
 		return spd, dir, vs, ve
 	end
 end
 
 # ╔═╡ 44183ed0-b125-42e4-bb34-d8b60d95d272
 spd,dir,vs,ve=flightMask(sel.DT,sel.lat,sel.lon,4,5)
+
+# ╔═╡ 69dc708a-2ee8-41f9-86d6-81c88f898069
+rest = spd .< 4
+
+# ╔═╡ 506ff3d6-bd06-4045-a418-e1888b1afee5
+diff(rest)
+
+# ╔═╡ 5f2b2319-ee04-46f9-8b18-390435b30504
+
 
 # ╔═╡ 7c23b6d9-e659-430f-bc5e-ca24ef58196d
 begin
@@ -116,8 +125,8 @@ begin
 		del = delta * F
 		
 		# use only segments that exceed 7 minutes in length
-		fsa = fs[(fe .- fs) >= (7 * 60 * F)] + (60 * F)
-		fea = fe[(fe .- fs) >= (7 * 60 * F)] - (60 * F)
+		fsa = fs[(fe .- fs) .>= (7 * 60 * F)] + (60 * F)
+		fea = fe[(fe .- fs) .>= (7 * 60 * F)] - (60 * F)
 		
 		secnum = sum(floor((fea .- fsa .- window)./del) + 1)
 		
@@ -140,9 +149,48 @@ end
 begin
 	window = 300 * .2
 	del = 60*.2
-	fsa = vs[(ve .- vs) >= (7 * 60 * .2)] + (60 * .2)
-	fea = ve[(ve .- vs) >= (7 * 60 * .2)] - (60 * .2)
+	fsa = vs[(ve .- vs) .>= (7 * 60 * .2)] .+ (60 * .2)
+	fea = ve[(ve .- vs) .>= (7 * 60 * .2)] .- (60 * .2)
 end
+
+# ╔═╡ 95e4ab43-3be8-47db-9cf7-44590a99ba99
+
+
+# ╔═╡ cccf3dee-0ed2-4a1f-a828-2ab04331361a
+
+
+# ╔═╡ 4b0b2af9-0760-477d-9394-12728641364d
+sum((ve .- vs) .>= (7 * 60 * .2))
+
+# ╔═╡ 49dbe98a-9f6c-400a-aa3f-1aa7f641d55d
+
+
+# ╔═╡ 4c2b26a5-1b58-44b9-b4d8-347d44308ceb
+vs[1]
+
+# ╔═╡ ce81b81b-ad03-452c-8a46-30a21975dcce
+ve[1]
+
+# ╔═╡ 863e2c7d-b4d4-42c1-bd97-4d3b6b7f7c8f
+
+
+# ╔═╡ 5b19e0ac-4318-4061-8344-03310a01a6ed
+
+
+# ╔═╡ 3174b784-1bde-4fb2-b014-4ad049efa5bc
+
+
+# ╔═╡ 704285fc-692d-43e1-a3dc-60f5a524991e
+
+
+# ╔═╡ d09e7671-8bbe-4bd1-b1b5-aaddfcfe9cc8
+(ve .- vs) .>= (7*60*9.2)
+
+# ╔═╡ 1d0f649d-9de1-402e-8f44-5896c5b1d3dc
+
+
+# ╔═╡ ec65b7ef-3016-4cb7-a414-b498bdfdf18f
+
 
 # ╔═╡ 2acd5143-ad20-4049-964b-2c968e083740
 length(vs)
@@ -1414,8 +1462,24 @@ version = "0.9.1+5"
 # ╠═16b94084-9283-4d4b-adb8-2b08e52462a8
 # ╠═62ee1055-dbd9-4f93-990d-ce40092e2b1b
 # ╠═44183ed0-b125-42e4-bb34-d8b60d95d272
+# ╠═69dc708a-2ee8-41f9-86d6-81c88f898069
+# ╠═506ff3d6-bd06-4045-a418-e1888b1afee5
+# ╠═5f2b2319-ee04-46f9-8b18-390435b30504
 # ╠═7c23b6d9-e659-430f-bc5e-ca24ef58196d
 # ╠═85b28651-7cb0-4d62-8fb9-6926bbc0fc0d
+# ╠═95e4ab43-3be8-47db-9cf7-44590a99ba99
+# ╠═cccf3dee-0ed2-4a1f-a828-2ab04331361a
+# ╠═4b0b2af9-0760-477d-9394-12728641364d
+# ╠═49dbe98a-9f6c-400a-aa3f-1aa7f641d55d
+# ╠═4c2b26a5-1b58-44b9-b4d8-347d44308ceb
+# ╠═ce81b81b-ad03-452c-8a46-30a21975dcce
+# ╠═863e2c7d-b4d4-42c1-bd97-4d3b6b7f7c8f
+# ╠═5b19e0ac-4318-4061-8344-03310a01a6ed
+# ╠═3174b784-1bde-4fb2-b014-4ad049efa5bc
+# ╠═704285fc-692d-43e1-a3dc-60f5a524991e
+# ╠═d09e7671-8bbe-4bd1-b1b5-aaddfcfe9cc8
+# ╠═1d0f649d-9de1-402e-8f44-5896c5b1d3dc
+# ╠═ec65b7ef-3016-4cb7-a414-b498bdfdf18f
 # ╠═2acd5143-ad20-4049-964b-2c968e083740
 # ╠═f5ff84ff-8930-4dd8-92fe-ea72b62e5176
 # ╠═7de594be-d8f0-412d-970a-380f3fdec814
