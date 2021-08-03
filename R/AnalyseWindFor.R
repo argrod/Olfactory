@@ -517,6 +517,8 @@ dat$rwh[dat$aveDir == 0] <- NA
 dat$U <- dat$wSp*cos(dat$wDir)
 dat$V <- dat$wSp*sin(dat$wDir)
 
+selectDat <- dat[!is.na(dat$rwh),]
+
 ggplot(dat[dat$distTo < 10 & dat$forage != 1,]) + geom_point(aes(y = rwh, x = distTo)) + scale_x_continuous(limits=c(-180,180))
 hist(dat$distTo)
 
@@ -552,3 +554,8 @@ for(b in 1:length(fSt)){
 }
 fSt[b]
 fEd[b]
+
+
+dloadLoc  = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
+gribFls = list.files(dloadLoc,pattern="*grib2.bin")
+if(any(gribFls == "Z__C_RJTD_20190824150000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"))

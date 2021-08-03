@@ -20,18 +20,18 @@ end
 % end
 % clear file i
 tgs = dir2(fileloc);
-tags = string();
+tagsFolds = string();
 for b = 1:length(tgs)
-    tags(b) = tgs(b).name;
+    tagsFolds(b) = tgs(b).name;
 end
 % select only unique tag names and find the index of last occurrence
-[tags,te] = unique(tags,'last');
+tags = extractBefore(filesNs,".txt");
 
 dat = cell(length(tags),5);
 for tg = 1:length(tags)
     tagfiles = filesNs(startsWith(filesNs,tags(tg)));
     for b = 1:length(tagfiles)
-        fileID = fopen(strcat(fileloc,tags(tg),"/",tagfiles(b)));
+        fileID = fopen(strcat(fileloc,tagsFolds(tg),"/",tagfiles(b)));
         GPSDat = textscan(fileID, '%{yyyy/MM/dd,HH:mm:ss}D %f %f %f %f %f %f %s','Delimiter','\t','HeaderLines',0);
         fclose(fileID);
         if b > 1
@@ -69,8 +69,8 @@ for b = 1:length(dat)
     spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
     dir = atan2(diff(y),diff(x));
     [flight,fs,fe] = flightmask(spd,4,5);
-    [ss,se] = getsection(.2,1500,60,fs,fe);
-    windestimates(spd,dir,ss,se)
+    [ss,se] = getsection(.2,300,60,fs,fe);
+%     windestimates(spd,dir,ss,se)
     [vw,wd,va,resn,bh,rwh,wInd] = windestimates5(spd,dir,ss,se);
     aveDir = zeros(length(forage),1);
     aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
