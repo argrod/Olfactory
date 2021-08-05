@@ -299,3 +299,69 @@ end
 
 %% RERUN 2016/17 WHILE SUBSAMPLED
 
+%% NETCDF Files
+if ismac()
+    netloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/netCDF/ASCAT/2016/";
+else
+    netloc = "F:/UTokyoDrive/PhD/Data/netCDF/ASCAT/2016/";
+end
+
+netfiles = dir2(netloc);
+fileTimes = cat(1,netfiles.name);
+filesTimes = strcat(fileTimes(:,7:10),"/",fileTimes(:,11:12),"/",fileTimes(:,13:15),fileTimes(:,16:17),":",fileTimes(:,18:19),":",fileTimes(:,20:21));
+filesTimes = datetime(filesTimes,'InputFormat','yyyy/MM/dd_HH:mm:ss') + hours(9);
+
+timesall = dat{1,3};
+latsall = dat{1,4};
+lonsall = dat{1,5};
+for b = 1:length(timesall)
+    tpoint = timesall(b);
+    if abs(filesTimes(find(filesTimes > tpoint,1)) - tpoint) < minutes(30)
+        % find the nearest timepoint file
+    ind = find(filesTimes > tpoint,1);
+    ts = ncread(strcat(netloc,netfiles(ind).name),"time");
+    ts = datetime(1990,01,01,0,0,0) + seconds(ts) + hours(9); % presumably in GMT, so add 9 hours
+    lts = ncread(strcat(netloc,netfiles(ind).name),"lat");
+    lns = ncread(strcat(netloc,netfiles(ind).name),"lon");
+    wSp = ncread(strcat(netloc,netfiles(ind).name),"model_speed");
+    wDir = ncread(strcat(netloc,netfiles(ind).name),"model_dir");
+    % find the nearest time (column)
+    timeind = find(ts(1,:)'>tpoint, 1);
+    
+    end
+end
+    
+    
+    ts(1,1)
+    filesTimes(ind-1)
+end
+tst=cat(1,convertCharsToStrings(netfiles.name))
+tst(,1)
+[netfiles(1:end).name]
+extractfield(netfiles,'name')
+
+find(min(abs(latsall(b) - lts)) == min(min(abs(latsall(b) - lts))))
+find(abs(latsall(b)-lts(:,339)) == min(abs(latsall(b)-lts(:,339))))
+
+lts(29,337)
+lts(23,339)
+lns(29,337)
+lns(23,339)
+lonsall(b)
+diff(lns(1,:))
+
+latsall(b)
+
+% presumably time is in GMT, so add 9 hours
+ts = ts + hours(9);
+
+
+% first select time that is appropriate
+
+
+index = zeros(length(latsall),2);
+for b = 1:length(latsall)
+    index(b,:) = [find(abs(latsall(b)-lts(:,(min(abs(latsall(b) - lts)) == min(min(abs(latsall(b) - lts)))))) == min(abs(latsall(b)-lts(:,(min(abs(latsall(b) - lts)) == min(min(abs(latsall(b) - lts)))))))) find(min(abs(latsall(b) - lts)) == min(min(abs(latsall(b) - lts))))];
+end
+lts(29,337)
+lts(105,339)

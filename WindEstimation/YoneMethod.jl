@@ -4,6 +4,15 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        el
+    end
+end
+
 # ╔═╡ b2b504be-f728-42d5-bb28-04c7a566cf5d
 begin
 	using Plots
@@ -24,6 +33,8 @@ begin
 	using Glob
 	using DataFrames
 	using LsqFit
+	using PlutoUI
+	using LaTeXStrings
 end
 
 # ╔═╡ 24dd02f0-f348-11eb-02fe-3309b1be5acc
@@ -53,23 +64,15 @@ begin
 	sel = EDat[findall(x->x==tags[1],EDat.ID),:]
 end
 
+# ╔═╡ 0c8048da-df98-4e4a-ba2e-195ede0d6e5c
+md"""
+## Example tag
+
+Plot of the tracks of inidiviual $(EDat.ID[1]) 
+"""
+
 # ╔═╡ 6f21012b-39d6-47d4-99b3-0dde5068c357
-
-
-# ╔═╡ 39232859-9a15-450a-a79e-6632ecbed677
-
-
-# ╔═╡ 12e5dc37-400d-4406-8de9-26a20df98eb3
-
-
-# ╔═╡ d9e65c24-6cf0-47ac-8039-7d47186613cd
-
-
-# ╔═╡ 49e45c19-8e5d-4f8d-8bf8-ecaa2e65707d
-
-
-# ╔═╡ 16b94084-9283-4d4b-adb8-2b08e52462a8
-
+plot(sel.lon,sel.lat)
 
 # ╔═╡ 62ee1055-dbd9-4f93-990d-ce40092e2b1b
 begin
@@ -91,32 +94,47 @@ begin
 		a = findall(x -> x == true, [false; rest])
 		tvs = findall(x -> x == 1, diff([0;rest]))
 		tve = findall(x -> x == -1, diff([rest;0]))
-		rmv = findall(x -> x .<= 5, (tve .- tvs .+ 1))
+		rmv = findall(x -> x .<= consecutive, (tve .- tvs .+ 1))
 		for x in rmv
 			rest[tvs[x]:tve[x]] .= false
 		end
-		vs = findall(x -> x == -1, diff([0;rest]))
-		ve = findall(x -> x == 1, diff([rest;0]))
-		return spd, dir, vs, ve
+		flight = rest .== false
+		vs = findall(x -> x .== 1, diff([0;flight]))
+		ve = findall(x -> x .== -1, diff([flight;0]))
+		return spd, dir, vs, ve, rest
 	end
 end
 
-# ╔═╡ 44183ed0-b125-42e4-bb34-d8b60d95d272
-spd,dir,vs,ve=flightMask(sel.DT,sel.lat,sel.lon,4,5)
+# ╔═╡ 99f6bc95-5032-46ef-bac5-5b01bd55846c
+spd, dir, vs, ve, rest = flightMask(sel.DT,sel.lat,sel.lon,5,5);
 
-# ╔═╡ 69dc708a-2ee8-41f9-86d6-81c88f898069
-rest = spd .< 4
+# ╔═╡ 08cd4275-db5a-4553-bf0a-7b71a8927eb7
+md"""
+## Separating the track into flight segments
 
-# ╔═╡ 506ff3d6-bd06-4045-a418-e1888b1afee5
-diff(rest)
+Using the criteria of a ground speed of $> 4 \textrm{ms}^{-1}$, the track is split into flight or rest. You can test other thresholds and their results below.
+"""
 
-# ╔═╡ 5f2b2319-ee04-46f9-8b18-390435b30504
+# ╔═╡ cf3bd1d2-53ed-4b4c-ad8a-c3716b89b569
+md"""
+Flight speed threshold (ms$$^{-1}$$) $(@bind tagDur Slider(1:50))
+"""
 
+# ╔═╡ 1ad6e21c-05d1-4fa6-b21e-abe6858f1ed6
+begin
+	spd2,dir2,vsShow,veShow = flightMask(sel.DT,sel.lat,sel.lon,tagDur,5)
+	amount = zeros(Int,nrow(sel))
+	for b = 1:length(vsShow)
+		amount[vsShow[b]:veShow[b]] .= 1
+	end
+	plot(sel.lon,sel.lat,label="")
+	scatter!(sel.lon[amount .== 1],sel.lat[amount.==1],markersize = 2,markerstrokewidth=0,label="Flight")
+end
 
 # ╔═╡ 7c23b6d9-e659-430f-bc5e-ca24ef58196d
 begin
 	# separate flight data into section for wind estimation
-	function getsection(F,Win,delta,fs,fe)
+	function getsection(F,Win,delta,fs,fe,time)
 		# F - sampling frequency (Hz)
 		# Win - sampling window (seconds)
 		# delta - window step length (seconds)
@@ -125,119 +143,209 @@ begin
 		del = delta * F
 		
 		# use only segments that exceed 7 minutes in length
-		fsa = fs[(fe .- fs) .>= (7 * 60 * F)] + (60 * F)
-		fea = fe[(fe .- fs) .>= (7 * 60 * F)] - (60 * F)
+		fsa = fs[(fe .- fs) .>= (7 * 60 * F)] .+ (60 * F)
+		fea = fe[(fe .- fs) .>= (7 * 60 * F)] .- (60 * F)
 		
-		secnum = sum(floor((fea .- fsa .- window)./del) + 1)
+		secnum = sum(floor.((fea .- fsa .- window)./del) .+ 1)
 		
-		ss = zeros(Int8,secnum,1); se = zeros(Int8,secnum,1)
+		ss = zeros(Int,trunc(Int,secnum),1)
+		se = zeros(Int,trunc(Int,secnum),1)
 		k = 1
 		while k <= secnum
 			for i = 1:length(fsa)
 				for c = 0:floor((fea[i] - fsa[i] - window)./del)
-					ss[k] = fsa[i] + c * del;
-					se[k] = fsa[i] + c * del + window
+					# ensure time difference is less than 6 minutes
+					if time[trunc(Int,(fsa[i] + c * del + window))] - time[trunc(Int,(fsa[i] + c * del))] > Minute(6)
+						ss[k] = 0
+						se[k] = 0
+					else
+						ss[k] = fsa[i] + c * del
+						se[k] = fsa[i] + c * del + window
+					end
 					k = k + 1
 				end
 			end
 		end
+		ss = filter(x->x≠0,ss)
+		se = filter(x->x≠0,se)
 		return ss,se
 	end
 end
 
-# ╔═╡ 85b28651-7cb0-4d62-8fb9-6926bbc0fc0d
+# ╔═╡ 87a66166-31c6-460a-b534-a219d8d52a79
+ss,se = getsection(.2,300,60,vs,ve,sel.DT)
+
+# ╔═╡ a7cf59c7-74bd-4c55-a1bb-74fde41c7a6a
 begin
-	window = 300 * .2
-	del = 60*.2
-	fsa = vs[(ve .- vs) .>= (7 * 60 * .2)] .+ (60 * .2)
-	fea = ve[(ve .- vs) .>= (7 * 60 * .2)] .- (60 * .2)
+	eg = 300
+	egSel = sel[ss[eg]:se[eg],:]
+	plot(sel.lon[ss[eg]:se[eg]],sel.lat[ss[eg]:se[eg]])
 end
 
-# ╔═╡ 95e4ab43-3be8-47db-9cf7-44590a99ba99
+# ╔═╡ 80e537c2-76a1-4507-a83b-67e76ad873a5
+plot(sel.DT[(ss[eg]:se[eg]).+1],spd[ss[eg]:se[eg]])
+
+# ╔═╡ 88cd3a79-5283-4605-9405-dfb3927d9ba9
+curve_fit(ea
+
+# ╔═╡ fc36b2ba-8d8f-40ba-a381-289b0f37ed27
 
 
-# ╔═╡ cccf3dee-0ed2-4a1f-a828-2ab04331361a
+# ╔═╡ 11cdeaca-f0c1-47d2-9f4d-1ca0bbbc9d5e
+# foist(v) = v[1] .* cos(v[2])
+# 		secnd(v) = v[1] .* sin(v[2])
+# 		full(c) = secnd([c[1] c[2]]).*sin(gd) + foist([c[1] c[2]]).*cos(gd) + sqrt((secnd([c[1] c[2]]).*sin(gd) + foist([c[1] c[2]]).*cos(gd)).^2 - secnd([c[1] c[2]]).^2 - foist([c[1] c[2]]).^2 + c[3]^2) - vg
+# 		lb = [0 -pi 0]
+# 		ub = [20 pi 20]
+# 		ydata = ea(c0)
+
+# ╔═╡ dc38cae8-9786-45fd-9e49-730c7b24ab90
+begin 
+	function windestimates(spd, dir, ss, se)
+		vw = zeros(Float64,length(ss),1)
+	end
+end
+
+# ╔═╡ 9bc1d10b-5314-485b-86aa-3294d1c7f4c3
 
 
-# ╔═╡ 4b0b2af9-0760-477d-9394-12728641364d
-sum((ve .- vs) .>= (7 * 60 * .2))
+# ╔═╡ 115295f1-047a-4da4-a348-1b89e8c795bb
+c = [3 0 9]
 
-# ╔═╡ 49dbe98a-9f6c-400a-aa3f-1aa7f641d55d
-
-
-# ╔═╡ 4c2b26a5-1b58-44b9-b4d8-347d44308ceb
-vs[1]
-
-# ╔═╡ ce81b81b-ad03-452c-8a46-30a21975dcce
-ve[1]
-
-# ╔═╡ 863e2c7d-b4d4-42c1-bd97-4d3b6b7f7c8f
+# ╔═╡ 0089eb62-612b-44ee-baa3-a60f4d943997
 
 
-# ╔═╡ 5b19e0ac-4318-4061-8344-03310a01a6ed
+# ╔═╡ 6234054e-576c-447f-9b3c-cd150d409678
 
 
-# ╔═╡ 3174b784-1bde-4fb2-b014-4ad049efa5bc
+# ╔═╡ 2ad538e7-ed97-4892-9270-03518e7a2691
 
 
-# ╔═╡ 704285fc-692d-43e1-a3dc-60f5a524991e
+# ╔═╡ 4dac5868-f999-4921-a2ec-0c52599944da
 
 
-# ╔═╡ d09e7671-8bbe-4bd1-b1b5-aaddfcfe9cc8
-(ve .- vs) .>= (7*60*9.2)
-
-# ╔═╡ 1d0f649d-9de1-402e-8f44-5896c5b1d3dc
+# ╔═╡ 4013d6c0-c976-45ac-a50e-16cfdcc5a375
 
 
-# ╔═╡ ec65b7ef-3016-4cb7-a414-b498bdfdf18f
+# ╔═╡ 27ccce8b-6983-42de-a7ab-c0a8ae46db78
 
 
-# ╔═╡ 2acd5143-ad20-4049-964b-2c968e083740
-length(vs)
-
-# ╔═╡ f5ff84ff-8930-4dd8-92fe-ea72b62e5176
+# ╔═╡ ef3c74dd-9c83-49a7-9174-7543f8e476da
 
 
-# ╔═╡ 7de594be-d8f0-412d-970a-380f3fdec814
+# ╔═╡ 50b00185-3275-47a0-8d96-a22d152404bc
 
 
-# ╔═╡ 361d07d3-b7be-4eb0-bfe5-6ed46f94b063
+# ╔═╡ 8fce9f68-563a-4d00-8c91-c8eb86c35290
 
 
-# ╔═╡ effc3ba5-4dd7-4848-a8dd-c5f299c5e718
-window = Win * F
-		del = delta * F
-		
-		# use only segments that exceed 7 minutes in length
-		fsa = fs[(fe .- fs) >= (7 * 60 * F)] + (60 * F)
-		fea = fe[(fe .- fs) >= (7 * 60 * F)] - (60 * F)
-		
-		secnum = sum(floor((fea .- fsa .- window)./del) + 1)
-		
-		ss = zeros(Int8,secnum,1); se = zeros(Int8,secnum,1)
-		k = 1
-		while k <= secnum
-			for i = 1:length(fsa)
-				for c = 0:floor((fea[i] - fsa[i] - window)./del)
-					ss[k] = fsa[i] + c * del;
-					se[k] = fsa[i] + c * del + window
-					k = k + 1
-				end
-			end
-		end
+# ╔═╡ 942cf4c3-0bd0-4711-9c20-ae8bcf1ff89b
 
-# ╔═╡ a72ec19d-3c6f-43ba-9b62-8b7eaa5aadfd
-ss,se = getsection(.2,300,60,vs,ve)
 
-# ╔═╡ 2e531133-6ed9-4038-b5f7-7059c3198742
+# ╔═╡ aeea8cbb-808b-474c-b8ef-bedd5aaf8ef4
 
+
+# ╔═╡ beedc2f7-8ea8-40fe-bc3c-db6626cca71a
+md"""
+The wind vector made up of wind speed ($w_v$) and wind direction ($w_d$) can be converted into $u$ and $v$ components via:
+
+$u = w_v \times \cos(w_d)$
+$v = w_v \times \sin(w_d)$
+
+Then a function can be written of the ground speed ($v_d$) as a function of track direction ($g_d$):
+
+$f(w_d,w_v,a_v) = v\sin(g_d)+u\cos(g_d)+\sqrt{\big(v\sin(g_d)+u\cos(g_d)\big)^2-v^2-u^2}-v_g$
+
+where $a_v$ is the air speed.
+push!(out,(x-x0)^2+(y-y0)^2-r^2)
+"""
+
+# ╔═╡ f45dfc08-d3f0-4a64-8244-11955328d818
+
+
+# ╔═╡ 9976fd7a-c063-429a-8367-bb26953b4d7f
+
+
+# ╔═╡ cdd21f69-e37d-47ba-a1f1-08aa8e0dc760
+
+
+# ╔═╡ f8ccbdfd-19b9-4c65-9bce-bb39b9040a52
+
+
+# ╔═╡ f88c6530-a402-4e32-9c9e-dd5e55981d8a
+
+
+# ╔═╡ 7041ca90-3d5a-479a-89c1-c2b4adba5401
+
+
+# ╔═╡ ac0ca5bd-544b-4143-ace3-5d7be1f98f43
+
+
+# ╔═╡ f257d0c8-caf1-4a96-8e6a-4251b525f94b
+
+
+# ╔═╡ d98eec94-0de2-4faf-842f-6bd71ae74fd1
+
+
+# ╔═╡ 0d408e3b-b1db-4cfd-abfb-c416b3b59829
+
+
+# ╔═╡ 89658e6a-0542-46c7-955a-648763adad3b
+
+
+# ╔═╡ 83302108-12c8-48de-9403-a29a0fc6e4f1
+
+
+# ╔═╡ 978e5ef1-90c0-44bb-8a00-869898f70d35
+
+
+# ╔═╡ fbfbde00-beba-4622-8aa8-0ae37b67b7b7
+
+
+# ╔═╡ c526a447-64f6-47e1-8434-9a2e5316f421
+
+
+# ╔═╡ 31df6953-db3c-44c3-b9c8-d09618d2b4ac
+
+
+# ╔═╡ eed56293-6b89-416c-96a8-685b5957b4f2
+begin
+	gd = dir[ss[1]:se[1]]
+	vg = spd[ss[1]:se[1]]
+	
+end
+
+# ╔═╡ bb33aaed-8f48-4895-ae32-835d6d92508d
+begin
+	scatter(gd,vg,xlim=(-pi,pi))
+	xlabel!("Track direction")
+	ylabel!("Track speed (m/s)")
+end
+
+# ╔═╡ 82cf3981-1648-4430-baca-2fce80e40a6b
+begin
+	gx = vg .* cos.(gd)
+	gy = vg .* sin.(gd)
+	scatter(gx,gy)
+end
+
+# ╔═╡ bf268156-adae-4688-a94b-f2ed2e97d320
+begin
+		wx(v) = v[1] .* cos(v[2])
+		wy(v) = v[1] .* sin(v[2])
+		ea(t,c) = wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd) .+ sqrt.((wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2) .- vg
+		lb = [0 -pi 0]
+		ub = [20 pi 20]
+		# ydata = ea([0 0 0],gd,vg)
+		# curve_fit(ea,[3 0 9],lower = lb, upper = ub)
+end
 
 # ╔═╡ cabe59d8-b22e-4b5b-ad6e-7c01f709c4ea
 begin
 	function wind2dveclsq(vg,gd,c0)
 		wx(v) = v[1] .* cos(v[2])
 		wy(v) = v[1] .* sin(v[2])
-		ea(c) = wv([c[1] c[2]]).*sin(gd) + wx([c[1] c[2]]).*cos(gd) + sqrt((wy([c[1] c[2]]).*sin(gd) + wx([c[1] c[2]]).*cos(gd)).^2 - wy([c[1] c[2]]).^2 - wx([c[1] c[2]]).^2 + c[3]^2) - vg
+		ea(c) = wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd) .+ sqrt.((wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2) .- vg
 		lb = [0 -pi 0]
 		ub = [20 pi 20]
 		ydata = ea(c0)
@@ -245,29 +353,72 @@ begin
 	end
 end
 
-# ╔═╡ 11cdeaca-f0c1-47d2-9f4d-1ca0bbbc9d5e
-foist(v) = v[1] .* cos(v[2])
-		secnd(v) = v[1] .* sin(v[2])
-		full(c) = secnd([c[1] c[2]]).*sin(gd) + foist([c[1] c[2]]).*cos(gd) + sqrt((secnd([c[1] c[2]]).*sin(gd) + foist([c[1] c[2]]).*cos(gd)).^2 - secnd([c[1] c[2]]).^2 - foist([c[1] c[2]]).^2 + c[3]^2) - vg
-		lb = [0 -pi 0]
-		ub = [20 pi 20]
-		ydata = ea(c0)
+# ╔═╡ 04ce9b62-abcb-4ed7-a35d-85565357932c
+wind2dveclsq(vg,gd,[3 0 9])
 
-# ╔═╡ b540a82e-95d1-47d4-bb8a-56196282eb73
+# ╔═╡ b5ea6fd2-a58c-4f78-a046-26081615170e
+curve_fit(ea,gx,gy,[3, 0, 9])
 
+# ╔═╡ d015f470-943d-42f4-ad57-c32255e8e4e6
+# begin 
+# 	# a two-parameter exponential model
+# # x: array of independent variables
+# # p: array of model parameters
 
-# ╔═╡ fa8a55ad-1721-4bb2-a6fb-16bc81eaa87c
+# model(c) = wy([c[1] c[2]]).*sin.(gd) + wx([c[1] c[2]]).*cos.(gd) .+ sqrt.((wy([c[1] c[2]]).*sin.(gd) + wx([c[1] c[2]]).*cos.(gd)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2) .- vg
 
+# # some example data
+# # xdata: independent variables
+# # ydata: dependent variable
+# # xdata = range(0,stop=10,length=20)
+# ydata = model([3 0 9])
+# # p0 = [0.5, 0.5]
 
-# ╔═╡ c6658800-236d-485a-a743-a5adc0266ef1
+# fit = curve_fit(model, [3 0 9], ydata,[3 0 9])
+# end
 
-
-# ╔═╡ 946d9015-c75c-47f9-ae25-c09d002e6eda
+# ╔═╡ 20d4be45-c19c-4186-a548-8e1cb09588ed
 begin
-	m(t, p) = p[1] * exp.(p[2] * t)
-	p0 = [0.5, 0.5]
-	fit = curve_fit(m, tdata, ydata, p0)
+	data = [(-2.0,1.0), (0.0, 3.0), (2.0, 1.0)]
+	
+ptrs = 1:length(data)
+	
+y = zeros(length(data))
+	
+function circle_model(t,p)
+	out = []
+	x0,y0,r = p
+	for ptr ∈ ptrs
+		x,y = data[ptr]
+		push!(out,(x-x0)^2+(y-y0)^2-r^2)
+	end
+	out
 end
+	
+p0 = [0.0, 0.0, 1.0] # using 0.0 as initial radius fails
+	
+fit = curve_fit(circle_model, ptrs, y, p0)
+	
+fit.param
+end
+
+# ╔═╡ 9eac61b7-720d-48be-9410-f8e3be54e459
+ptrs
+
+# ╔═╡ 67ae0690-019f-4017-901b-8e6d2c6c1244
+y
+
+# ╔═╡ bdcadc88-cfda-48b3-b678-3d6e1db9effc
+md"""
+## Theory
+
+With no wind effect on the bird as it flies, it should, theoretically, fly at the same speed regardless of the direction. Therefore, the track speed ($t_s$) and direction ($t_d$) should generate a relationship such that $t_s^2 + t_d^2 = r^2$ where $r$ is the radius of a circle centered around the point ($0,0$).
+
+The addition of winds should move the origin point such that the speed of travel should be dictated by the travel direction (i.e. a westerly wind would increase travel speed to the east and decrease it to the west, shifting the center further to the right).
+"""
+
+# ╔═╡ 61470dff-2413-4c6f-97d5-2ec739774b1c
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -279,9 +430,11 @@ DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 GRIB = "b16dfd50-4035-11e9-28d4-9dfe17e6779b"
 Geodesy = "0ef565a4-170c-5f04-8de2-149903a85f3d"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LsqFit = "2fda8390-95c7-5789-9bda-21331edee243"
 NetCDF = "30363a11-5582-574a-97bb-aa9a979735b9"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
 RCall = "6f49c342-dc21-5d91-9882-a32aef131414"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
@@ -294,9 +447,11 @@ DataFrames = "~1.2.2"
 GRIB = "~0.3.0"
 Geodesy = "~1.0.1"
 Glob = "~1.3.0"
+LaTeXStrings = "~1.2.1"
 LsqFit = "~0.12.1"
 NetCDF = "~0.11.3"
-Plots = "~1.19.4"
+Plots = "~1.20.0"
+PlutoUI = "~0.7.9"
 Query = "~1.0.0"
 RCall = "~0.13.12"
 RecursiveArrayTools = "~2.16.1"
@@ -318,9 +473,9 @@ uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 
 [[ArrayInterface]]
 deps = ["IfElse", "LinearAlgebra", "Requires", "SparseArrays", "Static"]
-git-tree-sha1 = "f2fbc50f22a0b16f390077a9be763f6785091072"
+git-tree-sha1 = "2e004e61f76874d153979effc832ae53b56c20ee"
 uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "3.1.21"
+version = "3.1.22"
 
 [[Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -572,9 +727,9 @@ version = "3.3.5+0"
 
 [[GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Printf", "Random", "Serialization", "Sockets", "Test", "UUIDs"]
-git-tree-sha1 = "9f473cdf6e2eb360c576f9822e7c765dd9d26dbc"
+git-tree-sha1 = "182da592436e287758ded5be6e32c406de3a2e47"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.58.0"
+version = "0.58.1"
 
 [[GRIB]]
 deps = ["eccodes_jll"]
@@ -584,9 +739,9 @@ version = "0.3.0"
 
 [[GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "eaf96e05a880f3db5ded5a5a8a7817ecba3c7392"
+git-tree-sha1 = "d59e8320c2747553788e4fc42231489cc602fa50"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.58.0+0"
+version = "0.58.1+0"
 
 [[Geodesy]]
 deps = ["CoordinateTransformations", "Dates", "LinearAlgebra", "StaticArrays"]
@@ -812,9 +967,9 @@ version = "0.12.1"
 
 [[MacroTools]]
 deps = ["Markdown", "Random"]
-git-tree-sha1 = "6a8a2a625ab0dea913aba95c11370589e0239ff0"
+git-tree-sha1 = "0fb723cd8c45858c22169b2e42269e53271a6df7"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.6"
+version = "0.5.7"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -928,9 +1083,9 @@ version = "0.11.1"
 
 [[Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "94bf17e83a0e4b20c8d77f6af8ffe8cc3b386c0a"
+git-tree-sha1 = "bfd7d8c7fd87f04543810d9cbd3995972236ba1b"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "1.1.1"
+version = "1.1.2"
 
 [[Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -956,9 +1111,15 @@ version = "1.0.11"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
-git-tree-sha1 = "1e72752052a3893d0f7103fbac728b60b934f5a5"
+git-tree-sha1 = "e39bea10478c6aff5495ab522517fae5134b40e3"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.19.4"
+version = "1.20.0"
+
+[[PlutoUI]]
+deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "Suppressor"]
+git-tree-sha1 = "44e225d5837e2a2345e69a1d1e01ac2443ff9fcb"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.9"
 
 [[PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -1071,9 +1232,9 @@ version = "1.1.0"
 
 [[SentinelArrays]]
 deps = ["Dates", "Random"]
-git-tree-sha1 = "35927c2c11da0a86bcd482464b93dadd09ce420f"
+git-tree-sha1 = "a3a337914a035b2d59c9cbe7f1a38aaba1265b02"
 uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-version = "1.3.5"
+version = "1.3.6"
 
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -1166,6 +1327,11 @@ version = "1.7.2"
 [[SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
+
+[[Suppressor]]
+git-tree-sha1 = "a819d77f31f83e5792a76081eee1ea6342ab8787"
+uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
+version = "0.2.0"
 
 [[TOML]]
 deps = ["Dates"]
@@ -1454,44 +1620,63 @@ version = "0.9.1+5"
 # ╠═b2b504be-f728-42d5-bb28-04c7a566cf5d
 # ╠═0e34f851-4e25-4b6a-b76f-672b311a6819
 # ╠═19ad02e2-a725-42e4-8d3e-ecaa93a559a7
+# ╟─0c8048da-df98-4e4a-ba2e-195ede0d6e5c
 # ╠═6f21012b-39d6-47d4-99b3-0dde5068c357
-# ╠═39232859-9a15-450a-a79e-6632ecbed677
-# ╠═12e5dc37-400d-4406-8de9-26a20df98eb3
-# ╠═d9e65c24-6cf0-47ac-8039-7d47186613cd
-# ╠═49e45c19-8e5d-4f8d-8bf8-ecaa2e65707d
-# ╠═16b94084-9283-4d4b-adb8-2b08e52462a8
 # ╠═62ee1055-dbd9-4f93-990d-ce40092e2b1b
-# ╠═44183ed0-b125-42e4-bb34-d8b60d95d272
-# ╠═69dc708a-2ee8-41f9-86d6-81c88f898069
-# ╠═506ff3d6-bd06-4045-a418-e1888b1afee5
-# ╠═5f2b2319-ee04-46f9-8b18-390435b30504
-# ╠═7c23b6d9-e659-430f-bc5e-ca24ef58196d
-# ╠═85b28651-7cb0-4d62-8fb9-6926bbc0fc0d
-# ╠═95e4ab43-3be8-47db-9cf7-44590a99ba99
-# ╠═cccf3dee-0ed2-4a1f-a828-2ab04331361a
-# ╠═4b0b2af9-0760-477d-9394-12728641364d
-# ╠═49dbe98a-9f6c-400a-aa3f-1aa7f641d55d
-# ╠═4c2b26a5-1b58-44b9-b4d8-347d44308ceb
-# ╠═ce81b81b-ad03-452c-8a46-30a21975dcce
-# ╠═863e2c7d-b4d4-42c1-bd97-4d3b6b7f7c8f
-# ╠═5b19e0ac-4318-4061-8344-03310a01a6ed
-# ╠═3174b784-1bde-4fb2-b014-4ad049efa5bc
-# ╠═704285fc-692d-43e1-a3dc-60f5a524991e
-# ╠═d09e7671-8bbe-4bd1-b1b5-aaddfcfe9cc8
-# ╠═1d0f649d-9de1-402e-8f44-5896c5b1d3dc
-# ╠═ec65b7ef-3016-4cb7-a414-b498bdfdf18f
-# ╠═2acd5143-ad20-4049-964b-2c968e083740
-# ╠═f5ff84ff-8930-4dd8-92fe-ea72b62e5176
-# ╠═7de594be-d8f0-412d-970a-380f3fdec814
-# ╠═361d07d3-b7be-4eb0-bfe5-6ed46f94b063
-# ╠═effc3ba5-4dd7-4848-a8dd-c5f299c5e718
-# ╠═a72ec19d-3c6f-43ba-9b62-8b7eaa5aadfd
-# ╠═2e531133-6ed9-4038-b5f7-7059c3198742
+# ╠═99f6bc95-5032-46ef-bac5-5b01bd55846c
+# ╟─08cd4275-db5a-4553-bf0a-7b71a8927eb7
+# ╠═cf3bd1d2-53ed-4b4c-ad8a-c3716b89b569
+# ╟─1ad6e21c-05d1-4fa6-b21e-abe6858f1ed6
+# ╟─7c23b6d9-e659-430f-bc5e-ca24ef58196d
+# ╠═87a66166-31c6-460a-b534-a219d8d52a79
+# ╠═a7cf59c7-74bd-4c55-a1bb-74fde41c7a6a
+# ╠═80e537c2-76a1-4507-a83b-67e76ad873a5
+# ╠═bb33aaed-8f48-4895-ae32-835d6d92508d
+# ╠═82cf3981-1648-4430-baca-2fce80e40a6b
 # ╠═cabe59d8-b22e-4b5b-ad6e-7c01f709c4ea
+# ╠═04ce9b62-abcb-4ed7-a35d-85565357932c
+# ╠═88cd3a79-5283-4605-9405-dfb3927d9ba9
+# ╠═fc36b2ba-8d8f-40ba-a381-289b0f37ed27
 # ╠═11cdeaca-f0c1-47d2-9f4d-1ca0bbbc9d5e
-# ╠═b540a82e-95d1-47d4-bb8a-56196282eb73
-# ╠═fa8a55ad-1721-4bb2-a6fb-16bc81eaa87c
-# ╠═c6658800-236d-485a-a743-a5adc0266ef1
-# ╠═946d9015-c75c-47f9-ae25-c09d002e6eda
+# ╠═dc38cae8-9786-45fd-9e49-730c7b24ab90
+# ╠═bf268156-adae-4688-a94b-f2ed2e97d320
+# ╠═b5ea6fd2-a58c-4f78-a046-26081615170e
+# ╠═9bc1d10b-5314-485b-86aa-3294d1c7f4c3
+# ╠═115295f1-047a-4da4-a348-1b89e8c795bb
+# ╠═0089eb62-612b-44ee-baa3-a60f4d943997
+# ╠═6234054e-576c-447f-9b3c-cd150d409678
+# ╠═2ad538e7-ed97-4892-9270-03518e7a2691
+# ╠═4dac5868-f999-4921-a2ec-0c52599944da
+# ╠═4013d6c0-c976-45ac-a50e-16cfdcc5a375
+# ╠═27ccce8b-6983-42de-a7ab-c0a8ae46db78
+# ╠═ef3c74dd-9c83-49a7-9174-7543f8e476da
+# ╠═50b00185-3275-47a0-8d96-a22d152404bc
+# ╠═8fce9f68-563a-4d00-8c91-c8eb86c35290
+# ╠═942cf4c3-0bd0-4711-9c20-ae8bcf1ff89b
+# ╠═aeea8cbb-808b-474c-b8ef-bedd5aaf8ef4
+# ╠═beedc2f7-8ea8-40fe-bc3c-db6626cca71a
+# ╠═f45dfc08-d3f0-4a64-8244-11955328d818
+# ╠═9976fd7a-c063-429a-8367-bb26953b4d7f
+# ╠═cdd21f69-e37d-47ba-a1f1-08aa8e0dc760
+# ╠═f8ccbdfd-19b9-4c65-9bce-bb39b9040a52
+# ╠═f88c6530-a402-4e32-9c9e-dd5e55981d8a
+# ╠═7041ca90-3d5a-479a-89c1-c2b4adba5401
+# ╠═ac0ca5bd-544b-4143-ace3-5d7be1f98f43
+# ╠═f257d0c8-caf1-4a96-8e6a-4251b525f94b
+# ╠═d98eec94-0de2-4faf-842f-6bd71ae74fd1
+# ╠═0d408e3b-b1db-4cfd-abfb-c416b3b59829
+# ╠═89658e6a-0542-46c7-955a-648763adad3b
+# ╠═83302108-12c8-48de-9403-a29a0fc6e4f1
+# ╠═978e5ef1-90c0-44bb-8a00-869898f70d35
+# ╠═fbfbde00-beba-4622-8aa8-0ae37b67b7b7
+# ╠═c526a447-64f6-47e1-8434-9a2e5316f421
+# ╠═31df6953-db3c-44c3-b9c8-d09618d2b4ac
+# ╠═eed56293-6b89-416c-96a8-685b5957b4f2
+# ╠═d015f470-943d-42f4-ad57-c32255e8e4e6
+# ╠═20d4be45-c19c-4186-a548-8e1cb09588ed
+# ╠═9eac61b7-720d-48be-9410-f8e3be54e459
+# ╠═67ae0690-019f-4017-901b-8e6d2c6c1244
+# ╠═bdcadc88-cfda-48b3-b678-3d6e1db9effc
+# ╠═61470dff-2413-4c6f-97d5-2ec739774b1c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
