@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.9
+# v0.14.7
 
 using Markdown
 using InteractiveUtils
@@ -59,13 +59,13 @@ begin
 	end
 	rename!(EDat,[:DT,:lat,:lon,:c4,:c5,:c6,:c7,:c8,:ID])
 	dt = dateformat"y/m/d,H:M:S"
-	EDat.DT = DateTime.(EDat.DT,dt)
+	EDat.DT = DateTime.(EDat.DT,dt);
 end
 
 # ╔═╡ 19ad02e2-a725-42e4-8d3e-ecaa93a559a7
 begin
-	tags = unique(EDat.ID)
-	sel = EDat[findall(x->x==tags[1],EDat.ID),:]
+	tags = unique(EDat.ID);
+	sel = EDat[findall(x->x==tags[1],EDat.ID),:];
 end
 
 # ╔═╡ 0c8048da-df98-4e4a-ba2e-195ede0d6e5c
@@ -121,7 +121,7 @@ Using the criteria of a ground speed of $> 4 \textrm{ms}^{-1}$, the track is spl
 
 # ╔═╡ cf3bd1d2-53ed-4b4c-ad8a-c3716b89b569
 md"""
-Flight speed threshold (ms$$^{-1}$$) $(@bind tagDur Slider(1:50))
+Flight speed threshold (ms$$^{-1}$$) $(@bind tagDur Slider(1:50, show_value = true))
 """
 
 # ╔═╡ 1ad6e21c-05d1-4fa6-b21e-abe6858f1ed6
@@ -177,17 +177,23 @@ begin
 end
 
 # ╔═╡ 87a66166-31c6-460a-b534-a219d8d52a79
-ss,se = getsection(.2,300,60,vs,ve,sel.DT)
+ss,se = getsection(.2,300,60,vs,ve,sel.DT);
 
 # ╔═╡ a7cf59c7-74bd-4c55-a1bb-74fde41c7a6a
 begin
 	eg = 300
 	egSel = sel[ss[eg]:se[eg],:]
 	plot(sel.lon[ss[eg]:se[eg]],sel.lat[ss[eg]:se[eg]])
+	xlabel!("Lon")
+	ylabel!("Lat")
 end
 
 # ╔═╡ 80e537c2-76a1-4507-a83b-67e76ad873a5
-plot(sel.DT[(ss[eg]:se[eg]).+1],spd[ss[eg]:se[eg]])
+begin
+	plot(1:61,spd[ss[eg]:se[eg]])
+	xlabel!("Time (s)")
+	ylabel!("Speed (m/s)")
+end
 
 # ╔═╡ 88cd3a79-5283-4605-9405-dfb3927d9ba9
 curve_fit(ea
@@ -331,6 +337,8 @@ begin
 	gx = vg .* cos.(gd)
 	gy = vg .* sin.(gd)
 	scatter(gx,gy)
+	xlabel!("Track U component (m/s)")
+	ylabel!("Track V component (m/s)")
 end
 
 # ╔═╡ bf268156-adae-4688-a94b-f2ed2e97d320
@@ -1622,21 +1630,21 @@ version = "0.9.1+5"
 # ╔═╡ Cell order:
 # ╟─24dd02f0-f348-11eb-02fe-3309b1be5acc
 # ╠═b2b504be-f728-42d5-bb28-04c7a566cf5d
-# ╠═0e34f851-4e25-4b6a-b76f-672b311a6819
-# ╠═19ad02e2-a725-42e4-8d3e-ecaa93a559a7
+# ╟─0e34f851-4e25-4b6a-b76f-672b311a6819
+# ╟─19ad02e2-a725-42e4-8d3e-ecaa93a559a7
 # ╟─0c8048da-df98-4e4a-ba2e-195ede0d6e5c
-# ╠═6f21012b-39d6-47d4-99b3-0dde5068c357
-# ╠═62ee1055-dbd9-4f93-990d-ce40092e2b1b
-# ╠═99f6bc95-5032-46ef-bac5-5b01bd55846c
+# ╟─6f21012b-39d6-47d4-99b3-0dde5068c357
+# ╟─62ee1055-dbd9-4f93-990d-ce40092e2b1b
+# ╟─99f6bc95-5032-46ef-bac5-5b01bd55846c
 # ╟─08cd4275-db5a-4553-bf0a-7b71a8927eb7
 # ╠═cf3bd1d2-53ed-4b4c-ad8a-c3716b89b569
 # ╟─1ad6e21c-05d1-4fa6-b21e-abe6858f1ed6
 # ╟─7c23b6d9-e659-430f-bc5e-ca24ef58196d
-# ╠═87a66166-31c6-460a-b534-a219d8d52a79
-# ╠═a7cf59c7-74bd-4c55-a1bb-74fde41c7a6a
-# ╠═80e537c2-76a1-4507-a83b-67e76ad873a5
-# ╠═bb33aaed-8f48-4895-ae32-835d6d92508d
-# ╠═82cf3981-1648-4430-baca-2fce80e40a6b
+# ╟─87a66166-31c6-460a-b534-a219d8d52a79
+# ╟─a7cf59c7-74bd-4c55-a1bb-74fde41c7a6a
+# ╟─80e537c2-76a1-4507-a83b-67e76ad873a5
+# ╟─bb33aaed-8f48-4895-ae32-835d6d92508d
+# ╟─82cf3981-1648-4430-baca-2fce80e40a6b
 # ╠═cabe59d8-b22e-4b5b-ad6e-7c01f709c4ea
 # ╠═04ce9b62-abcb-4ed7-a35d-85565357932c
 # ╠═88cd3a79-5283-4605-9405-dfb3927d9ba9

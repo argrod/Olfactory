@@ -317,7 +317,7 @@ lonsall = dat{1,5};
 for b = 1:length(timesall)
     tpoint = timesall(b);
     if abs(filesTimes(find(filesTimes > tpoint,1)) - tpoint) < minutes(30)
-        % find the nearest timepoint file
+    % find the nearest timepoint file
     ind = find(filesTimes > tpoint,1);
     ts = ncread(strcat(netloc,netfiles(ind).name),"time");
     ts = datetime(1990,01,01,0,0,0) + seconds(ts) + hours(9); % presumably in GMT, so add 9 hours
@@ -327,14 +327,16 @@ for b = 1:length(timesall)
     wDir = ncread(strcat(netloc,netfiles(ind).name),"model_dir");
     % find the nearest time (column)
     timeind = find(ts(1,:)'>tpoint, 1);
-    
+    ts(1,:)
+    [x,y,zone] = deg2utm(lts(:,timeind),lns(:,timeind)); % convert from dec degs to UTM
+    [locx,locy,loczone] = deg2utm(latsall(b),lonsall(b));
+    distFrom = sqrt((x - locx).^2 + (y - locy).^2)
     end
 end
     
     
     ts(1,1)
     filesTimes(ind-1)
-end
 tst=cat(1,convertCharsToStrings(netfiles.name))
 tst(,1)
 [netfiles(1:end).name]
@@ -365,3 +367,18 @@ for b = 1:length(latsall)
 end
 lts(29,337)
 lts(105,339)
+
+year = 2019;
+start_jd = 182;
+end_jd = 212;
+for jd = start_jd:end_jd
+    filename=['weather_data_' num2str(year) '_' num2str(jd) '.txt'];
+    if isfile(filename)
+        fprintf('already have the file |%s|\n',filename);
+    else
+        url=['http://www.weather.unh.edu/data/' num2str(year) '/' num2str(jd) '.txt'];
+        outname=websave(filename,url);
+        fprintf('got weather data file |%s|\n',outname);
+    end
+    
+end

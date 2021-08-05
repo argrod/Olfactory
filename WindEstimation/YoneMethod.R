@@ -51,3 +51,57 @@ for(b in 1:length(tags)){
 
     }
 }
+
+###################################################################################################
+################################ COMPARE YONE AND GOTO METHOD RESULTS #############################
+###################################################################################################
+
+library(lubridate)
+if(Sys.info()['sysname'] == "Darwin"){
+    yoneloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    gotoloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
+} else {
+    yoneloc <- "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    gotoloc <- "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/MinDat/"
+}
+
+yonefiles <- list.files(yoneloc, pattern = '*.txt')
+gotofiles <- list.files(gotoloc, pattern = '*.csv')
+
+yoneDat <- vector(mode = "list", length = length(yonefiles))
+gotoDat <- vector(mode = "list", length = length(gotofiles))
+for(b in 1:length(yoneDat)){
+    yoneDat[[b]] <- read.delim(paste(yoneloc,yonefiles[b],sep = ""),sep = ",", header = T)
+    yoneDat[[b]]$DT <- sub(',',' ',yoneDat[[b]]$time)
+    yoneDat[[b]]$DT <- as.POSIXct(yoneDat[[b]]$DT,tz = "")
+    gotoDat[[b]] <- read.delim(paste(gotoloc,gotofiles[b],sep = ""), sep = ",", header = F)
+    colnames(gotoDat[[b]]) <- c("DT","Lat","Lon","Head","X","Y")
+    gotoDat[[b]]$DT <- as.POSIXct(gotoDat[[b]]$DT, tz = "")
+}
+
+overDF <- data.frame(DT="",gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric())
+overlDat <- vector(mode="list",length=length(yoneDat))
+for(b in 1:length(yoneDat)){
+    overlDat[[b]] <- overDF
+    for(g in 1:nrow(gotoDat[[b]])){
+        if(any(which(yoneDat[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(5)) & yoneDat[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(5))))){
+            inds <- which(yoneDat[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(5)) & yoneDat[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(5)))
+            overlDat[[b]][g,] <- data.frame(DT=gotoDat[[b]]$DT[g],gotoHead = as.numeric(gotoDat[[b]]$Head[g]),gotoX = as.numeric(gotoDat[[b]]$X[g]),gotoY = as.numeric(gotoDat[[b]]$Y[g]),yoneY = as.numeric(mean(yoneDat[[b]]$wSp[inds]*sin(yoneDat[[b]]$wDir[inds]))),yoneX = as.numeric(mean(yoneDat[[b]]$wSp[inds]*cos(yoneDat[[b]]$wDir[inds]))))
+        } else {
+            overlDat[[b]][g,] <- cbind(NA,NA,NA,NA,NA,NA)
+        }
+    }
+}
+
+library(dplyr)
+allOverL <- bind_rows(overlDat)
+
+allOverL <- allOverL[!is.na(allOverL$gotoY),]
+plot(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)),atan2(as.numeric(allOverL$yoneY),as.numeric(allOverL$yoneX)))
+
+plot(gotoDat[[b]]$DT,rep(1,nrow(gotoDat[[b]])))
+points(yoneDat[[b]]$DT,rep(5,nrow(yoneDat[[b]])))
+
+for(g in 1:nrow(gotoDat[[b]])){
+print(min(abs(gotoDat[[b]]$DT[g] - yoneDat[[b]]$DT)))
+}
