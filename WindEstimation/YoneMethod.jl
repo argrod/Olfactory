@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.14.9
 
 using Markdown
 using InteractiveUtils
@@ -36,7 +36,11 @@ Following discussions with 米原さん, after the [PNAS publication](https://ww
 # ╔═╡ 0e34f851-4e25-4b6a-b76f-672b311a6819
 # READ IN AND FORMAT
 begin
-	fileloc19 = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/AxyTrek/"
+	if Sys.iswindows()
+		fileloc19 = "F:/UTokyoDrive/PhD/Data/2019Shearwater/AxyTrek/"
+	else
+		fileloc19 = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/AxyTrek/"
+	end
 	files = glob("*/*.txt",fileloc19)
 	EDat = DataFrame()
 	for b = 1:length(files)
@@ -52,24 +56,6 @@ begin
 	tags = unique(EDat.ID)
 	sel = EDat[findall(x->x==tags[1],EDat.ID),:]
 end
-
-# ╔═╡ 6f21012b-39d6-47d4-99b3-0dde5068c357
-
-
-# ╔═╡ 39232859-9a15-450a-a79e-6632ecbed677
-
-
-# ╔═╡ 12e5dc37-400d-4406-8de9-26a20df98eb3
-
-
-# ╔═╡ d9e65c24-6cf0-47ac-8039-7d47186613cd
-
-
-# ╔═╡ 49e45c19-8e5d-4f8d-8bf8-ecaa2e65707d
-
-
-# ╔═╡ 16b94084-9283-4d4b-adb8-2b08e52462a8
-
 
 # ╔═╡ 62ee1055-dbd9-4f93-990d-ce40092e2b1b
 begin
@@ -95,14 +81,23 @@ begin
 		for x in rmv
 			rest[tvs[x]:tve[x]] .= false
 		end
-		vs = findall(x -> x == -1, diff([0;rest]))
-		ve = findall(x -> x == 1, diff([rest;0]))
+		vs = findall(x -> x == 1, diff([0;rest]))
+		ve = findall(x -> x == -1, diff([rest;0]))
 		return spd, dir, vs, ve
 	end
 end
 
+# ╔═╡ ef3bdd9c-7997-4452-afa8-dd5aff528239
+
+
+# ╔═╡ 8819e747-9e90-41fe-b3b3-0f5dc3587db2
+
+
 # ╔═╡ 44183ed0-b125-42e4-bb34-d8b60d95d272
 spd,dir,vs,ve=flightMask(sel.DT,sel.lat,sel.lon,4,5)
+
+# ╔═╡ bee387a3-2c50-4fc3-8f23-6d01e1191a3e
+(ve-vs).*5
 
 # ╔═╡ 69dc708a-2ee8-41f9-86d6-81c88f898069
 rest = spd .< 4
@@ -1454,13 +1449,10 @@ version = "0.9.1+5"
 # ╠═b2b504be-f728-42d5-bb28-04c7a566cf5d
 # ╠═0e34f851-4e25-4b6a-b76f-672b311a6819
 # ╠═19ad02e2-a725-42e4-8d3e-ecaa93a559a7
-# ╠═6f21012b-39d6-47d4-99b3-0dde5068c357
-# ╠═39232859-9a15-450a-a79e-6632ecbed677
-# ╠═12e5dc37-400d-4406-8de9-26a20df98eb3
-# ╠═d9e65c24-6cf0-47ac-8039-7d47186613cd
-# ╠═49e45c19-8e5d-4f8d-8bf8-ecaa2e65707d
-# ╠═16b94084-9283-4d4b-adb8-2b08e52462a8
 # ╠═62ee1055-dbd9-4f93-990d-ce40092e2b1b
+# ╠═bee387a3-2c50-4fc3-8f23-6d01e1191a3e
+# ╠═ef3bdd9c-7997-4452-afa8-dd5aff528239
+# ╠═8819e747-9e90-41fe-b3b3-0f5dc3587db2
 # ╠═44183ed0-b125-42e4-bb34-d8b60d95d272
 # ╠═69dc708a-2ee8-41f9-86d6-81c88f898069
 # ╠═506ff3d6-bd06-4045-a418-e1888b1afee5
