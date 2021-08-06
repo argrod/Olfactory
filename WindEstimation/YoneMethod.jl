@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.7
+# v0.14.9
 
 using Markdown
 using InteractiveUtils
@@ -195,11 +195,8 @@ begin
 	ylabel!("Speed (m/s)")
 end
 
-# ╔═╡ 88cd3a79-5283-4605-9405-dfb3927d9ba9
-curve_fit(ea
-
-# ╔═╡ fc36b2ba-8d8f-40ba-a381-289b0f37ed27
-
+# ╔═╡ 04ce9b62-abcb-4ed7-a35d-85565357932c
+# wind2dveclsq(vg,gd,[3 0 9])
 
 # ╔═╡ 11cdeaca-f0c1-47d2-9f4d-1ca0bbbc9d5e
 # foist(v) = v[1] .* cos(v[2])
@@ -216,7 +213,65 @@ begin
 	end
 end
 
+# ╔═╡ b5ea6fd2-a58c-4f78-a046-26081615170e
+# curve_fit(ea,gx,gy,[3, 0, 9])
+
 # ╔═╡ 9bc1d10b-5314-485b-86aa-3294d1c7f4c3
+begin
+	selDir = dir[ss[1]:se[2]]; selSpd = spd[ss[1]:se[2]]
+	sortInd = sortperm(selDir)
+	sortedDir = selDir[sortInd]
+	sortedSpd = selSpd[sortInd]
+	sinRel(θ,c) = c[1] .+ c[2].*sin.(θ) .+ c[3].*cos.(θ)
+	ft = curve_fit(sinRel,sortedDir,sortedSpd,[1.0,1.0,1.0])
+end
+
+# ╔═╡ 9d5c901d-c3f9-4c56-bade-8a25b2be2fe7
+ft.param
+
+# ╔═╡ eaac9617-cdd5-49fb-80a2-d36b3ca15a68
+begin
+	scatter(dir[ss[1]:se[2]],spd[ss[1]:se[2]])
+	plot!(sortedDir,sinRel(sortedDir,ft.param),ylim=(0,15))
+end
+
+# ╔═╡ 66f5865d-9236-4562-b7ce-cdc7440c4c0e
+
+
+# ╔═╡ 800e1bad-8917-4d98-b0fb-73ef0469e1d6
+length(sinRel(dir[ss[1]:se[2]].*(180/pi).+180,ft.param))
+
+# ╔═╡ cacfb01e-31fc-4b0c-8b75-4a55fffdf4c8
+
+
+# ╔═╡ 92ef42d9-ee38-4485-bbca-d5b4303dbb2a
+plot(sinRel(1:360,[5.7,0.7,2.6]))
+
+# ╔═╡ 2381a54b-ba61-468f-9287-bf3e2024b694
+
+
+# ╔═╡ 493fba7a-e07f-496e-b40a-1f214dd4dfb9
+ft.param
+
+# ╔═╡ e7de5ad0-3dbb-44e6-8db4-c7913f3c1da8
+
+
+# ╔═╡ 048c1046-466d-4411-9123-d75950d90658
+
+
+# ╔═╡ 6d05f40a-6dc9-41e2-8058-4a07275aabc6
+
+
+# ╔═╡ 40c64e96-99dd-43b8-be78-ae7749a56541
+
+
+# ╔═╡ a9ced414-b6a1-4c70-a416-ecc5b48cf4b1
+
+
+# ╔═╡ ce8b12f4-1df5-4683-84ca-b0e4fff617e2
+
+
+# ╔═╡ 5f3e6fa0-bb15-4126-9251-799708e1cccf
 
 
 # ╔═╡ 115295f1-047a-4da4-a348-1b89e8c795bb
@@ -364,12 +419,6 @@ begin
 		curve_fit(ea,c0,lower = lb, upper = ub)
 	end
 end
-
-# ╔═╡ 04ce9b62-abcb-4ed7-a35d-85565357932c
-wind2dveclsq(vg,gd,[3 0 9])
-
-# ╔═╡ b5ea6fd2-a58c-4f78-a046-26081615170e
-curve_fit(ea,gx,gy,[3, 0, 9])
 
 # ╔═╡ d015f470-943d-42f4-ad57-c32255e8e4e6
 # begin 
@@ -1637,23 +1686,36 @@ version = "0.9.1+5"
 # ╟─62ee1055-dbd9-4f93-990d-ce40092e2b1b
 # ╟─99f6bc95-5032-46ef-bac5-5b01bd55846c
 # ╟─08cd4275-db5a-4553-bf0a-7b71a8927eb7
-# ╠═cf3bd1d2-53ed-4b4c-ad8a-c3716b89b569
+# ╟─cf3bd1d2-53ed-4b4c-ad8a-c3716b89b569
 # ╟─1ad6e21c-05d1-4fa6-b21e-abe6858f1ed6
 # ╟─7c23b6d9-e659-430f-bc5e-ca24ef58196d
-# ╟─87a66166-31c6-460a-b534-a219d8d52a79
+# ╠═87a66166-31c6-460a-b534-a219d8d52a79
 # ╟─a7cf59c7-74bd-4c55-a1bb-74fde41c7a6a
 # ╟─80e537c2-76a1-4507-a83b-67e76ad873a5
 # ╟─bb33aaed-8f48-4895-ae32-835d6d92508d
 # ╟─82cf3981-1648-4430-baca-2fce80e40a6b
 # ╠═cabe59d8-b22e-4b5b-ad6e-7c01f709c4ea
 # ╠═04ce9b62-abcb-4ed7-a35d-85565357932c
-# ╠═88cd3a79-5283-4605-9405-dfb3927d9ba9
-# ╠═fc36b2ba-8d8f-40ba-a381-289b0f37ed27
 # ╠═11cdeaca-f0c1-47d2-9f4d-1ca0bbbc9d5e
 # ╠═dc38cae8-9786-45fd-9e49-730c7b24ab90
 # ╠═bf268156-adae-4688-a94b-f2ed2e97d320
 # ╠═b5ea6fd2-a58c-4f78-a046-26081615170e
 # ╠═9bc1d10b-5314-485b-86aa-3294d1c7f4c3
+# ╠═9d5c901d-c3f9-4c56-bade-8a25b2be2fe7
+# ╠═eaac9617-cdd5-49fb-80a2-d36b3ca15a68
+# ╠═66f5865d-9236-4562-b7ce-cdc7440c4c0e
+# ╠═800e1bad-8917-4d98-b0fb-73ef0469e1d6
+# ╠═cacfb01e-31fc-4b0c-8b75-4a55fffdf4c8
+# ╠═92ef42d9-ee38-4485-bbca-d5b4303dbb2a
+# ╠═2381a54b-ba61-468f-9287-bf3e2024b694
+# ╠═493fba7a-e07f-496e-b40a-1f214dd4dfb9
+# ╠═e7de5ad0-3dbb-44e6-8db4-c7913f3c1da8
+# ╠═048c1046-466d-4411-9123-d75950d90658
+# ╠═6d05f40a-6dc9-41e2-8058-4a07275aabc6
+# ╠═40c64e96-99dd-43b8-be78-ae7749a56541
+# ╠═a9ced414-b6a1-4c70-a416-ecc5b48cf4b1
+# ╠═ce8b12f4-1df5-4683-84ca-b0e4fff617e2
+# ╠═5f3e6fa0-bb15-4126-9251-799708e1cccf
 # ╠═115295f1-047a-4da4-a348-1b89e8c795bb
 # ╠═0089eb62-612b-44ee-baa3-a60f4d943997
 # ╠═6234054e-576c-447f-9b3c-cd150d409678
