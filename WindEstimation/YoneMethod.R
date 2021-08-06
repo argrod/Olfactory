@@ -79,14 +79,16 @@ for(b in 1:length(yoneDat)){
     gotoDat[[b]]$DT <- as.POSIXct(gotoDat[[b]]$DT, tz = "")
 }
 
-overDF <- data.frame(DT="",gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric())
+overDF <- data.frame(DT=POSIXct(),gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric())
 overlDat <- vector(mode="list",length=length(yoneDat))
+yoneDatrem <- yoneDat
 for(b in 1:length(yoneDat)){
     overlDat[[b]] <- overDF
+    yoneDatrem[[b]] <- yoneDatrem[[b]][yoneDatrem[[b]]$aveDir != 0,]
     for(g in 1:nrow(gotoDat[[b]])){
-        if(any(which(yoneDat[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(5)) & yoneDat[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(5))))){
-            inds <- which(yoneDat[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(5)) & yoneDat[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(5)))
-            overlDat[[b]][g,] <- data.frame(DT=gotoDat[[b]]$DT[g],gotoHead = as.numeric(gotoDat[[b]]$Head[g]),gotoX = as.numeric(gotoDat[[b]]$X[g]),gotoY = as.numeric(gotoDat[[b]]$Y[g]),yoneY = as.numeric(mean(yoneDat[[b]]$wSp[inds]*sin(yoneDat[[b]]$wDir[inds]))),yoneX = as.numeric(mean(yoneDat[[b]]$wSp[inds]*cos(yoneDat[[b]]$wDir[inds]))))
+        if(any(which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(1)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(1))))){
+            inds <- which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(1)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(1)))
+            overlDat[[b]][g,] <- data.frame(DT=gotoDat[[b]]$DT[g],gotoHead = as.numeric(gotoDat[[b]]$Head[g]),gotoX = as.numeric(gotoDat[[b]]$X[g]),gotoY = as.numeric(gotoDat[[b]]$Y[g]),yoneY = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*sin(yoneDatrem[[b]]$wDir[inds]))),yoneX = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*cos(yoneDatrem[[b]]$wDir[inds]))))
         } else {
             overlDat[[b]][g,] <- cbind(NA,NA,NA,NA,NA,NA)
         }
@@ -99,6 +101,20 @@ allOverL <- bind_rows(overlDat)
 allOverL <- allOverL[!is.na(allOverL$gotoY),]
 plot(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)),atan2(as.numeric(allOverL$yoneY),as.numeric(allOverL$yoneX)))
 
+plot(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)))
+
+plot(atan2(as.numeric(allOverL$yoneY),as.numeric(allOverL$yoneX)))
+
+library(ggplot2)
+ggplot(allOverL) + geom_point(aes(y = atan2(as.numeric(yoneY),as.numeric(yoneX)),x = atan2(as.numeric(gotoY),as.numeric(gotoX))),data=allOverL[allOverL$yoneX != 0,]) + scale_y_continuous(name = "Yone method wind direction (rad)") + scale_x_continuous(name = "Goto method wind direction (rad)") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+library(circular)
+cor.circular(atan2(allOverL$gotoY,allOverL$gotoX),atan2(allOverL$yoneY,allOverL$yoneX),test=T)
+
+ggplot(allOverL) + geom_point(aes(y = yoneX,x = gotoX),data=allOverL[allOverL$yoneX != 0,])
+
+
+sum(allOverL$X == 0)
 plot(gotoDat[[b]]$DT,rep(1,nrow(gotoDat[[b]])))
 points(yoneDat[[b]]$DT,rep(5,nrow(yoneDat[[b]])))
 

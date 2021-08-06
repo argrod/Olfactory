@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.9
+# v0.15.1
 
 using Markdown
 using InteractiveUtils
@@ -195,6 +195,93 @@ begin
 	ylabel!("Speed (m/s)")
 end
 
+# ╔═╡ 9e7a192a-c823-467b-b743-36daf0337aa8
+
+
+# ╔═╡ b012fbab-ddf1-4b58-840b-b5ab278f7150
+
+
+# ╔═╡ 7020789b-aaad-431e-8ee9-d929852f70e1
+
+
+# ╔═╡ 76b5a853-5e04-497c-a3c2-c3af800f1909
+[3 0 9]
+
+# ╔═╡ 2cf89d73-4442-4084-a1e9-2c85b38095de
+
+
+# ╔═╡ 8526fc1f-c3da-4676-b804-bc98abd30290
+
+
+# ╔═╡ 9f07e1c6-5afb-4ac9-b571-e22161ac84d1
+
+
+# ╔═╡ 0b0bac61-86c9-4ce1-9f2d-a8a7c609ad76
+
+
+# ╔═╡ 2045c3bb-9b50-44b5-8e9d-477f4717dd8a
+
+
+# ╔═╡ 8e0b0f75-536c-4531-b346-39821ef10fec
+
+
+# ╔═╡ ebab33b1-3aff-41d6-b04e-176f02342b35
+
+
+# ╔═╡ 8f20f3bb-df17-4a62-a20a-857e9268abed
+
+
+# ╔═╡ 89a89bb0-acc7-46e1-bcbd-39402e075c11
+
+
+# ╔═╡ 205cd474-d5d0-4470-b56d-2ee9d37ed0ed
+wy([3 0]*sin.(gd)
+
+# ╔═╡ 77351942-34e9-44c9-95c5-94e210288bbd
+
+
+# ╔═╡ 47fb8578-4c00-41c0-8586-515d8e8a6cfe
+
+
+# ╔═╡ 9236a1f8-0e22-42bc-9a07-ef8ef0bf25bf
+
+
+# ╔═╡ 3b69098f-3777-409e-a384-34b54b3c85e2
+
+
+# ╔═╡ b1e7696b-9d09-44eb-86c8-2cfc9d4d9671
+
+
+# ╔═╡ 729f983a-2794-48ea-9484-447c2982137b
+
+
+# ╔═╡ 83f89135-fb60-4004-858b-955156c36a47
+
+
+# ╔═╡ e0a93033-6792-46f0-ba01-a8e187f88955
+
+
+# ╔═╡ dad257f4-afe4-4272-8a71-5d5cdb1c1afd
+
+
+# ╔═╡ 4e0f5953-0d75-4b3b-ba06-2a4a562e56ec
+
+
+# ╔═╡ 569163c3-e9d4-4edc-89cc-14ae2da12c92
+
+
+# ╔═╡ 3fdd9c83-e2a4-4c05-8c05-3b8a66e1a1f7
+
+
+# ╔═╡ 03fe0635-4e1d-4f87-8edc-080ca4935e8f
+
+
+# ╔═╡ 8b9b9c15-eb5b-448b-835d-af7aa2a6448c
+
+
+# ╔═╡ fb255db9-3fdd-48eb-a307-36e064e61ccd
+
+
 # ╔═╡ 04ce9b62-abcb-4ed7-a35d-85565357932c
 # wind2dveclsq(vg,gd,[3 0 9])
 
@@ -212,6 +299,17 @@ begin
 		vw = zeros(Float64,length(ss),1)
 	end
 end
+
+# ╔═╡ bf268156-adae-4688-a94b-f2ed2e97d320
+# begin
+# 		wx(v) = v[1] .* cos(v[2])
+# 		wy(v) = v[1] .* sin(v[2])
+# 		ea(t,c) = wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd) .+ sqrt.((wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2) .- vg
+# 		lb = [0 -pi 0]
+# 		ub = [20 pi 20]
+# 		# ydata = ea([0 0 0],gd,vg)
+# 		# curve_fit(ea,[3 0 9],lower = lb, upper = ub)
+# end
 
 # ╔═╡ b5ea6fd2-a58c-4f78-a046-26081615170e
 # curve_fit(ea,gx,gy,[3, 0, 9])
@@ -253,130 +351,13 @@ plot(sinRel(1:360,[5.7,0.7,2.6]))
 # ╔═╡ 493fba7a-e07f-496e-b40a-1f214dd4dfb9
 ft.param
 
-# ╔═╡ e7de5ad0-3dbb-44e6-8db4-c7913f3c1da8
-
-
-# ╔═╡ 048c1046-466d-4411-9123-d75950d90658
-
-
-# ╔═╡ 6d05f40a-6dc9-41e2-8058-4a07275aabc6
-
-
-# ╔═╡ 40c64e96-99dd-43b8-be78-ae7749a56541
-
-
-# ╔═╡ a9ced414-b6a1-4c70-a416-ecc5b48cf4b1
-
-
-# ╔═╡ ce8b12f4-1df5-4683-84ca-b0e4fff617e2
-
-
-# ╔═╡ 5f3e6fa0-bb15-4126-9251-799708e1cccf
-
-
 # ╔═╡ 115295f1-047a-4da4-a348-1b89e8c795bb
 c = [3 0 9]
 
-# ╔═╡ 0089eb62-612b-44ee-baa3-a60f4d943997
-
-
-# ╔═╡ 6234054e-576c-447f-9b3c-cd150d409678
-
-
-# ╔═╡ 2ad538e7-ed97-4892-9270-03518e7a2691
-
-
-# ╔═╡ 4dac5868-f999-4921-a2ec-0c52599944da
-
-
-# ╔═╡ 4013d6c0-c976-45ac-a50e-16cfdcc5a375
-
-
-# ╔═╡ 27ccce8b-6983-42de-a7ab-c0a8ae46db78
-
-
-# ╔═╡ ef3c74dd-9c83-49a7-9174-7543f8e476da
-
-
-# ╔═╡ 50b00185-3275-47a0-8d96-a22d152404bc
-
-
-# ╔═╡ 8fce9f68-563a-4d00-8c91-c8eb86c35290
-
-
-# ╔═╡ 942cf4c3-0bd0-4711-9c20-ae8bcf1ff89b
-
-
-# ╔═╡ aeea8cbb-808b-474c-b8ef-bedd5aaf8ef4
-
-
-# ╔═╡ beedc2f7-8ea8-40fe-bc3c-db6626cca71a
-md"""
-The wind vector made up of wind speed ($w_v$) and wind direction ($w_d$) can be converted into $u$ and $v$ components via:
-
-$u = w_v \times \cos(w_d)$
-$v = w_v \times \sin(w_d)$
-
-Then a function can be written of the ground speed ($v_d$) as a function of track direction ($g_d$):
-
-$f(w_d,w_v,a_v) = v\sin(g_d)+u\cos(g_d)+\sqrt{\big(v\sin(g_d)+u\cos(g_d)\big)^2-v^2-u^2}-v_g$
-
-where $a_v$ is the air speed.
-push!(out,(x-x0)^2+(y-y0)^2-r^2)
-"""
-
-# ╔═╡ f45dfc08-d3f0-4a64-8244-11955328d818
-
-
-# ╔═╡ 9976fd7a-c063-429a-8367-bb26953b4d7f
-
-
-# ╔═╡ cdd21f69-e37d-47ba-a1f1-08aa8e0dc760
-
-
-# ╔═╡ f8ccbdfd-19b9-4c65-9bce-bb39b9040a52
-
-
-# ╔═╡ f88c6530-a402-4e32-9c9e-dd5e55981d8a
-
-
-# ╔═╡ 7041ca90-3d5a-479a-89c1-c2b4adba5401
-
-
-# ╔═╡ ac0ca5bd-544b-4143-ace3-5d7be1f98f43
-
-
-# ╔═╡ f257d0c8-caf1-4a96-8e6a-4251b525f94b
-
-
-# ╔═╡ d98eec94-0de2-4faf-842f-6bd71ae74fd1
-
-
-# ╔═╡ 0d408e3b-b1db-4cfd-abfb-c416b3b59829
-
-
-# ╔═╡ 89658e6a-0542-46c7-955a-648763adad3b
-
-
-# ╔═╡ 83302108-12c8-48de-9403-a29a0fc6e4f1
-
-
-# ╔═╡ 978e5ef1-90c0-44bb-8a00-869898f70d35
-
-
-# ╔═╡ fbfbde00-beba-4622-8aa8-0ae37b67b7b7
-
-
-# ╔═╡ c526a447-64f6-47e1-8434-9a2e5316f421
-
-
-# ╔═╡ 31df6953-db3c-44c3-b9c8-d09618d2b4ac
-
-
 # ╔═╡ eed56293-6b89-416c-96a8-685b5957b4f2
 begin
-	gd = dir[ss[1]:se[1]]
-	vg = spd[ss[1]:se[1]]
+	gd = dir[ss[1]:se[1]];
+	vg = spd[ss[1]:se[1]];
 	
 end
 
@@ -396,15 +377,14 @@ begin
 	ylabel!("Track V component (m/s)")
 end
 
-# ╔═╡ bf268156-adae-4688-a94b-f2ed2e97d320
+# ╔═╡ ba6daf12-03d7-4714-800f-3ab12d02d5a2
 begin
 		wx(v) = v[1] .* cos(v[2])
 		wy(v) = v[1] .* sin(v[2])
-		ea(t,c) = wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd) .+ sqrt.((wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2) .- vg
-		lb = [0 -pi 0]
-		ub = [20 pi 20]
-		# ydata = ea([0 0 0],gd,vg)
-		# curve_fit(ea,[3 0 9],lower = lb, upper = ub)
+		ea(gd,c) = wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd) .+ sqrt.(wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd).^2 .- wy([c[1] c[2]])^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
+		lb = [0, -pi, 0]
+		ub = [20, pi, 20]
+		curve_fit(ea,vg,gd,[3.0, 0.0, 9.0],lower = lb, upper = ub)
 end
 
 # ╔═╡ cabe59d8-b22e-4b5b-ad6e-7c01f709c4ea
@@ -412,13 +392,30 @@ begin
 	function wind2dveclsq(vg,gd,c0)
 		wx(v) = v[1] .* cos(v[2])
 		wy(v) = v[1] .* sin(v[2])
-		ea(c) = wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd) .+ sqrt.((wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2) .- vg
+		ea(gd,c) = wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd) .+ sqrt.((wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
 		lb = [0 -pi 0]
 		ub = [20 pi 20]
 		ydata = ea(c0)
-		curve_fit(ea,c0,lower = lb, upper = ub)
+		curve_fit(ea,vg,gd,c0,lower = lb, upper = ub)
 	end
 end
+
+# ╔═╡ 9658da94-80ea-4454-96ee-ecddd59ca2a6
+wind2dveclsq(vg,gd,[3,0,9])
+
+# ╔═╡ 48f99cd6-752f-4f99-80b2-6695369710f3
+begin
+	wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd) .+ sqrt.(wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd).^2 .- wy([c[1] c[2]])^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
+end
+
+# ╔═╡ ac03761e-9d66-4f7f-874d-9c18de325336
+wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd) .+ sqrt.(wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd).^2 .- wy([c[1] c[2]])^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
+
+# ╔═╡ cffa7c7b-b5b8-4636-93be-ff7bd155f961
+length(wy([3 0])*sin.(gd) .+ wx([3 0])*cos.(gd) .+ sqrt.(wy([3 0])*sin.(gd) .+ wx([3 0])*cos.(gd).^2 .- wy([3 0])^2 .- wx([3 0]).^2 .+ c[3]^2))
+
+# ╔═╡ 901d3194-b035-4154-9ed3-709320e114c1
+vg
 
 # ╔═╡ d015f470-943d-42f4-ad57-c32255e8e4e6
 # begin 
@@ -438,7 +435,28 @@ end
 # fit = curve_fit(model, [3 0 9], ydata,[3 0 9])
 # end
 
-# ╔═╡ 20d4be45-c19c-4186-a548-8e1cb09588ed
+# ╔═╡ bdcadc88-cfda-48b3-b678-3d6e1db9effc
+md"""
+## Theory
+
+With no wind effect on the bird as it flies, it should, theoretically, fly at the same speed regardless of the direction. Therefore, the track speed ($t_s$) and direction ($t_d$) should generate a relationship such that $t_s^2 + t_d^2 = r^2$ where $r$ is the radius of a circle centered around the point ($0,0$).
+
+The addition of winds should move the origin point such that the speed of travel should be dictated by the travel direction (i.e. a westerly wind would increase travel speed to the east and decrease it to the west, shifting the center further to the right).
+
+The wind vector made up of wind speed ($w_v$) and wind direction ($w_d$) can be converted into $u$ and $v$ components via:
+
+$u = w_v \times \cos(w_d)$
+$v = w_v \times \sin(w_d)$
+
+Then a function can be written of the ground speed ($v_d$) as a function of track direction ($g_d$):
+
+$f(w_d,w_v,a_v) = v\sin(g_d)+u\cos(g_d)+\sqrt{\big(v\sin(g_d)+u\cos(g_d)\big)^2-v^2-u^2}-v_g$
+
+where $a_v$ is the air speed.
+push!(out,(x-x0)^2+(y-y0)^2-r^2)
+"""
+
+# ╔═╡ 61470dff-2413-4c6f-97d5-2ec739774b1c
 begin
 	data = [(-2.0,1.0), (0.0, 3.0), (2.0, 1.0)]
 	
@@ -463,23 +481,8 @@ fit = curve_fit(circle_model, ptrs, y, p0)
 fit.param
 end
 
-# ╔═╡ 9eac61b7-720d-48be-9410-f8e3be54e459
-ptrs
-
-# ╔═╡ 67ae0690-019f-4017-901b-8e6d2c6c1244
-y
-
-# ╔═╡ bdcadc88-cfda-48b3-b678-3d6e1db9effc
-md"""
-## Theory
-
-With no wind effect on the bird as it flies, it should, theoretically, fly at the same speed regardless of the direction. Therefore, the track speed ($t_s$) and direction ($t_d$) should generate a relationship such that $t_s^2 + t_d^2 = r^2$ where $r$ is the radius of a circle centered around the point ($0,0$).
-
-The addition of winds should move the origin point such that the speed of travel should be dictated by the travel direction (i.e. a westerly wind would increase travel speed to the east and decrease it to the west, shifting the center further to the right).
-"""
-
-# ╔═╡ 61470dff-2413-4c6f-97d5-2ec739774b1c
-
+# ╔═╡ 772339c6-6cd8-4936-be49-6b9f3a782eb8
+plot(data); scatter!(fit.param)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1695,6 +1698,41 @@ version = "0.9.1+5"
 # ╟─bb33aaed-8f48-4895-ae32-835d6d92508d
 # ╟─82cf3981-1648-4430-baca-2fce80e40a6b
 # ╠═cabe59d8-b22e-4b5b-ad6e-7c01f709c4ea
+# ╠═9658da94-80ea-4454-96ee-ecddd59ca2a6
+# ╠═ba6daf12-03d7-4714-800f-3ab12d02d5a2
+# ╠═9e7a192a-c823-467b-b743-36daf0337aa8
+# ╠═b012fbab-ddf1-4b58-840b-b5ab278f7150
+# ╠═48f99cd6-752f-4f99-80b2-6695369710f3
+# ╠═7020789b-aaad-431e-8ee9-d929852f70e1
+# ╠═76b5a853-5e04-497c-a3c2-c3af800f1909
+# ╠═2cf89d73-4442-4084-a1e9-2c85b38095de
+# ╠═8526fc1f-c3da-4676-b804-bc98abd30290
+# ╠═9f07e1c6-5afb-4ac9-b571-e22161ac84d1
+# ╠═0b0bac61-86c9-4ce1-9f2d-a8a7c609ad76
+# ╠═2045c3bb-9b50-44b5-8e9d-477f4717dd8a
+# ╠═ac03761e-9d66-4f7f-874d-9c18de325336
+# ╠═8e0b0f75-536c-4531-b346-39821ef10fec
+# ╠═cffa7c7b-b5b8-4636-93be-ff7bd155f961
+# ╠═ebab33b1-3aff-41d6-b04e-176f02342b35
+# ╠═8f20f3bb-df17-4a62-a20a-857e9268abed
+# ╠═89a89bb0-acc7-46e1-bcbd-39402e075c11
+# ╠═205cd474-d5d0-4470-b56d-2ee9d37ed0ed
+# ╠═77351942-34e9-44c9-95c5-94e210288bbd
+# ╠═47fb8578-4c00-41c0-8586-515d8e8a6cfe
+# ╠═9236a1f8-0e22-42bc-9a07-ef8ef0bf25bf
+# ╠═3b69098f-3777-409e-a384-34b54b3c85e2
+# ╠═b1e7696b-9d09-44eb-86c8-2cfc9d4d9671
+# ╠═729f983a-2794-48ea-9484-447c2982137b
+# ╠═83f89135-fb60-4004-858b-955156c36a47
+# ╠═e0a93033-6792-46f0-ba01-a8e187f88955
+# ╠═dad257f4-afe4-4272-8a71-5d5cdb1c1afd
+# ╠═4e0f5953-0d75-4b3b-ba06-2a4a562e56ec
+# ╠═569163c3-e9d4-4edc-89cc-14ae2da12c92
+# ╠═3fdd9c83-e2a4-4c05-8c05-3b8a66e1a1f7
+# ╠═03fe0635-4e1d-4f87-8edc-080ca4935e8f
+# ╠═8b9b9c15-eb5b-448b-835d-af7aa2a6448c
+# ╠═901d3194-b035-4154-9ed3-709320e114c1
+# ╠═fb255db9-3fdd-48eb-a307-36e064e61ccd
 # ╠═04ce9b62-abcb-4ed7-a35d-85565357932c
 # ╠═11cdeaca-f0c1-47d2-9f4d-1ca0bbbc9d5e
 # ╠═dc38cae8-9786-45fd-9e49-730c7b24ab90
@@ -1709,48 +1747,11 @@ version = "0.9.1+5"
 # ╠═92ef42d9-ee38-4485-bbca-d5b4303dbb2a
 # ╠═2381a54b-ba61-468f-9287-bf3e2024b694
 # ╠═493fba7a-e07f-496e-b40a-1f214dd4dfb9
-# ╠═e7de5ad0-3dbb-44e6-8db4-c7913f3c1da8
-# ╠═048c1046-466d-4411-9123-d75950d90658
-# ╠═6d05f40a-6dc9-41e2-8058-4a07275aabc6
-# ╠═40c64e96-99dd-43b8-be78-ae7749a56541
-# ╠═a9ced414-b6a1-4c70-a416-ecc5b48cf4b1
-# ╠═ce8b12f4-1df5-4683-84ca-b0e4fff617e2
-# ╠═5f3e6fa0-bb15-4126-9251-799708e1cccf
 # ╠═115295f1-047a-4da4-a348-1b89e8c795bb
-# ╠═0089eb62-612b-44ee-baa3-a60f4d943997
-# ╠═6234054e-576c-447f-9b3c-cd150d409678
-# ╠═2ad538e7-ed97-4892-9270-03518e7a2691
-# ╠═4dac5868-f999-4921-a2ec-0c52599944da
-# ╠═4013d6c0-c976-45ac-a50e-16cfdcc5a375
-# ╠═27ccce8b-6983-42de-a7ab-c0a8ae46db78
-# ╠═ef3c74dd-9c83-49a7-9174-7543f8e476da
-# ╠═50b00185-3275-47a0-8d96-a22d152404bc
-# ╠═8fce9f68-563a-4d00-8c91-c8eb86c35290
-# ╠═942cf4c3-0bd0-4711-9c20-ae8bcf1ff89b
-# ╠═aeea8cbb-808b-474c-b8ef-bedd5aaf8ef4
-# ╠═beedc2f7-8ea8-40fe-bc3c-db6626cca71a
-# ╠═f45dfc08-d3f0-4a64-8244-11955328d818
-# ╠═9976fd7a-c063-429a-8367-bb26953b4d7f
-# ╠═cdd21f69-e37d-47ba-a1f1-08aa8e0dc760
-# ╠═f8ccbdfd-19b9-4c65-9bce-bb39b9040a52
-# ╠═f88c6530-a402-4e32-9c9e-dd5e55981d8a
-# ╠═7041ca90-3d5a-479a-89c1-c2b4adba5401
-# ╠═ac0ca5bd-544b-4143-ace3-5d7be1f98f43
-# ╠═f257d0c8-caf1-4a96-8e6a-4251b525f94b
-# ╠═d98eec94-0de2-4faf-842f-6bd71ae74fd1
-# ╠═0d408e3b-b1db-4cfd-abfb-c416b3b59829
-# ╠═89658e6a-0542-46c7-955a-648763adad3b
-# ╠═83302108-12c8-48de-9403-a29a0fc6e4f1
-# ╠═978e5ef1-90c0-44bb-8a00-869898f70d35
-# ╠═fbfbde00-beba-4622-8aa8-0ae37b67b7b7
-# ╠═c526a447-64f6-47e1-8434-9a2e5316f421
-# ╠═31df6953-db3c-44c3-b9c8-d09618d2b4ac
-# ╠═eed56293-6b89-416c-96a8-685b5957b4f2
+# ╟─eed56293-6b89-416c-96a8-685b5957b4f2
 # ╠═d015f470-943d-42f4-ad57-c32255e8e4e6
-# ╠═20d4be45-c19c-4186-a548-8e1cb09588ed
-# ╠═9eac61b7-720d-48be-9410-f8e3be54e459
-# ╠═67ae0690-019f-4017-901b-8e6d2c6c1244
-# ╠═bdcadc88-cfda-48b3-b678-3d6e1db9effc
+# ╟─bdcadc88-cfda-48b3-b678-3d6e1db9effc
 # ╠═61470dff-2413-4c6f-97d5-2ec739774b1c
+# ╠═772339c6-6cd8-4936-be49-6b9f3a782eb8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
