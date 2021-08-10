@@ -78,6 +78,9 @@ for b = 1:length(dat)
     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
     wSp = zeros(length(forage),1);
     wSp(wInd(~isnan(wInd))) = vw(~isnan(wInd));
+    Resnorm = NaN(length(lat),1);
+    Resnorm(wInd(~isnan(wInd))) = resn(~isnan(wInd)); 
+    
     % find the foraging points
 %     forSt = find(diff(forage) == 1) + 1;
 %     forEd = find(diff(forage) == -1);
@@ -95,7 +98,7 @@ for b = 1:length(dat)
 %             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
 %         end
 %     end
-    outW = table(time,lat,lon,aveDir,wDir,wSp);
+    outW = table(time,lat,lon,aveDir,wDir,wSp,Resnorm);
     % output the data
     writetable(outW, strcat(outloc,tags(b),"WindYone.txt"));
 end
@@ -148,7 +151,7 @@ if ismac()
     outloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/WindEst/YoneMet/";
 else
     load('F:/UTokyoDrive/PhD//Data/2016Shearwater/MatlabDat/ReadIn/AllGPSForage.mat');
-    outloc = "F:/UTokyoDrive/PhD//Data/2016Shearwater/WindEst/YoneMet/";
+    outloc = "F:/UTokyoDrive/PhD/Data/2016Shearwater/WindEst/YoneMet/";
 end
 
 %% ANALYSE WIND AS USUAL
@@ -171,13 +174,10 @@ for b = 1:length(dat)
     wSpd(wInd(~isnan(wInd))) = vw(~isnan(wInd));
     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
     vA(wInd(~isnan(wInd))) = va(~isnan(wInd));
-%     aveDir = zeros(length(forage),1);
-%     aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
-%     wDir = zeros(length(forage),1);
-%     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
-%     wSp = zeros(length(forage),1);
-%     wSp(wInd(~isnan(wInd))) = vw(~isnan(wInd));
-%     % find the foraging points
+    Resnorm = NaN(length(lat),1);
+    Resnorm(wInd(~isnan(wInd))) = resnorm(~isnan(wInd)); 
+    
+    % find the foraging points
 %     forSt = find(diff(forage) == 1) + 1;
 %     forEd = find(diff(forage) == -1);
 %     if forSt(1) > forEd(1)
@@ -194,7 +194,7 @@ for b = 1:length(dat)
 %             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
 %         end
 %     end
-    outW = table(time,lat,lon,wSpd,wDir,vA);
+    outW = table(time,lat,lon,wSpd,wDir,vA,Resnorm);
     % output the data
     writetable(outW, strcat(outloc,"1sFix/",tags(b),"WindYone.txt"));
 end
@@ -225,6 +225,9 @@ for b = 1:length(dat)
     wSpd(wInd(~isnan(wInd))) = vwSub(~isnan(wInd));
     wDir(wInd(~isnan(wInd))) = wdSub(~isnan(wInd));
     vA(wInd(~isnan(wInd))) = vaSub(~isnan(wInd));
+    ResnSub = NaN(length(latSub),1);
+    ResnSub(wInd(~isnan(wInd))) = resnSub(~isnan(wInd));
+
     % find the foraging points
 %     forSt = find(diff(forage) == 1) + 1;
 %     forEd = find(diff(forage) == -1);
@@ -242,7 +245,7 @@ for b = 1:length(dat)
 %             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
 %         end
 %     end
-    outW = table(timeSub,latSub,lonSub,wSpd,wDir,vA);
+    outW = table(timeSub,latSub,lonSub,wSpd,wDir,vA,ResnSub);
     writetable(outW, strcat(outloc,"5sFix/",tags(b),"WindYone.txt"));
 end
 
@@ -394,7 +397,7 @@ else
     outloc = "F:/UTokyoDrive/PhD//Data/2014Shearwater/WindEst/YoneMet/";
 end
 
-files14 = dir(strcat(loc14,'*.txt'));
+files14 = dir2(strcat(loc14,'*.txt'));
 files14 = string({files14.name})';
 files14 = files14(~contains(files14,'yobi.txt'));
 % remove tags with strange looking data

@@ -74,12 +74,14 @@ for(b in 1:length(yoneDat)){
     yoneDat[[b]] <- read.delim(paste(yoneloc,yonefiles[b],sep = ""),sep = ",", header = T)
     yoneDat[[b]]$DT <- sub(',',' ',yoneDat[[b]]$time)
     yoneDat[[b]]$DT <- as.POSIXct(yoneDat[[b]]$DT,tz = "")
+    # remove non-calculated values
+    yoneDat[[b]] <- yoneDat[[b]][yoneDat[[b]]$wDir != 0,]
     gotoDat[[b]] <- read.delim(paste(gotoloc,gotofiles[b],sep = ""), sep = ",", header = F)
     colnames(gotoDat[[b]]) <- c("DT","Lat","Lon","Head","X","Y")
     gotoDat[[b]]$DT <- as.POSIXct(gotoDat[[b]]$DT, tz = "")
 }
 
-overDF <- data.frame(DT=POSIXct(),gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric())
+overDF <- data.frame(DT=POSIXct(),gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric(),yoneResN = numeric())
 overlDat <- vector(mode="list",length=length(yoneDat))
 yoneDatrem <- yoneDat
 for(b in 1:length(yoneDat)){
@@ -88,9 +90,9 @@ for(b in 1:length(yoneDat)){
     for(g in 1:nrow(gotoDat[[b]])){
         if(any(which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(1)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(1))))){
             inds <- which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(1)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(1)))
-            overlDat[[b]][g,] <- data.frame(DT=gotoDat[[b]]$DT[g],gotoHead = as.numeric(gotoDat[[b]]$Head[g]),gotoX = as.numeric(gotoDat[[b]]$X[g]),gotoY = as.numeric(gotoDat[[b]]$Y[g]),yoneY = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*sin(yoneDatrem[[b]]$wDir[inds]))),yoneX = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*cos(yoneDatrem[[b]]$wDir[inds]))))
+            overlDat[[b]][g,] <- data.frame(DT=gotoDat[[b]]$DT[g],gotoHead = as.numeric(gotoDat[[b]]$Head[g]),gotoX = as.numeric(gotoDat[[b]]$X[g]),gotoY = as.numeric(gotoDat[[b]]$Y[g]),yoneY = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*sin(yoneDatrem[[b]]$wDir[inds]))),yoneX = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*cos(yoneDatrem[[b]]$wDir[inds]))),yoneResN = mean(yoneDat[[b]]$Resnorm[inds]))
         } else {
-            overlDat[[b]][g,] <- cbind(NA,NA,NA,NA,NA,NA)
+            overlDat[[b]][g,] <- cbind(NA,NA,NA,NA,NA,NA,NA)
         }
     }
 }
@@ -104,6 +106,9 @@ plot(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)),atan2(as.numer
 plot(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)))
 
 plot(atan2(as.numeric(allOverL$yoneY),as.numeric(allOverL$yoneX)))
+
+library(circular)
+cor.circular(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)),atan2(as.numeric(allOverL$yoneY),as.numeric(allOverL$yoneX)),test=T)
 
 library(ggplot2)
 ggplot(allOverL) + geom_point(aes(y = atan2(as.numeric(yoneY),as.numeric(yoneX)),x = atan2(as.numeric(gotoY),as.numeric(gotoX))),data=allOverL[allOverL$yoneX != 0,]) + scale_y_continuous(name = "Yone method wind direction (rad)") + scale_x_continuous(name = "Goto method wind direction (rad)") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
@@ -128,24 +133,40 @@ print(min(abs(gotoDat[[b]]$DT[g] - yoneDat[[b]]$DT)))
 ##################################################################################################
 
 library(lubridate)
+library(ggpubr)
+library(dplyr)
+library(ggplot2)
+library(circular)
 if(Sys.info()['sysname'] == "Darwin"){
-    oneloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
-    fiveloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
+    oneloc14 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc14 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
 } else {
-    oneloc <- "F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
-    fiveloc <- "F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
+    oneloc14 <- "F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc14 <- "F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
 }
 
-onefiles <- list.files(oneloc, pattern = '*.txt')
-fivefiles <- list.files(fiveloc, pattern = '*.txt')
+onefiles14 <- list.files(oneloc14, pattern = '*.txt')
+fivefiles14 <- list.files(fiveloc14, pattern = '*.txt')
 
-combD <- vector(mode = "list",length=length(onefiles))
-for(b in 1:length(onefiles)){
-    ODat<-read.delim(paste(oneloc,onefiles[b],sep = ""),sep = ",",header=T)
-    FDat<-read.delim(paste(fiveloc,fivefiles[b],sep = ""),sep = ",",header=T)
+if(Sys.info()['sysname'] == "Darwin"){
+    oneloc16 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc16 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/WindEst/YoneMet/5sFix/"
+} else {
+    oneloc16 <- "F:/UTokyoDrive/PhD/Data/2016Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc16 <- "F:/UTokyoDrive/PhD/Data/2016Shearwater/WindEst/YoneMet/5sFix/"
+}
+
+onefiles16 <- list.files(oneloc16, pattern = '*.txt')
+fivefiles16 <- list.files(fiveloc16, pattern = '*.txt')
+
+combD <- vector(mode = "list",length=length(c(onefiles14,onefiles16)))
+for(b in 1:length(onefiles14)){
+    ODat<-read.delim(paste(oneloc14,onefiles14[b],sep = ""),sep = ",",header=T)
+    FDat<-read.delim(paste(fiveloc14,fivefiles14[b],sep = ""),sep = ",",header=T)
     ODat$DT <- as.POSIXct(ODat$time,format="%d-%b-%Y %H:%M:%S")
     FDat$DT <- as.POSIXct(FDat$timeSub,format="%d-%b-%Y %H:%M:%S")
     # remove NaN rows
+    if(any(!is.na(ODat$wDir))){
     ODat <- ODat[!is.na(ODat$wDir),]
     FDat <- FDat[!is.na(FDat$wDir),]
     # go through each FDat row and find a nearby (in time) ODat row
@@ -155,7 +176,24 @@ for(b in 1:length(onefiles)){
         ind <- which(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))) == minDiff)
         combD[[b]][g,] <- cbind(ODat$wSpd[ind],FDat$wSpd[g],ODat$wDir[ind], FDat$wDir[g],minDiff,FDat$DT[g],ODat$Resnorm[ind],FDat$ResnSub[g])
     }
-    combD[[b]]$OwSpd
+    }
+}
+# add 2016 data
+for(b in 1:length(onefiles16)){
+    ODat<-read.delim(paste(oneloc16,onefiles16[b],sep = ""),sep = ",",header=T)
+    FDat<-read.delim(paste(fiveloc16,fivefiles16[b],sep = ""),sep = ",",header=T)
+    ODat$DT <- as.POSIXct(ODat$time,format="%d-%b-%Y %H:%M:%S")
+    FDat$DT <- as.POSIXct(FDat$timeSub,format="%d-%b-%Y %H:%M:%S")
+    # remove NaN rows
+    ODat <- ODat[!is.na(ODat$wDir),]
+    FDat <- FDat[!is.na(FDat$wDir),]
+    # go through each FDat row and find a nearby (in time) ODat row
+    combD[[b + length(onefiles14)]] <- data.frame(OwSpd = double(), FwSpd = double(), OwDir = double(), FwDir = double(), minDiff = double(), DT = double(), Oresnorm = double(),Fresnorm = double())
+    for(g in 1:nrow(FDat)){
+        minDiff <- min(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))))
+        ind <- which(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))) == minDiff)
+        combD[[b + length(onefiles14)]][g,] <- cbind(ODat$wSpd[ind],FDat$wSpd[g],ODat$wDir[ind], FDat$wDir[g],minDiff,FDat$DT[g],ODat$Resnorm[ind],FDat$ResnSub[g])
+    }
 }
 
 plot(combD[[1]]$OwSpd,combD[[1]]$FwSpd)
@@ -205,7 +243,6 @@ spdval <- ggplotRegression(splm) +
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=(("Subsampled data wind speed (m/s)"))) + scale_x_continuous(name=(("Original data wind speed (m/s)")))
 
-library(ggpubr)
 if(Sys.info()['sysname'] == "Darwin"){
   figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
   # figLoc <- "/Documents/GitHub/PhD/Olfactory/"
@@ -216,13 +253,11 @@ if(Sys.info()['sysname'] == "Darwin"){
 ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-.25,vjust=2)
 ggsave(paste(figLoc,"SubSampVal.svg",sep=""), device="svg", dpi = 300, height = 7,
       width = 5, units = "in")
+ 
 
 
 
 
-library(dplyr)
-library(ggplot2)
-library(circular)
 allComb <- bind_rows(combD)
 ggplot(allComb) + geom_point(aes(x = as.numeric(OwDir), y = as.numeric(FwDir))) + scale_x_continuous(name = "Original direction (rad)",limits=c(-pi,pi)) + scale_y_continuous(name = "Subsampled direction (rad)",limits=c(-pi,pi)) + theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor=element_blank())
 
