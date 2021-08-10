@@ -121,3 +121,152 @@ points(yoneDat[[b]]$DT,rep(5,nrow(yoneDat[[b]])))
 for(g in 1:nrow(gotoDat[[b]])){
 print(min(abs(gotoDat[[b]]$DT[g] - yoneDat[[b]]$DT)))
 }
+
+
+##################################################################################################
+################################ COMPARE SUBSAMPLED 2014 YONE METHOD #############################
+##################################################################################################
+
+library(lubridate)
+if(Sys.info()['sysname'] == "Darwin"){
+    oneloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
+} else {
+    oneloc <- "F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc <- "F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
+}
+
+onefiles <- list.files(oneloc, pattern = '*.txt')
+fivefiles <- list.files(fiveloc, pattern = '*.txt')
+
+combD <- vector(mode = "list",length=length(onefiles))
+for(b in 1:length(onefiles)){
+    ODat<-read.delim(paste(oneloc,onefiles[b],sep = ""),sep = ",",header=T)
+    FDat<-read.delim(paste(fiveloc,fivefiles[b],sep = ""),sep = ",",header=T)
+    ODat$DT <- as.POSIXct(ODat$time,format="%d-%b-%Y %H:%M:%S")
+    FDat$DT <- as.POSIXct(FDat$timeSub,format="%d-%b-%Y %H:%M:%S")
+    # remove NaN rows
+    ODat <- ODat[!is.na(ODat$wDir),]
+    FDat <- FDat[!is.na(FDat$wDir),]
+    # go through each FDat row and find a nearby (in time) ODat row
+    combD[[b]] <- data.frame(OwSpd = double(), FwSpd = double(), OwDir = double(), FwDir = double(), minDiff = double(), DT = double(), Oresnorm = double(),Fresnorm = double())
+    for(g in 1:nrow(FDat)){
+        minDiff <- min(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))))
+        ind <- which(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))) == minDiff)
+        combD[[b]][g,] <- cbind(ODat$wSpd[ind],FDat$wSpd[g],ODat$wDir[ind], FDat$wDir[g],minDiff,FDat$DT[g],ODat$Resnorm[ind],FDat$ResnSub[g])
+    }
+    combD[[b]]$OwSpd
+}
+
+plot(combD[[1]]$OwSpd,combD[[1]]$FwSpd)
+plot(combD[[1]]$OwDir,combD[[1]]$FwDir)
+
+allSubD <- bind_rows(combD)
+allSubD <- allSubD[allSubD$minDiff < 10,]
+
+ggplot(allSubD) + geom_point(aes(x = OwSpd, y = FwSpd))
+
+ggplot(allSubD) + geom_point(aes(x = OwDir, y = FwDir)) + scale_x_continuous(limits=c(-pi,pi)) + scale_y_continuous(limits=c(-pi,pi))
+
+ggplot(allSubD) + geom_bar(aes(x = Oresnorm))
+
+cor.circular(allSubD$OwDir, allSubD$FwDir, test = T)
+
+allSubD$OwDir[allSubD$OwDir > pi] <- allSubD$OwDir[allSubD$OwDir > pi] - 2*pi
+allSubD$FwDir[allSubD$FwDir > pi] <- allSubD$FwDir[allSubD$FwDir > pi] - 2*pi
+
+ggplotRegression <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point(pch=21,fill="red") +
+  stat_smooth(method = "lm", col = "blue")
+}
+
+res<-cor.circular(allSubD$OwDir, allSubD$FwDir, test = T)
+res
+# res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
+hdval <- ggplot(allSubD, aes(x = OwDir, y = FwDir)) +
+    geom_point(pch=21,fill="deepskyblue") +
+    geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=-2.,y=0.2,label="corr = 0.954 \np = 0") +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name='Subsampled wind heading (rad)') + scale_x_continuous(name='Original data wind headings (rad)')
+
+splm <- lm(OwSpd ~ FwSpd, data = allSubD)
+
+spdval <- ggplotRegression(splm) +
+    geom_line(data=data.frame(x=0:max(allSubD$FwSpd),y=0:max(allSubD$FwSpd)),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=4,y=15.5,label="y = 0.614x + 0.9\np = 1.361") +
+    annotate("text",x=4,y=13.,label=expression(paste(R^2," = 0.88"))) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name=(("Subsampled data wind speed (m/s)"))) + scale_x_continuous(name=(("Original data wind speed (m/s)")))
+
+library(ggpubr)
+if(Sys.info()['sysname'] == "Darwin"){
+  figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
+  # figLoc <- "/Documents/GitHub/PhD/Olfactory/"
+} else {
+  figLoc <- "F:/UTokyoDrive/PhD/Figures/Olfactory/"
+  # figLoc <- "F:/Documents/GitHub/PhD/Olfactory/"
+}
+ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-.25,vjust=2)
+ggsave(paste(figLoc,"SubSampVal.svg",sep=""), device="svg", dpi = 300, height = 7,
+      width = 5, units = "in")
+
+
+
+
+library(dplyr)
+library(ggplot2)
+library(circular)
+allComb <- bind_rows(combD)
+ggplot(allComb) + geom_point(aes(x = as.numeric(OwDir), y = as.numeric(FwDir))) + scale_x_continuous(name = "Original direction (rad)",limits=c(-pi,pi)) + scale_y_continuous(name = "Subsampled direction (rad)",limits=c(-pi,pi)) + theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor=element_blank())
+
+
+
+subOvDF <- data.frame(DT=POSIXct(), fiveX = numeric(), fiveY = numeric(), oneY = numeric(), oneX = numeric())
+subOvlDat <- vector(mode="list",length=length(oneDat))
+oneDatrem <- oneDat
+for(b in 1:length(oneDat)){
+    subOvlDat[[b]] <- subOvDF
+    oneDatrem[[b]] <- oneDatrem[[b]][oneDatrem[[b]]$aveDir != 0,]
+    for(g in 1:nrow(fiveDat[[b]])){
+        if(any(which(oneDatrem[[b]]$DT > (fiveDat[[b]]$DT[g] - lubridate::minutes(1)) & oneDatrem[[b]]$DT < (fiveDat[[b]]$DT[g] + lubridate::minutes(1))))){
+            inds <- which(oneDatrem[[b]]$DT > (fiveDat[[b]]$DT[g] - lubridate::minutes(1)) & oneDatrem[[b]]$DT < (fiveDat[[b]]$DT[g] + lubridate::minutes(1)))
+            subOvlDat[[b]][g,] <- data.frame(DT=fiveDat[[b]]$DT[g],fiveX = as.numeric(fiveDat[[b]]$X[g]),fiveY = as.numeric(fiveDat[[b]]$Y[g]),oneY = as.numeric(mean(oneDatrem[[b]]$wSp[inds]*sin(oneDatrem[[b]]$wDir[inds]))),oneX = as.numeric(mean(oneDatrem[[b]]$wSp[inds]*cos(oneDatrem[[b]]$wDir[inds]))))
+        } else {
+            subOvlDat[[b]][g,] <- cbind(NA,NA,NA,NA,NA)
+        }
+    }
+}
+
+library(dplyr)
+allOverL <- bind_rows(subOvlDat)
+
+allOverL <- allOverL[!is.na(allOverL$fiveY),]
+plot(atan2(as.numeric(allOverL$fiveY),as.numeric(allOverL$fiveX)),atan2(as.numeric(allOverL$oneY),as.numeric(allOverL$oneX)))
+
+plot(atan2(as.numeric(allOverL$fiveY),as.numeric(allOverL$fiveX)))
+
+plot(atan2(as.numeric(allOverL$oneY),as.numeric(allOverL$oneX)))
+
+library(ggplot2)
+ggplot(allOverL) + geom_point(aes(y = atan2(as.numeric(oneY),as.numeric(oneX)),x = atan2(as.numeric(fiveY),as.numeric(fiveX))),data=allOverL[allOverL$oneX != 0,]) + scale_y_continuous(name = "one method wind direction (rad)") + scale_x_continuous(name = "five method wind direction (rad)") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+library(circular)
+cor.circular(atan2(allOverL$fiveY,allOverL$fiveX),atan2(allOverL$oneY,allOverL$oneX),test=T)
+
+ggplot(allOverL) + geom_point(aes(y = oneX,x = fiveX),data=allOverL[allOverL$oneX != 0,])
+
+
+sum(allOverL$X == 0)
+plot(fiveDat[[b]]$DT,rep(1,nrow(fiveDat[[b]])))
+points(oneDat[[b]]$DT,rep(5,nrow(oneDat[[b]])))
+
+for(g in 1:nrow(fiveDat[[b]])){
+print(min(abs(fiveDat[[b]]$DT[g] - oneDat[[b]]$DT)))
+}

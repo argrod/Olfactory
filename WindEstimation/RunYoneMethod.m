@@ -445,9 +445,12 @@ for b = 1:length(dat)
     wSpd = NaN(length(lat),1);
     wDir = NaN(length(lat),1);
     vA = NaN(length(lat),1);
+    Resnorm = NaN(length(lat),1);
     wSpd(wInd(~isnan(wInd))) = vw(~isnan(wInd));
     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
     vA(wInd(~isnan(wInd))) = va(~isnan(wInd));
+    Resnorm(wInd(~isnan(wInd))) = resnorm(~isnan(wInd));
+    
 %     aveDir = zeros(length(forage),1);
 %     aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
 %     wDir = zeros(length(forage),1);
@@ -471,7 +474,7 @@ for b = 1:length(dat)
 %             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
 %         end
 %     end
-    outW = table(time,lat,lon,wSpd,wDir,vA);
+    outW = table(time,lat,lon,wSpd,wDir,vA,Resnorm);
     % output the data
     writetable(outW, strcat(outloc,"1sFix/",tags(b),"WindYone.txt"));
 end
@@ -499,9 +502,12 @@ for b = 1:length(dat)
     wSpd = NaN(length(latSub),1);
     wDir = NaN(length(latSub),1);
     vA = NaN(length(latSub),1);
+    ResnSub = NaN(length(latSub),1);
     wSpd(wInd(~isnan(wInd))) = vwSub(~isnan(wInd));
     wDir(wInd(~isnan(wInd))) = wdSub(~isnan(wInd));
     vA(wInd(~isnan(wInd))) = vaSub(~isnan(wInd));
+    ResnSub(wInd(~isnan(wInd))) = resnSub(~isnan(wInd));
+
     % find the foraging points
 %     forSt = find(diff(forage) == 1) + 1;
 %     forEd = find(diff(forage) == -1);
@@ -519,6 +525,6 @@ for b = 1:length(dat)
 %             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
 %         end
 %     end
-    outW = table(timeSub,latSub,lonSub,wSpd,wDir,vA);
+    outW = table(timeSub,latSub,lonSub,wSpd,wDir,vA,ResnSub);
     writetable(outW, strcat(outloc,"5sFix/",tags(b),"WindYone.txt"));
 end
