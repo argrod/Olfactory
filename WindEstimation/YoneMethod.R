@@ -81,7 +81,7 @@ for(b in 1:length(yoneDat)){
     gotoDat[[b]]$DT <- as.POSIXct(gotoDat[[b]]$DT, tz = "")
 }
 
-overDF <- data.frame(DT=POSIXct(),gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric(),yoneResN = numeric())
+overDF <- data.frame(gotoDT=POSIXct(),yoneDT = POSIXct(),gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric(),yoneResN = numeric())
 overlDat <- vector(mode="list",length=length(yoneDat))
 yoneDatrem <- yoneDat
 for(b in 1:length(yoneDat)){
@@ -90,9 +90,9 @@ for(b in 1:length(yoneDat)){
     for(g in 1:nrow(gotoDat[[b]])){
         if(any(which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(1)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(1))))){
             inds <- which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(1)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(1)))
-            overlDat[[b]][g,] <- data.frame(DT=gotoDat[[b]]$DT[g],gotoHead = as.numeric(gotoDat[[b]]$Head[g]),gotoX = as.numeric(gotoDat[[b]]$X[g]),gotoY = as.numeric(gotoDat[[b]]$Y[g]),yoneY = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*sin(yoneDatrem[[b]]$wDir[inds]))),yoneX = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*cos(yoneDatrem[[b]]$wDir[inds]))),yoneResN = mean(yoneDat[[b]]$Resnorm[inds]))
+            overlDat[[b]][g,] <- data.frame(gotoDT=gotoDat[[b]]$DT[g],yoneDT = mean(yoneDat[[b]]$DT[inds]),gotoHead = as.numeric(gotoDat[[b]]$Head[g]),gotoX = as.numeric(gotoDat[[b]]$X[g]),gotoY = as.numeric(gotoDat[[b]]$Y[g]),yoneY = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*sin(yoneDatrem[[b]]$wDir[inds]))),yoneX = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*cos(yoneDatrem[[b]]$wDir[inds]))),yoneResN = mean(yoneDat[[b]]$Resnorm[inds]))
         } else {
-            overlDat[[b]][g,] <- cbind(NA,NA,NA,NA,NA,NA,NA)
+            overlDat[[b]][g,] <- cbind(NA,NA,NA,NA,NA,NA,NA,NA)
         }
     }
 }
@@ -101,31 +101,50 @@ library(dplyr)
 allOverL <- bind_rows(overlDat)
 
 allOverL <- allOverL[!is.na(allOverL$gotoY),]
-plot(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)),atan2(as.numeric(allOverL$yoneY),as.numeric(allOverL$yoneX)))
-
-plot(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)))
-
-plot(atan2(as.numeric(allOverL$yoneY),as.numeric(allOverL$yoneX)))
-
 library(circular)
-cor.circular(atan2(as.numeric(allOverL$gotoY),as.numeric(allOverL$gotoX)),atan2(as.numeric(allOverL$yoneY),as.numeric(allOverL$yoneX)),test=T)
-
 library(ggplot2)
-ggplot(allOverL) + geom_point(aes(y = atan2(as.numeric(yoneY),as.numeric(yoneX)),x = atan2(as.numeric(gotoY),as.numeric(gotoX))),data=allOverL[allOverL$yoneX != 0,]) + scale_y_continuous(name = "Yone method wind direction (rad)") + scale_x_continuous(name = "Goto method wind direction (rad)") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+allOverL$gotoDir <- atan2(allOverL$gotoY,allOverL$gotoX)
+allOverL$yoneDir <- atan2(allOverL$yoneY,allOverL$yoneX)
+allOverL$gotoSpd <- sqrt(allOverL$gotoX^2 + allOverL$gotoY^2)
+allOverL$yoneSpd <- sqrt(allOverL$yoneX^2 + allOverL$yoneY^2)
 
-library(circular)
-cor.circular(atan2(allOverL$gotoY,allOverL$gotoX),atan2(allOverL$yoneY,allOverL$yoneX),test=T)
+res<-cor.circular(allOverL$yoneDir,allOverL$gotoDir, test = T)
+res
+# res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
+hdval <- ggplot(allOverL, aes(x = gotoDir, y = yoneDir)) +
+    geom_point(pch=21,fill="deepskyblue") +
+    geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=.5,y=3.1,label="corr = 0.15",hjust=0) +
+    annotate("text",x=.5,y=2.6,label="p < 9 %*% 10^{-6}",parse=T,hjust=0) +
+    # annotate("text",x=-pi,y=0,label="n = 79",hjust=0) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name='Estimated headings (rad)') + scale_x_continuous(name='JMA headings (rad)')
 
-ggplot(allOverL) + geom_point(aes(y = yoneX,x = gotoX),data=allOverL[allOverL$yoneX != 0,])
+splm <- lm(yoneSpd ~ gotoSpd, data = allOverL)
+summary(splm)
 
+ggplotRegressionNoDot <- function (fit) {
 
-sum(allOverL$X == 0)
-plot(gotoDat[[b]]$DT,rep(1,nrow(gotoDat[[b]])))
-points(yoneDat[[b]]$DT,rep(5,nrow(yoneDat[[b]])))
+require(ggplot2)
 
-for(g in 1:nrow(gotoDat[[b]])){
-print(min(abs(gotoDat[[b]]$DT[g] - yoneDat[[b]]$DT)))
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  stat_smooth(method = "lm", col = "blue")
 }
+
+spdval <- ggplotRegression(splm) +
+    geom_line(data=data.frame(x=0:max(allOverL$gotoSpd),y=0:max(allOverL$gotoSpd)),aes(x=x,y=y),colour="red",linetype='dashed') +
+    # geom_point(pch = 21, fill = allOverL$yoneResN) +
+    annotate("text",x=7.,y=10.5,label="y = 0.07x + 1.9",hjust=0) +
+    annotate("text",x=7.,y=9.5,label="p < 2 %*% 10^{-3}",parse=T,hjust=0) +
+    annotate("text",x=7.,y=8.5,label=expression(paste(R^2," = 0.007")),hjust=0) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(allOverL$gotoSpd),max(allOverL$gotoSpd)))
+
+ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-3,vjust=2)
+ggsave(paste(figLoc,"MethodCompare19.svg",sep=""), device="svg", dpi = 300, height = 7,
+      width = 3.5, units = "in")
 
 
 ##################################################################################################
@@ -137,6 +156,8 @@ library(ggpubr)
 library(dplyr)
 library(ggplot2)
 library(circular)
+library(sp)
+library(rgdal)
 if(Sys.info()['sysname'] == "Darwin"){
     oneloc14 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
     fiveloc14 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
@@ -165,17 +186,28 @@ for(b in 1:length(onefiles14)){
     FDat<-read.delim(paste(fiveloc14,fivefiles14[b],sep = ""),sep = ",",header=T)
     ODat$DT <- as.POSIXct(ODat$time,format="%d-%b-%Y %H:%M:%S")
     FDat$DT <- as.POSIXct(FDat$timeSub,format="%d-%b-%Y %H:%M:%S")
+    colnames(ODat) <- c("time","lon","lat","wSpd","wDir","vA","Resnorm","DT")
+    colnames(FDat) <- c("timeSub","lonSub","latSub","wSpd","wDir","vA","ResnSub","DT")
     # remove NaN rows
     if(any(!is.na(ODat$wDir))){
-    ODat <- ODat[!is.na(ODat$wDir),]
-    FDat <- FDat[!is.na(FDat$wDir),]
-    # go through each FDat row and find a nearby (in time) ODat row
-    combD[[b]] <- data.frame(OwSpd = double(), FwSpd = double(), OwDir = double(), FwDir = double(), minDiff = double(), DT = double(), Oresnorm = double(),Fresnorm = double())
-    for(g in 1:nrow(FDat)){
-        minDiff <- min(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))))
-        ind <- which(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))) == minDiff)
-        combD[[b]][g,] <- cbind(ODat$wSpd[ind],FDat$wSpd[g],ODat$wDir[ind], FDat$wDir[g],minDiff,FDat$DT[g],ODat$Resnorm[ind],FDat$ResnSub[g])
-    }
+        ODat <- ODat[!is.na(ODat$wDir),]
+        FDat <- FDat[!is.na(FDat$wDir),]
+        # go through each FDat row and find a nearby (in time) ODat row
+        combD[[b]] <- data.frame(OwSpd = double(), FwSpd = double(), OwDir = double(), FwDir = double(), minDiff = double(), distDiff = double(), DT = double(), Oresnorm = double(),Fresnorm = double())
+        for(g in 1:nrow(FDat)){
+            minDiff <- min(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))))
+            ind <- which(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))) == minDiff)
+            # find the distance between measures (metres)
+            OGGPS.dec <- SpatialPoints(cbind(ODat$lon[ind],ODat$lat[ind]) , proj4string = CRS("+proj=longlat"))
+            UTMDat <- spTransform(OGGPS.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+            OGUTME <- UTMDat$coords.x1
+            OGUTMN <- UTMDat$coords.x2
+            SubGPS.dec <- SpatialPoints(cbind(ODat$lon[ind],ODat$lat[ind]) , proj4string = CRS("+proj=longlat"))
+            UTMDat <- spTransform(SubGPS.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+            SubUTME <- UTMDat$coords.x1
+            SubUTMN <- UTMDat$coords.x2    
+            combD[[b]][g,] <- cbind(ODat$wSpd[ind],FDat$wSpd[g],ODat$wDir[ind], FDat$wDir[g],minDiff,as.numeric(sqrt((OGUTME - SubUTME)^2 + (OGUTMN - SubUTMN)^2)),FDat$DT[g],ODat$Resnorm[ind],FDat$ResnSub[g])
+        }
     }
 }
 # add 2016 data
@@ -188,11 +220,19 @@ for(b in 1:length(onefiles16)){
     ODat <- ODat[!is.na(ODat$wDir),]
     FDat <- FDat[!is.na(FDat$wDir),]
     # go through each FDat row and find a nearby (in time) ODat row
-    combD[[b + length(onefiles14)]] <- data.frame(OwSpd = double(), FwSpd = double(), OwDir = double(), FwDir = double(), minDiff = double(), DT = double(), Oresnorm = double(),Fresnorm = double())
+    combD[[b + length(onefiles14)]] <- data.frame(OwSpd = double(), FwSpd = double(), OwDir = double(), FwDir = double(), minDiff = double(), distDiff = double(), DT = double(), Oresnorm = double(),Fresnorm = double())
     for(g in 1:nrow(FDat)){
         minDiff <- min(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))))
         ind <- which(abs(as.numeric(difftime(FDat$DT[g],ODat$DT, units = "secs"))) == minDiff)
-        combD[[b + length(onefiles14)]][g,] <- cbind(ODat$wSpd[ind],FDat$wSpd[g],ODat$wDir[ind], FDat$wDir[g],minDiff,FDat$DT[g],ODat$Resnorm[ind],FDat$ResnSub[g])
+        OGGPS.dec <- SpatialPoints(cbind(ODat$lon[ind],ODat$lat[ind]), proj4string = CRS("+proj=longlat"))
+        UTMDat <- spTransform(OGGPS.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+        OGUTME <- UTMDat$coords.x1
+        OGUTMN <- UTMDat$coords.x2
+        SubGPS.dec <- SpatialPoints(cbind(ODat$lon[ind],ODat$lat[ind]) , proj4string = CRS("+proj=longlat"))
+        UTMDat <- spTransform(SubGPS.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+        SubUTME <- UTMDat$coords.x1
+        SubUTMN <- UTMDat$coords.x2    
+        combD[[b + length(onefiles14)]][g,] <- cbind(ODat$wSpd[ind],FDat$wSpd[g],ODat$wDir[ind], FDat$wDir[g],minDiff,as.numeric(sqrt((OGUTME - SubUTME)^2 + (OGUTMN - SubUTMN)^2)),FDat$DT[g],ODat$Resnorm[ind],FDat$ResnSub[g])
     }
 }
 
@@ -228,7 +268,8 @@ res
 hdval <- ggplot(allSubD, aes(x = OwDir, y = FwDir)) +
     geom_point(pch=21,fill="deepskyblue") +
     geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text",x=-2.,y=0.2,label="corr = 0.954 \np = 0") +
+    annotate("text",x=-pi,y=1,label="corr = 0.954",hjust=0) +
+    annotate("text",x=-pi,y=0.5,label="p = 0",hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name='Subsampled wind heading (rad)') + scale_x_continuous(name='Original data wind headings (rad)')
@@ -237,8 +278,9 @@ splm <- lm(OwSpd ~ FwSpd, data = allSubD)
 
 spdval <- ggplotRegression(splm) +
     geom_line(data=data.frame(x=0:max(allSubD$FwSpd),y=0:max(allSubD$FwSpd)),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text",x=4,y=15.5,label="y = 0.614x + 0.9\np = 1.361") +
-    annotate("text",x=4,y=13.,label=expression(paste(R^2," = 0.88"))) +
+    annotate("text", x = 0, y = 16, label = "y == 0.91*x + 0.44",parse = T,hjust=0) +
+    annotate("text", x = 0, y = 14.5, label = "p < 2.2 %*% 10^{-16}",parse=T,hjust=0) + 
+    annotate("text",x=0,y=13,label=expression(paste(R^2," = 0.88")),hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=(("Subsampled data wind speed (m/s)"))) + scale_x_continuous(name=(("Original data wind speed (m/s)")))
@@ -250,10 +292,10 @@ if(Sys.info()['sysname'] == "Darwin"){
   figLoc <- "F:/UTokyoDrive/PhD/Figures/Olfactory/"
   # figLoc <- "F:/Documents/GitHub/PhD/Olfactory/"
 }
-ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-.25,vjust=2)
+ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-3,vjust=2)
 ggsave(paste(figLoc,"SubSampVal.svg",sep=""), device="svg", dpi = 300, height = 7,
-      width = 5, units = "in")
- 
+      width = 3.5, units = "in")
+
 
 
 
@@ -305,3 +347,107 @@ points(oneDat[[b]]$DT,rep(5,nrow(oneDat[[b]])))
 for(g in 1:nrow(fiveDat[[b]])){
 print(min(abs(fiveDat[[b]]$DT[g] - oneDat[[b]]$DT)))
 }
+
+
+##################################################################################################
+#################################### VALIDATION WITH JMA RESULTS #################################
+##################################################################################################
+
+library(circular)
+library(ggplot2)
+library(ggpubr)
+# 2014 and 2016
+valDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/WindEst/YoneMet/Comb20142016Validation.csv",sep=",")
+valDat$Time <- sub("T"," ",valDat$Time)
+valDat$Time <- as.POSIXct(valDat$Time,format="%Y-%m-%d %H:%M:%S",tz = "")
+head(valDat)
+cor.circular()
+head(valDat)
+
+ggplotRegression <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point(pch=21,fill="red") +
+  stat_smooth(method = "lm", col = "blue")
+}
+
+res<-cor.circular(valDat$estHead,valDat$gribHead, test = T)
+res
+# res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
+hdval <- ggplot(valDat, aes(x = gribHead, y = estHead)) +
+    geom_point(pch=21,fill="deepskyblue") +
+    geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=-pi,y=1,label="corr = 0.23",hjust=0) +
+    annotate("text",x=-pi,y=0.5,label="p = 0.041",hjust=0) +
+    annotate("text",x=-pi,y=0,label="n = 79",hjust=0) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name='Estimated headings (rad)') + scale_x_continuous(name='JMA headings (rad)')
+
+splm <- lm(estSpeed ~ gribSpeed, data = valDat)
+summary(splm)
+spdval <- ggplotRegression(splm) +
+    geom_line(data=data.frame(x=0:max(valDat$gribSpeed),y=0:max(valDat$gribSpeed)),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=min(valDat$gribSpeed),y=12.5,label="y = 3.851x + 0.21",hjust=0) +
+    annotate("text",x=min(valDat$gribSpeed),y=11.5,label="p = 0.3348",hjust=0) +
+    annotate("text",x=min(valDat$gribSpeed),y=10.5,label=expression(paste(R^2," = 0.012")),hjust=0) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(valDat$gribSpeed),max(valDat$gribSpeed)))
+
+ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-3,vjust=2)
+ggsave(paste(figLoc,"1416windVal.svg",sep=""), device="svg", dpi = 300, height = 7,
+      width = 3.5, units = "in")
+nrow(valDat)
+
+##################################################################################################
+#################################### VALIDATION WITH JMA RESULTS #################################
+##################################################################################################
+
+# 2019
+valDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/Validation.csv",sep=",")
+valDat$Time <- sub("T"," ",valDat$Time)
+valDat$Time <- as.POSIXct(valDat$Time,format="%Y-%m-%d %H:%M:%S",tz = "")
+head(valDat)
+cor.circular()
+head(valDat)
+
+ggplotRegression <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point(pch=21,fill="red") +
+  stat_smooth(method = "lm", col = "blue")
+}
+
+res<-cor.circular(valDat$estHead,valDat$gribHead, test = T)
+res
+# res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
+hdval <- ggplot(valDat, aes(x = gribHead, y = estHead)) +
+    geom_point(pch=21,fill="deepskyblue") +
+    geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=-pi,y=1,label="corr = 0.18",hjust=0) +
+    annotate("text",x=-pi,y=0.5,label="p < 0.01",hjust=0) +
+    # annotate("text",x=-pi,y=0,label="n = 79",hjust=0) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name='Estimated headings (rad)') + scale_x_continuous(name='JMA headings (rad)')
+
+splm <- lm(estSpeed ~ gribSpeed, data = valDat)
+summary(splm)
+spdval <- ggplotRegression(splm) +
+    geom_line(data=data.frame(x=0:max(valDat$gribSpeed),y=0:max(valDat$gribSpeed)),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=min(valDat$gribSpeed),y=12.5,label="y = 0.07x + 1.9",hjust=0) +
+    annotate("text",x=min(valDat$gribSpeed),y=11.5,label="p = 0.2",hjust=0) +
+    annotate("text",x=min(valDat$gribSpeed),y=10.5,label=expression(paste(R^2," = 0.007")),hjust=0) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(valDat$gribSpeed),max(valDat$gribSpeed)))
+
+ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-3,vjust=2)
+ggsave(paste(figLoc,"19windVal.svg",sep=""), device="svg", dpi = 300, height = 7,
+      width = 3.5, units = "in")
+nrow(valDat)
