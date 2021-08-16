@@ -967,9 +967,9 @@ hist(WindDat$distTo)
 
 # wind validation
 
-outPt <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/gribSelectedProper.csv", sep = ",", header=T)
+outPt <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/Validation.csv", sep = ",", header=T)
 outPt$Time <- as.POSIXct(outPt$Time,format="%Y-%m-%dT%H:%M:%S")
-cor.circular(outPt$est)
+# cor.circular(outPt$est)
 
 ggplotRegression <- function (fit) {
 
@@ -986,9 +986,9 @@ res
 hdval <- ggplot(outPt, aes(x = gribHead, y = estHead)) +
     geom_point(pch=21,fill="deepskyblue") +
     geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text",x=-pi,y=0.5,label="corr = 0.417", hjust = 0) +
-    annotate("text",x=-pi,y=0.,label="p < 4 %*% 10^{-7}", parse = T, hjust = 0) +
-    annotate("text",x=-pi,y=-0.5,label="n == 152", parse = T, hjust = 0) +
+    annotate("text",x=-pi,y=2,label="corr = 0.4", hjust = 0) +
+    annotate("text",x=-pi,y=1.5,label="p < 9 %*% 10^{-7}", parse = T, hjust = 0) +
+    annotate("text",x=-pi,y=1,label="n == 152", parse = T, hjust = 0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name='Estimated headings (rad)') + scale_x_continuous(name='JMA headings (rad)')
@@ -997,9 +997,9 @@ splm <- lm(estSpeed ~ gribSpeed, data = outPt)
 
 spdval <- ggplotRegression(splm) +
     geom_line(data=data.frame(x=0:max(outPt$gribSpeed),y=0:max(outPt$gribSpeed)),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text",x=0,y=12.5,label="y = 0.41x + 1.3", hjust= 0) +
-    annotate("text",x=0,y=11.5,label="p < 2 %*% 10^{-10}", parse = T, hjust= 0) +
-    annotate("text",x=0,y=10.5,label=expression(paste(R^2," = 0.24")), hjust= 0) +
+    annotate("text",x=0,y=12.5,label="y = 0.52x + 0.65", hjust= 0) +
+    annotate("text",x=0,y=11.5,label="p < 3 %*% 10^{-16}", parse = T, hjust= 0) +
+    annotate("text",x=0,y=10.5,label=expression(paste(R^2," = 0.38")), hjust= 0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name="Estimated wind speed (m/s)") + scale_x_continuous(name=(("JMA wind speed (m/s)")))

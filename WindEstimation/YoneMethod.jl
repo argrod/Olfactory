@@ -110,7 +110,7 @@ begin
 end
 
 # ╔═╡ 99f6bc95-5032-46ef-bac5-5b01bd55846c
-spd, dir, vs, ve, rest = flightMask(sel.DT,sel.lat,sel.lon,5,5);
+spd, dir, vs, ve, rest = flightMask(sel.DT,sel.lat,sel.lon,5,2);
 
 # ╔═╡ 08cd4275-db5a-4553-bf0a-7b71a8927eb7
 md"""
@@ -126,7 +126,7 @@ Flight speed threshold (ms$$^{-1}$$) $(@bind tagDur Slider(1:50, show_value = tr
 
 # ╔═╡ 1ad6e21c-05d1-4fa6-b21e-abe6858f1ed6
 begin
-	spd2,dir2,vsShow,veShow = flightMask(sel.DT,sel.lat,sel.lon,tagDur,5)
+	spd2,dir2,vsShow,veShow = flightMask(sel.DT,sel.lat,sel.lon,tagDur,1)
 	amount = zeros(Int,nrow(sel))
 	for b = 1:length(vsShow)
 		amount[vsShow[b]:veShow[b]] .= 1
@@ -195,92 +195,22 @@ begin
 	ylabel!("Speed (m/s)")
 end
 
-# ╔═╡ 9e7a192a-c823-467b-b743-36daf0337aa8
+# ╔═╡ db685610-a64d-4a88-a48a-b63bafed81db
 
 
-# ╔═╡ b012fbab-ddf1-4b58-840b-b5ab278f7150
+# ╔═╡ ee841eea-f938-4c96-b320-18077507310c
 
 
-# ╔═╡ 7020789b-aaad-431e-8ee9-d929852f70e1
+# ╔═╡ a78582d4-5f8d-4961-ad39-75da28845e81
 
 
-# ╔═╡ 76b5a853-5e04-497c-a3c2-c3af800f1909
-[3 0 9]
+# ╔═╡ ab1a4b7b-ce9a-4fd2-86f5-770b30c28010
+
 
 # ╔═╡ 2cf89d73-4442-4084-a1e9-2c85b38095de
-
-
-# ╔═╡ 8526fc1f-c3da-4676-b804-bc98abd30290
-
-
-# ╔═╡ 9f07e1c6-5afb-4ac9-b571-e22161ac84d1
-
-
-# ╔═╡ 0b0bac61-86c9-4ce1-9f2d-a8a7c609ad76
-
-
-# ╔═╡ 2045c3bb-9b50-44b5-8e9d-477f4717dd8a
-
-
-# ╔═╡ 8e0b0f75-536c-4531-b346-39821ef10fec
-
-
-# ╔═╡ ebab33b1-3aff-41d6-b04e-176f02342b35
-
-
-# ╔═╡ 8f20f3bb-df17-4a62-a20a-857e9268abed
-
-
-# ╔═╡ 89a89bb0-acc7-46e1-bcbd-39402e075c11
-
-
-# ╔═╡ 205cd474-d5d0-4470-b56d-2ee9d37ed0ed
-wy([3 0]*sin.(gd)
-
-# ╔═╡ 77351942-34e9-44c9-95c5-94e210288bbd
-
-
-# ╔═╡ 47fb8578-4c00-41c0-8586-515d8e8a6cfe
-
-
-# ╔═╡ 9236a1f8-0e22-42bc-9a07-ef8ef0bf25bf
-
-
-# ╔═╡ 3b69098f-3777-409e-a384-34b54b3c85e2
-
-
-# ╔═╡ b1e7696b-9d09-44eb-86c8-2cfc9d4d9671
-
-
-# ╔═╡ 729f983a-2794-48ea-9484-447c2982137b
-
-
-# ╔═╡ 83f89135-fb60-4004-858b-955156c36a47
-
-
-# ╔═╡ e0a93033-6792-46f0-ba01-a8e187f88955
-
-
-# ╔═╡ dad257f4-afe4-4272-8a71-5d5cdb1c1afd
-
-
-# ╔═╡ 4e0f5953-0d75-4b3b-ba06-2a4a562e56ec
-
-
-# ╔═╡ 569163c3-e9d4-4edc-89cc-14ae2da12c92
-
-
-# ╔═╡ 3fdd9c83-e2a4-4c05-8c05-3b8a66e1a1f7
-
-
-# ╔═╡ 03fe0635-4e1d-4f87-8edc-080ca4935e8f
-
-
-# ╔═╡ 8b9b9c15-eb5b-448b-835d-af7aa2a6448c
-
-
-# ╔═╡ fb255db9-3fdd-48eb-a307-36e064e61ccd
-
+wy([c(1) c(2)]).*sin(gd) + wx([c(1) c(2)]).*cos(gd) + ...
+    sqrt((wy([c(1) c(2)]).*sin(gd)+wx([c(1) c(2)]).*cos(gd)).^2 ...
+    - wy([c(1) c(2)]).^2 - wx([c(1) c(2)]).^2 + c(3)^2)
 
 # ╔═╡ 04ce9b62-abcb-4ed7-a35d-85565357932c
 # wind2dveclsq(vg,gd,[3 0 9])
@@ -321,7 +251,7 @@ begin
 	sortedDir = selDir[sortInd]
 	sortedSpd = selSpd[sortInd]
 	sinRel(θ,c) = c[1] .+ c[2].*sin.(θ) .+ c[3].*cos.(θ)
-	ft = curve_fit(sinRel,sortedDir,sortedSpd,[1.0,1.0,1.0])
+	ft = curve_fit(sinRel,sortedDir,sortedSpd,[1.0,1.0,1.0]);
 end
 
 # ╔═╡ 9d5c901d-c3f9-4c56-bade-8a25b2be2fe7
@@ -351,9 +281,6 @@ plot(sinRel(1:360,[5.7,0.7,2.6]))
 # ╔═╡ 493fba7a-e07f-496e-b40a-1f214dd4dfb9
 ft.param
 
-# ╔═╡ 115295f1-047a-4da4-a348-1b89e8c795bb
-c = [3 0 9]
-
 # ╔═╡ eed56293-6b89-416c-96a8-685b5957b4f2
 begin
 	gd = dir[ss[1]:se[1]];
@@ -381,9 +308,9 @@ end
 begin
 		wx(v) = v[1] .* cos(v[2])
 		wy(v) = v[1] .* sin(v[2])
-		ea(gd,c) = wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd) .+ sqrt.(wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd).^2 .- wy([c[1] c[2]])^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
-		lb = [0, -pi, 0]
-		ub = [20, pi, 20]
+		ea(gd,c) = wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd) .+ sqrt.((wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd)).^2 .- wy([c[1] c[2]])^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
+		lb = [0.0, -pi, 0.0]
+		ub = [20.0, pi, 20.0]
 		curve_fit(ea,vg,gd,[3.0, 0.0, 9.0],lower = lb, upper = ub)
 end
 
@@ -403,19 +330,20 @@ end
 # ╔═╡ 9658da94-80ea-4454-96ee-ecddd59ca2a6
 wind2dveclsq(vg,gd,[3,0,9])
 
-# ╔═╡ 48f99cd6-752f-4f99-80b2-6695369710f3
+# ╔═╡ bdb06538-038e-4560-9680-1094e80bf892
 begin
-	wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd) .+ sqrt.(wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd).^2 .- wy([c[1] c[2]])^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
+	f(p, c) = wy([c[1] c[2]]).*sin.(p) .+ wx([c[1] c[2]]).*cos.(p) .+ sqrt.((wy([c[1] c[2]]).*sin.(p) .+ wx([c[1] c[2]]).*cos.(p)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
+	curve_fit(f,gd,vg,[3.0 0.0 9.0])
 end
 
-# ╔═╡ ac03761e-9d66-4f7f-874d-9c18de325336
-wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd) .+ sqrt.(wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd).^2 .- wy([c[1] c[2]])^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
+# ╔═╡ 7dac4045-8d83-49db-982e-64f5015b36db
+wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd) .+ sqrt.((wy([c[1] c[2]]).*sin.(gd) .+ wx([c[1] c[2]]).*cos.(gd)).^2 .- wy([c[1] c[2]]).^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
 
-# ╔═╡ cffa7c7b-b5b8-4636-93be-ff7bd155f961
-length(wy([3 0])*sin.(gd) .+ wx([3 0])*cos.(gd) .+ sqrt.(wy([3 0])*sin.(gd) .+ wx([3 0])*cos.(gd).^2 .- wy([3 0])^2 .- wx([3 0]).^2 .+ c[3]^2))
 
-# ╔═╡ 901d3194-b035-4154-9ed3-709320e114c1
-vg
+# ╔═╡ 48f99cd6-752f-4f99-80b2-6695369710f3
+begin
+	wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd) .+ sqrt.((wy([c[1] c[2]])*sin.(gd) .+ wx([c[1] c[2]])*cos.(gd)).^2 .- wy([c[1] c[2]])^2 .- wx([c[1] c[2]]).^2 .+ c[3]^2)
+end
 
 # ╔═╡ d015f470-943d-42f4-ad57-c32255e8e4e6
 # begin 
@@ -518,7 +446,7 @@ Plots = "~1.20.0"
 PlutoUI = "~0.7.9"
 Query = "~1.0.0"
 RCall = "~0.13.12"
-RecursiveArrayTools = "~2.16.1"
+RecursiveArrayTools = "~2.17.0"
 StructArrays = "~0.6.0"
 """
 
@@ -537,9 +465,9 @@ uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 
 [[ArrayInterface]]
 deps = ["IfElse", "LinearAlgebra", "Requires", "SparseArrays", "Static"]
-git-tree-sha1 = "2e004e61f76874d153979effc832ae53b56c20ee"
+git-tree-sha1 = "cdb00a6fb50762255021e5571cf95df3e1797a51"
 uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "3.1.22"
+version = "3.1.23"
 
 [[Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -573,15 +501,15 @@ version = "0.10.0"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "f53ca8d41e4753c41cdafa6ec5f7ce914b34be54"
+git-tree-sha1 = "bdc0937269321858ab2a4f288486cb258b9a0af7"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "0.10.13"
+version = "1.3.0"
 
 [[ColorSchemes]]
-deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random", "StaticArrays"]
-git-tree-sha1 = "ed268efe58512df8c7e224d2e170afd76dd6a417"
+deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random"]
+git-tree-sha1 = "9995eb3977fbf67b86d0a0a0508e83017ded03f2"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.13.0"
+version = "3.14.0"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -647,9 +575,9 @@ version = "1.2.2"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "4437b64df1e0adccc3e5d1adbc3ac741095e4677"
+git-tree-sha1 = "7d9d316f04214f7efdbb6398d545446e246eff02"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.9"
+version = "0.18.10"
 
 [[DataValueInterfaces]]
 git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
@@ -898,9 +826,9 @@ version = "1.3.0"
 
 [[JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
-git-tree-sha1 = "81690084b6198a2e1da36fcfda16eeca9f9f24e4"
+git-tree-sha1 = "8076680b162ada2a031f707ac7b4953e30667a37"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-version = "0.21.1"
+version = "0.21.2"
 
 [[JpegTurbo_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1258,9 +1186,9 @@ version = "0.3.4"
 
 [[RecursiveArrayTools]]
 deps = ["ArrayInterface", "ChainRulesCore", "DocStringExtensions", "LinearAlgebra", "RecipesBase", "Requires", "StaticArrays", "Statistics", "ZygoteRules"]
-git-tree-sha1 = "0426474f50756b3b47b08075604a41b460c45d17"
+git-tree-sha1 = "6cf3169ab34096657b79ea7d26f64ad79b3a5ea7"
 uuid = "731186ca-8d62-57ce-b412-fbd966d074cd"
-version = "2.16.1"
+version = "2.17.0"
 
 [[Reexport]]
 git-tree-sha1 = "5f6c21241f0f655da3952fd60aa18477cf96c220"
@@ -1333,9 +1261,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[SpecialFunctions]]
 deps = ["ChainRulesCore", "LogExpFunctions", "OpenSpecFun_jll"]
-git-tree-sha1 = "508822dca004bf62e210609148511ad03ce8f1d8"
+git-tree-sha1 = "a322a9493e49c5f3a10b50df3aedaf1cdb3244b7"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "1.6.0"
+version = "1.6.1"
 
 [[Static]]
 deps = ["IfElse"]
@@ -1345,9 +1273,9 @@ version = "0.3.0"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "885838778bb6f0136f8317757d7803e0d81201e4"
+git-tree-sha1 = "3240808c6d463ac46f1c1cd7638375cd22abbccb"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.2.9"
+version = "1.2.12"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1687,7 +1615,7 @@ version = "0.9.1+5"
 # ╟─0c8048da-df98-4e4a-ba2e-195ede0d6e5c
 # ╟─6f21012b-39d6-47d4-99b3-0dde5068c357
 # ╟─62ee1055-dbd9-4f93-990d-ce40092e2b1b
-# ╟─99f6bc95-5032-46ef-bac5-5b01bd55846c
+# ╠═99f6bc95-5032-46ef-bac5-5b01bd55846c
 # ╟─08cd4275-db5a-4553-bf0a-7b71a8927eb7
 # ╟─cf3bd1d2-53ed-4b4c-ad8a-c3716b89b569
 # ╟─1ad6e21c-05d1-4fa6-b21e-abe6858f1ed6
@@ -1698,47 +1626,22 @@ version = "0.9.1+5"
 # ╟─bb33aaed-8f48-4895-ae32-835d6d92508d
 # ╟─82cf3981-1648-4430-baca-2fce80e40a6b
 # ╠═cabe59d8-b22e-4b5b-ad6e-7c01f709c4ea
+# ╠═bdb06538-038e-4560-9680-1094e80bf892
+# ╠═db685610-a64d-4a88-a48a-b63bafed81db
+# ╠═ee841eea-f938-4c96-b320-18077507310c
+# ╠═7dac4045-8d83-49db-982e-64f5015b36db
 # ╠═9658da94-80ea-4454-96ee-ecddd59ca2a6
 # ╠═ba6daf12-03d7-4714-800f-3ab12d02d5a2
-# ╠═9e7a192a-c823-467b-b743-36daf0337aa8
-# ╠═b012fbab-ddf1-4b58-840b-b5ab278f7150
+# ╠═a78582d4-5f8d-4961-ad39-75da28845e81
+# ╠═ab1a4b7b-ce9a-4fd2-86f5-770b30c28010
 # ╠═48f99cd6-752f-4f99-80b2-6695369710f3
-# ╠═7020789b-aaad-431e-8ee9-d929852f70e1
-# ╠═76b5a853-5e04-497c-a3c2-c3af800f1909
 # ╠═2cf89d73-4442-4084-a1e9-2c85b38095de
-# ╠═8526fc1f-c3da-4676-b804-bc98abd30290
-# ╠═9f07e1c6-5afb-4ac9-b571-e22161ac84d1
-# ╠═0b0bac61-86c9-4ce1-9f2d-a8a7c609ad76
-# ╠═2045c3bb-9b50-44b5-8e9d-477f4717dd8a
-# ╠═ac03761e-9d66-4f7f-874d-9c18de325336
-# ╠═8e0b0f75-536c-4531-b346-39821ef10fec
-# ╠═cffa7c7b-b5b8-4636-93be-ff7bd155f961
-# ╠═ebab33b1-3aff-41d6-b04e-176f02342b35
-# ╠═8f20f3bb-df17-4a62-a20a-857e9268abed
-# ╠═89a89bb0-acc7-46e1-bcbd-39402e075c11
-# ╠═205cd474-d5d0-4470-b56d-2ee9d37ed0ed
-# ╠═77351942-34e9-44c9-95c5-94e210288bbd
-# ╠═47fb8578-4c00-41c0-8586-515d8e8a6cfe
-# ╠═9236a1f8-0e22-42bc-9a07-ef8ef0bf25bf
-# ╠═3b69098f-3777-409e-a384-34b54b3c85e2
-# ╠═b1e7696b-9d09-44eb-86c8-2cfc9d4d9671
-# ╠═729f983a-2794-48ea-9484-447c2982137b
-# ╠═83f89135-fb60-4004-858b-955156c36a47
-# ╠═e0a93033-6792-46f0-ba01-a8e187f88955
-# ╠═dad257f4-afe4-4272-8a71-5d5cdb1c1afd
-# ╠═4e0f5953-0d75-4b3b-ba06-2a4a562e56ec
-# ╠═569163c3-e9d4-4edc-89cc-14ae2da12c92
-# ╠═3fdd9c83-e2a4-4c05-8c05-3b8a66e1a1f7
-# ╠═03fe0635-4e1d-4f87-8edc-080ca4935e8f
-# ╠═8b9b9c15-eb5b-448b-835d-af7aa2a6448c
-# ╠═901d3194-b035-4154-9ed3-709320e114c1
-# ╠═fb255db9-3fdd-48eb-a307-36e064e61ccd
 # ╠═04ce9b62-abcb-4ed7-a35d-85565357932c
 # ╠═11cdeaca-f0c1-47d2-9f4d-1ca0bbbc9d5e
 # ╠═dc38cae8-9786-45fd-9e49-730c7b24ab90
 # ╠═bf268156-adae-4688-a94b-f2ed2e97d320
 # ╠═b5ea6fd2-a58c-4f78-a046-26081615170e
-# ╠═9bc1d10b-5314-485b-86aa-3294d1c7f4c3
+# ╟─9bc1d10b-5314-485b-86aa-3294d1c7f4c3
 # ╠═9d5c901d-c3f9-4c56-bade-8a25b2be2fe7
 # ╠═eaac9617-cdd5-49fb-80a2-d36b3ca15a68
 # ╠═66f5865d-9236-4562-b7ce-cdc7440c4c0e
@@ -1747,7 +1650,6 @@ version = "0.9.1+5"
 # ╠═92ef42d9-ee38-4485-bbca-d5b4303dbb2a
 # ╠═2381a54b-ba61-468f-9287-bf3e2024b694
 # ╠═493fba7a-e07f-496e-b40a-1f214dd4dfb9
-# ╠═115295f1-047a-4da4-a348-1b89e8c795bb
 # ╟─eed56293-6b89-416c-96a8-685b5957b4f2
 # ╠═d015f470-943d-42f4-ad57-c32255e8e4e6
 # ╟─bdcadc88-cfda-48b3-b678-3d6e1db9effc

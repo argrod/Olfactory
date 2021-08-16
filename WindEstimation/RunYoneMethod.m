@@ -68,7 +68,7 @@ for b = 1:length(dat)
     tdiff = diff(time); % time difference between GPS points
     spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
     dir = atan2(diff(y),diff(x));
-    [flight,fs,fe] = flightmask(spd,4,5);
+    [flight,fs,fe] = flightmask(spd,5,1);
     [ss,se] = getsection(.2,300,60,fs,fe);
 %     windestimates(spd,dir,ss,se)
     [vw,wd,va,resn,bh,rwh,wInd] = windestimates5(spd,dir,ss,se);
@@ -146,6 +146,7 @@ for tg = 1:length(tags)
 end
 
 %% LOAD IN (2016)
+
 if ismac()
     load('/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/MatlabDat/ReadIn/AllGPSForage.mat');
     outloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/WindEst/YoneMet/";
@@ -216,7 +217,7 @@ for b = 1:length(dat)
     tdiff = diff(timeSub); % time difference between GPS points
     spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
     dir = atan2(diff(y),diff(x));
-    [flight,fs,fe] = flightmask(spd,4,5);
+    [flight,fs,fe] = flightmask(spd,5,1);
     [ssSub,seSub] = getsection(.2,300,60,fs,fe);
     [vwSub,wdSub,vaSub,resnSub,bh,rwh,wInd] = windestimates5(spd,dir,ssSub,seSub);
     wSpd = NaN(length(latSub),1);
@@ -251,44 +252,33 @@ end
 
 %% RUN 2017 DATA
 if ismac()
-    fileloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/TxtDat/BehaviourDetection/PredictedForage/";
+    fileloc = '/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/AxyTrek/AxyTrek/';
 else
-    fileloc = "F:/UTokyoDrive/PhD/Data/2016Shearwater/TxtDat/BehaviourDetection/PredictedForage/";
+    fileloc = 'F:/UTokyoDrive/PhD/Data/2017Shearwater/AxyTrek/AxyTrek/';
 end
-files = dir2(strcat(fileloc,"*ForageGPS.txt"));
+files = dir2(strcat(fileloc,"**/*.txt"));
 %files = files(3:end);
 % extract file names
 filesNs = string(split([files.name],'.txt'));
-filesNs = filesNs(contains(filesNs,"2017"));
+filesNs = filesNs(1:end-1);
 % get file names and dates
+tagstruct = dir2(fileloc(1:end-1));
 tags = strings(length(filesNs),1);
 for b = 1:length(filesNs)
-    file = char(filesNs(b));
-    tags(b) = file(1:strfind(file,'-2017')-1);
+    tags(b) = string(tagstruct(b).name);
 end
 clear file i
-% select only unique tag names and find the index of last occurrence
-[tags,te] = unique(tags,'last');
 
 dat = cell(length(tags),5);
 for tg = 1:length(tags)
-    tagfiles = filesNs(startsWith(filesNs,tags(tg)));
-    for b = 1:length(tagfiles)
-        fileID = fopen(strcat(fileloc,tagfiles(b),".txt"));
-        GPSDat = textscan(fileID, '%{dd-MM-yyyy HH:mm:ss}D %f %f %f','Delimiter',',','HeaderLines',1);
-        fclose(fileID);
-        if b > 1
-            dat{tg,3} = vertcat(dat{tg,3},GPSDat{1});
-            dat{tg,4} = vertcat(dat{tg,4},GPSDat{2});
-            dat{tg,5} = vertcat(dat{tg,5},GPSDat{3});
-            dat{tg,6} = vertcat(dat{tg,6},GPSDat{4});
-        else
-            dat{tg,3} = GPSDat{1};
-            dat{tg,4} = GPSDat{2};
-            dat{tg,5} = GPSDat{3};
-            dat{tg,6} = GPSDat{4};
-        end
-    end
+    fileID = fopen(strcat(fileloc,tags(tg),'/',filesNs(tg),".txt"));
+    GPSDat = textscan(fileID, '%{yyyy/MM/dd,HH:mm:ss}D %f %f %f %f %f %f %f','Delimiter','\t','HeaderLines',1);
+    fclose(fileID);
+    GPSDat{1}.Format = "dd-MMM-yyyy HH:mm:ss";
+    dat{tg,3} = GPSDat{1};
+    dat{tg,4} = GPSDat{2};
+    dat{tg,5} = GPSDat{3};
+    dat{tg,6} = GPSDat{4};
 end
 
 %% LOAD IN (2017)
@@ -300,7 +290,245 @@ else
     outloc = "F:/UTokyoDrive/PhD//Data/2017Shearwater/WindEst/YoneMet/";
 end
 
-%% RERUN 2016/17 WHILE SUBSAMPLED
+%% ANALYSE WIND AS USUAL
+for b = 1:size(dat,1)
+    [time, lat, lon] = gettimelatlon(dat, b);
+%     forage = dat{b,6};
+    [x,y,zone] = deg2utm(lat,lon); % convert from dec degs to UTM
+    DistTrav = sqrt(diff(x).^2+diff(y).^2); % calculate distance between GPS points
+    tdiff = diff(time); % time difference between GPS points
+    spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
+    dir = atan2(diff(y),diff(x));
+    [flight,fs,fe] = flightmask(spd,4,5);
+    [ss,se] = getsection(1,300,60,fs,fe);
+%     [vw,wd,va,resn] = windestimates(spd,dir,ss,se);
+    [vw,wd,va,resnorm,bh,rwh,wInd] = windestimates5(spd,dir,ss,se);
+    % create vector for wind values same length as lat lon
+    wSpd = NaN(length(lat),1);
+    wDir = NaN(length(lat),1);
+    vA = NaN(length(lat),1);
+    wSpd(wInd(~isnan(wInd))) = vw(~isnan(wInd));
+    wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
+    vA(wInd(~isnan(wInd))) = va(~isnan(wInd));
+    Resnorm = NaN(length(lat),1);
+    Resnorm(wInd(~isnan(wInd))) = resnorm(~isnan(wInd)); 
+    
+    % find the foraging points
+%     forSt = find(diff(forage) == 1) + 1;
+%     forEd = find(diff(forage) == -1);
+%     if forSt(1) > forEd(1)
+%         forSt = [1; forSt];
+%     end
+%     if forEd(end) < forSt(end)
+%         forEd = [forEd; length(forage)];
+%     end
+%     distTo = zeros(length(forage),1);
+%     for nxt = 1:length(forSt)
+%         if nxt == 1 && forSt(nxt) ~= 1
+%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
+%         else
+%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
+%         end
+%     end
+    outW = table(time,lat,lon,wSpd,wDir,vA,Resnorm);
+    % output the data
+    writetable(outW, strcat(outloc,"1sFix/",tags(b),"WindYone.txt"));
+end
+
+
+%% SUBSAMPLE
+
+datSub = dat;
+for b = 1:size(dat,1)
+    indeces = 1:5:length(dat{b,3});
+    datSub{b,3} = datSub{b,3}(indeces);
+    datSub{b,4} = datSub{b,4}(indeces);
+    datSub{b,5} = datSub{b,5}(indeces);
+
+    [timeSub, latSub, lonSub] = gettimelatlon(datSub, b);
+%     forage = datSub{b,6};
+    [x,y,zone] = deg2utm(latSub,lonSub); % convert from dec degs to UTM
+    DistTrav = sqrt(diff(x).^2+diff(y).^2); % calculate distance between GPS points
+    tdiff = diff(timeSub); % time difference between GPS points
+    spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
+    dir = atan2(diff(y),diff(x));
+    [flight,fs,fe] = flightmask(spd,5,1);
+    [ssSub,seSub] = getsection(.2,300,60,fs,fe);
+    [vwSub,wdSub,vaSub,resnSub,bh,rwh,wInd] = windestimates5(spd,dir,ssSub,seSub);
+    wSpd = NaN(length(latSub),1);
+    wDir = NaN(length(latSub),1);
+    vA = NaN(length(latSub),1);
+    wSpd(wInd(~isnan(wInd))) = vwSub(~isnan(wInd));
+    wDir(wInd(~isnan(wInd))) = wdSub(~isnan(wInd));
+    vA(wInd(~isnan(wInd))) = vaSub(~isnan(wInd));
+    ResnSub = NaN(length(latSub),1);
+    ResnSub(wInd(~isnan(wInd))) = resnSub(~isnan(wInd));
+
+    % find the foraging points
+%     forSt = find(diff(forage) == 1) + 1;
+%     forEd = find(diff(forage) == -1);
+%     if forSt(1) > forEd(1)
+%         forSt = [1; forSt];
+%     end
+%     if forEd(end) < forSt(end)
+%         forEd = [forEd; length(forage)];
+%     end
+%     distTo = zeros(length(forage),1);
+%     for nxt = 1:length(forSt)
+%         if nxt == 1 && forSt(nxt) ~= 1
+%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
+%         else
+%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
+%         end
+%     end
+    outW = table(timeSub,latSub,lonSub,wSpd,wDir,vA,ResnSub);
+    writetable(outW, strcat(outloc,"5sFix/",tags(b),"WindYone.txt"));
+end
+
+%% RUN 2014 DATA
+if ismac()
+    loc14 = '/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/AxyTrek/';
+    outloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/";
+else
+    loc14 = 'F:/UTokyoDrive/PhD//Data/2014Shearwater/AxyTrek/';
+    outloc = "F:/UTokyoDrive/PhD//Data/2014Shearwater/WindEst/YoneMet/";
+end
+files14 = dir2(strcat(loc14,'*.txt'));
+files14 = string({files14.name})';
+files14 = files14(~contains(files14,'yobi.txt'));
+% remove tags with strange looking data
+files14 = files14(~contains(files14,'st14n140f'));
+files14 = files14(~contains(files14,'st14n64m'));
+files14 = files14(~contains(files14,'st14n97f'));
+dat = cell(length(files14),4);
+for b = 1:length(files14)
+    fileID = fopen(strcat(loc14,files14(b)));
+    GPSDat = textscan(fileID, '%s %s %f %f %f %f %f %f %f %f',...
+    'Delimiter',' ','HeaderLines',0);
+    fclose(fileID);
+    if b > 1
+        dat{b,3} = vertcat(dat{b,3},datetime(cell2mat(strcat(GPSDat{1}," ",GPSDat{2})),'InputFormat',"HH:mm:ss.SS dd/MM/yyyy"));
+        dat{b,4} = vertcat(dat{b,4},GPSDat{3});
+        dat{b,5} = vertcat(dat{b,5},GPSDat{4});
+    else
+        dat{b,3} = datetime(cell2mat(strcat(GPSDat{1}," ",GPSDat{2})),'InputFormat',"HH:mm:ss.SS dd/MM/yyyy");
+        dat{b,4} = GPSDat{3};
+        dat{b,5} = GPSDat{4};
+    end
+end
+
+save(strcat(outloc,"Dat14.mat"),"dat")
+
+
+tags = erase(files14,'.txt');
+
+%% LOAD IN 2014
+if ismac()
+    load('/Volumes/GoogleDrive/My Drive/PhD//Data/2014Shearwater/WindEst/YoneMet/Dat14.mat');
+else
+    load("F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/Dat14.mat");
+end
+
+%% ANALYSE WIND AS USUAL
+for b = 1:length(dat)
+    [time, lat, lon] = gettimelatlon(dat, b);
+%     forage = dat{b,6};
+    [x,y,zone] = deg2utm(lat,lon); % convert from dec degs to UTM
+    DistTrav = sqrt(diff(x).^2+diff(y).^2); % calculate distance between GPS points
+    tdiff = diff(time); % time difference between GPS points
+    spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
+    dir = atan2(diff(y),diff(x));
+    [flight,fs,fe] = flightmask(spd,4,5);
+    [ss,se] = getsection(1,300,60,fs,fe);
+%     [vw,wd,va,resn] = windestimates(spd,dir,ss,se);
+    [vw,wd,va,resnorm,bh,rwh,wInd] = windestimates5(spd,dir,ss,se);
+    % create vector for wind values same length as lat lon
+    wSpd = NaN(length(lat),1);
+    wDir = NaN(length(lat),1);
+    vA = NaN(length(lat),1);
+    Resnorm = NaN(length(lat),1);
+    wSpd(wInd(~isnan(wInd))) = vw(~isnan(wInd));
+    wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
+    vA(wInd(~isnan(wInd))) = va(~isnan(wInd));
+    Resnorm(wInd(~isnan(wInd))) = resnorm(~isnan(wInd));
+    
+%     aveDir = zeros(length(forage),1);
+%     aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
+%     wDir = zeros(length(forage),1);
+%     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
+%     wSp = zeros(length(forage),1);
+%     wSp(wInd(~isnan(wInd))) = vw(~isnan(wInd));
+%     % find the foraging points
+%     forSt = find(diff(forage) == 1) + 1;
+%     forEd = find(diff(forage) == -1);
+%     if forSt(1) > forEd(1)
+%         forSt = [1; forSt];
+%     end
+%     if forEd(end) < forSt(end)
+%         forEd = [forEd; length(forage)];
+%     end
+%     distTo = zeros(length(forage),1);
+%     for nxt = 1:length(forSt)
+%         if nxt == 1 && forSt(nxt) ~= 1
+%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
+%         else
+%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
+%         end
+%     end
+    outW = table(time,lat,lon,wSpd,wDir,vA,Resnorm);
+    % output the data
+    writetable(outW, strcat(outloc,"1sFix/",tags(b),"WindYone.txt"));
+end
+
+%% SUBSAMPLE
+
+datSub = dat;
+for b = 1:length(dat)
+    indeces = 1:5:length(dat{b,3});
+    datSub{b,3} = datSub{b,3}(indeces);
+    datSub{b,4} = datSub{b,4}(indeces);
+    datSub{b,5} = datSub{b,5}(indeces);
+
+    [timeSub, latSub, lonSub] = gettimelatlon(datSub, b);
+%     forage = datSub{b,6};
+    [x,y,zone] = deg2utm(latSub,lonSub); % convert from dec degs to UTM
+    DistTrav = sqrt(diff(x).^2+diff(y).^2); % calculate distance between GPS points
+    tdiff = diff(timeSub); % time difference between GPS points
+    spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
+    dir = atan2(diff(y),diff(x));
+    [flight,fs,fe] = flightmask(spd,5,1);
+    [ssSub,seSub] = getsection(.2,300,60,fs,fe);
+    [vwSub,wdSub,vaSub,resnSub,bh,rwh,wInd] = windestimates5(spd,dir,ssSub,seSub);
+    wSpd = NaN(length(latSub),1);
+    wDir = NaN(length(latSub),1);
+    vA = NaN(length(latSub),1);
+    ResnSub = NaN(length(latSub),1);
+    wSpd(wInd(~isnan(wInd))) = vwSub(~isnan(wInd));
+    wDir(wInd(~isnan(wInd))) = wdSub(~isnan(wInd));
+    vA(wInd(~isnan(wInd))) = vaSub(~isnan(wInd));
+    ResnSub(wInd(~isnan(wInd))) = resnSub(~isnan(wInd));
+
+    % find the foraging points
+%     forSt = find(diff(forage) == 1) + 1;
+%     forEd = find(diff(forage) == -1);
+%     if forSt(1) > forEd(1)
+%         forSt = [1; forSt];
+%     end
+%     if forEd(end) < forSt(end)
+%         forEd = [forEd; length(forage)];
+%     end
+%     distTo = zeros(length(forage),1);
+%     for nxt = 1:length(forSt)
+%         if nxt == 1 && forSt(nxt) ~= 1
+%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
+%         else
+%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
+%         end
+%     end
+    outW = table(timeSub,latSub,lonSub,wSpd,wDir,vA,ResnSub);
+    writetable(outW, strcat(outloc,"5sFix/",tags(b),"WindYone.txt"));
+end
+
 
 %% NETCDF Files
 if ismac()
@@ -312,7 +540,19 @@ end
 netfiles = dir2(netloc);
 fileTimes = cat(1,netfiles.name);
 filesTimes = strcat(fileTimes(:,7:10),"/",fileTimes(:,11:12),"/",fileTimes(:,13:15),fileTimes(:,16:17),":",fileTimes(:,18:19),":",fileTimes(:,20:21));
-filesTimes = datetime(filesTimes,'InputFormat','yyyy/MM/dd_HH:mm:ss') + hours(9);
+filesTimes = datetime(filesTimes,'InputFormat','yyyy/MM/dd_HH:mm:ss');
+
+lat = ncread(strcat(netloc,netfiles(12).name),"lat");
+lon = ncread(strcat(netloc,netfiles(12).name),"lon");
+lats = reshape(lat,[size(lat,1)*size(lat,2),1]);
+lons = reshape(lon,[size(lon,2)*size(lon,2),1]);
+times = ncread(strcat(netloc,netfiles(12).name),"time");
+times = datetime(1990,01,01,0,0,0) + seconds(times);
+times = reshape(times,[size(times,1)*size(times,2),1]);
+% find unique times
+times = times(1,:)';
+range(times)
+[x,y,zone] = deg2utm(lat,lon); % convert from dec degs to UTM
 
 timesall = dat{1,3};
 latsall = dat{1,4};
@@ -384,150 +624,4 @@ for jd = start_jd:end_jd
         fprintf('got weather data file |%s|\n',outname);
     end
     
-end
-
-%% RUN 2014 DATA
-
-% LOAD IN
-if ismac()
-    loc14 = '/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/AxyTrek/';
-    outloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/";
-else
-    loc14 = 'F:/UTokyoDrive/PhD//Data/2014Shearwater/AxyTrek/';
-    outloc = "F:/UTokyoDrive/PhD//Data/2014Shearwater/WindEst/YoneMet/";
-end
-
-files14 = dir2(strcat(loc14,'*.txt'));
-files14 = string({files14.name})';
-files14 = files14(~contains(files14,'yobi.txt'));
-% remove tags with strange looking data
-files14 = files14(~contains(files14,'st14n140f'));
-files14 = files14(~contains(files14,'st14n64m'));
-files14 = files14(~contains(files14,'st14n97f'));
-dat = cell(length(files14),4);
-for b = 1:length(files14)
-    fileID = fopen(strcat(loc14,files14(b)));
-    GPSDat = textscan(fileID, '%s %s %f %f %f %f %f %f %f %f',...
-    'Delimiter',' ','HeaderLines',0);
-    fclose(fileID);
-    if b > 1
-        dat{b,3} = vertcat(dat{b,3},datetime(cell2mat(strcat(GPSDat{1}," ",GPSDat{2})),'InputFormat',"HH:mm:ss.SS dd/MM/yyyy"));
-        dat{b,4} = vertcat(dat{b,4},GPSDat{3});
-        dat{b,5} = vertcat(dat{b,5},GPSDat{4});
-    else
-        dat{b,3} = datetime(cell2mat(strcat(GPSDat{1}," ",GPSDat{2})),'InputFormat',"HH:mm:ss.SS dd/MM/yyyy");
-        dat{b,4} = GPSDat{3};
-        dat{b,5} = GPSDat{4};
-    end
-end
-
-save(strcat(outloc,"Dat14.mat"),"dat")
-
-if ismac()
-    load('/Volumes/GoogleDrive/My Drive/PhD//Data/2014Shearwater/WindEst/YoneMet/Dat14.mat');
-else
-    load("F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/Dat14.mat");
-end
-
-tags = erase(files14,'.txt');
-    
-%% ANALYSE WIND AS USUAL
-for b = 1:length(dat)
-    [time, lat, lon] = gettimelatlon(dat, b);
-%     forage = dat{b,6};
-    [x,y,zone] = deg2utm(lat,lon); % convert from dec degs to UTM
-    DistTrav = sqrt(diff(x).^2+diff(y).^2); % calculate distance between GPS points
-    tdiff = diff(time); % time difference between GPS points
-    spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
-    dir = atan2(diff(y),diff(x));
-    [flight,fs,fe] = flightmask(spd,4,5);
-    [ss,se] = getsection(1,300,60,fs,fe);
-%     [vw,wd,va,resn] = windestimates(spd,dir,ss,se);
-    [vw,wd,va,resnorm,bh,rwh,wInd] = windestimates5(spd,dir,ss,se);
-    % create vector for wind values same length as lat lon
-    wSpd = NaN(length(lat),1);
-    wDir = NaN(length(lat),1);
-    vA = NaN(length(lat),1);
-    Resnorm = NaN(length(lat),1);
-    wSpd(wInd(~isnan(wInd))) = vw(~isnan(wInd));
-    wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
-    vA(wInd(~isnan(wInd))) = va(~isnan(wInd));
-    Resnorm(wInd(~isnan(wInd))) = resnorm(~isnan(wInd));
-    
-%     aveDir = zeros(length(forage),1);
-%     aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
-%     wDir = zeros(length(forage),1);
-%     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
-%     wSp = zeros(length(forage),1);
-%     wSp(wInd(~isnan(wInd))) = vw(~isnan(wInd));
-%     % find the foraging points
-%     forSt = find(diff(forage) == 1) + 1;
-%     forEd = find(diff(forage) == -1);
-%     if forSt(1) > forEd(1)
-%         forSt = [1; forSt];
-%     end
-%     if forEd(end) < forSt(end)
-%         forEd = [forEd; length(forage)];
-%     end
-%     distTo = zeros(length(forage),1);
-%     for nxt = 1:length(forSt)
-%         if nxt == 1 && forSt(nxt) ~= 1
-%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
-%         else
-%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
-%         end
-%     end
-    outW = table(time,lat,lon,wSpd,wDir,vA,Resnorm);
-    % output the data
-    writetable(outW, strcat(outloc,"1sFix/",tags(b),"WindYone.txt"));
-end
-
-
-%% SUBSAMPLE
-
-datSub = dat;
-for b = 1:length(dat)
-    indeces = 1:5:length(dat{b,3});
-    datSub{b,3} = datSub{b,3}(indeces);
-    datSub{b,4} = datSub{b,4}(indeces);
-    datSub{b,5} = datSub{b,5}(indeces);
-
-    [timeSub, latSub, lonSub] = gettimelatlon(datSub, b);
-%     forage = datSub{b,6};
-    [x,y,zone] = deg2utm(latSub,lonSub); % convert from dec degs to UTM
-    DistTrav = sqrt(diff(x).^2+diff(y).^2); % calculate distance between GPS points
-    tdiff = diff(timeSub); % time difference between GPS points
-    spd = DistTrav./seconds(tdiff); % speed travelled, m^-2
-    dir = atan2(diff(y),diff(x));
-    [flight,fs,fe] = flightmask(spd,4,5);
-    [ssSub,seSub] = getsection(.2,300,60,fs,fe);
-    [vwSub,wdSub,vaSub,resnSub,bh,rwh,wInd] = windestimates5(spd,dir,ssSub,seSub);
-    wSpd = NaN(length(latSub),1);
-    wDir = NaN(length(latSub),1);
-    vA = NaN(length(latSub),1);
-    ResnSub = NaN(length(latSub),1);
-    wSpd(wInd(~isnan(wInd))) = vwSub(~isnan(wInd));
-    wDir(wInd(~isnan(wInd))) = wdSub(~isnan(wInd));
-    vA(wInd(~isnan(wInd))) = vaSub(~isnan(wInd));
-    ResnSub(wInd(~isnan(wInd))) = resnSub(~isnan(wInd));
-
-    % find the foraging points
-%     forSt = find(diff(forage) == 1) + 1;
-%     forEd = find(diff(forage) == -1);
-%     if forSt(1) > forEd(1)
-%         forSt = [1; forSt];
-%     end
-%     if forEd(end) < forSt(end)
-%         forEd = [forEd; length(forage)];
-%     end
-%     distTo = zeros(length(forage),1);
-%     for nxt = 1:length(forSt)
-%         if nxt == 1 && forSt(nxt) ~= 1
-%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
-%         else
-%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
-%         end
-%     end
-    outW = table(timeSub,latSub,lonSub,wSpd,wDir,vA,ResnSub);
-    writetable(outW, strcat(outloc,"5sFix/",tags(b),"WindYone.txt"));
 end

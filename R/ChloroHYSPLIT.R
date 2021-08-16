@@ -2287,3 +2287,26 @@ for(b in 1:length(uniqs)){
   # search through for gaps in sampling
   sdiffs <- which(sel$tdiff > )
 }
+
+#############################################################
+############# RUN WIND ANALYSIS FOR YONE METHOD #############
+#############################################################
+
+if(Sys.info()['sysname'] == "Darwin"){
+    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
+} else {
+    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("F:/UTokyoDrive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "F:/UTokyoDrive/PhD/Figures/Olfactory/"
+}
+D19 <- bind_rows(Dat19)
+# read in the 2019 wind estimates
+estLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+windFs <- list.files(estLoc)
+windD <- vector(mode = "list", length = length(windFs))
+for(b = 1:length(windFs)){
+  windD[[b]] <- read.delim(paste(estLoc, windFs[b], sep = ""), sep = ",", header = T)
+  windD[[b]] <- windD[[b]][windD[[b]]$wDir != 0,]
+}
