@@ -61,8 +61,8 @@ if(Sys.info()['sysname'] == "Darwin"){
     yoneloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
     gotoloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
 } else {
-    yoneloc <- "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
-    gotoloc <- "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/MinDat/"
+    yoneloc <- "G:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    gotoloc <- "G:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/MinDat/"
 }
 
 yonefiles <- list.files(yoneloc, pattern = '*.txt')
@@ -88,9 +88,16 @@ for(b in 1:length(yoneDat)){
     overlDat[[b]] <- overDF
     yoneDatrem[[b]] <- yoneDatrem[[b]][yoneDatrem[[b]]$aveDir != 0,]
     for(g in 1:nrow(gotoDat[[b]])){
-        if(any(which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(1)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(1))))){
-            inds <- which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(1)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(1)))
-            overlDat[[b]][g,] <- data.frame(gotoDT=gotoDat[[b]]$DT[g],yoneDT = mean(yoneDat[[b]]$DT[inds]),gotoHead = as.numeric(gotoDat[[b]]$Head[g]),gotoX = as.numeric(gotoDat[[b]]$X[g]),gotoY = as.numeric(gotoDat[[b]]$Y[g]),yoneY = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*sin(yoneDatrem[[b]]$wDir[inds]))),yoneX = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*cos(yoneDatrem[[b]]$wDir[inds]))),yoneResN = mean(yoneDat[[b]]$Resnorm[inds]))
+        if(any(which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(25)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(25))))){
+            inds <- which(yoneDatrem[[b]]$DT > (gotoDat[[b]]$DT[g] - lubridate::minutes(25)) & yoneDatrem[[b]]$DT < (gotoDat[[b]]$DT[g] + lubridate::minutes(25)))
+            overlDat[[b]][g,] <- data.frame(gotoDT=gotoDat[[b]]$DT[g],
+                yoneDT = mean(yoneDat[[b]]$DT[inds]),
+                gotoHead = as.numeric(gotoDat[[b]]$Head[g]),
+                gotoX = as.numeric(gotoDat[[b]]$X[g]),
+                gotoY = as.numeric(gotoDat[[b]]$Y[g]),
+                yoneY = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*sin(yoneDatrem[[b]]$wDir[inds]))),
+                yoneX = as.numeric(mean(yoneDatrem[[b]]$wSp[inds]*cos(yoneDatrem[[b]]$wDir[inds]))),
+                yoneResN = mean(yoneDat[[b]]$Resnorm[inds]))
         } else {
             overlDat[[b]][g,] <- cbind(NA,NA,NA,NA,NA,NA,NA,NA)
         }
@@ -114,8 +121,8 @@ res
 hdval <- ggplot(allOverL, aes(x = gotoDir, y = yoneDir)) +
     geom_point(pch=21,fill="deepskyblue") +
     geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text",x=.5,y=3.1,label="corr = 0.15",hjust=0) +
-    annotate("text",x=.5,y=2.6,label="p < 9 %*% 10^{-6}",parse=T,hjust=0) +
+    annotate("text",x=.5,y=3.1,label="corr = 0.27",hjust=0) +
+    annotate("text",x=.5,y=2.6,label="p == 0",parse=T,hjust=0) +
     # annotate("text",x=-pi,y=0,label="n = 79",hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
