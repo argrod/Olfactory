@@ -1,3 +1,26 @@
+install.packages("Gmisc")
+install.packages("sf")
+install.packages("rnaturalearth")
+install.packages("rnaturalearthdata")
+install.packages("lubridate")
+install.packages("rgdal")
+install.packages("adehabitatHR")
+install.packages("ggsn")
+install.packages("ggspatial")
+install.packages("sp")
+install.packages("plyr")
+install.packages("dplyr")
+install.packages("mapdata")
+install.packages("rerddap")
+install.packages("data.table")
+install.packages("ggplot2")
+install.packages("viridis")
+install.packages("MASS")
+install.packages("diagram")
+install.packages("ggthemes")
+install.packages("extrafont")
+
+
 library(Gmisc)
 library(sf)
 library(rnaturalearth)
@@ -19,6 +42,7 @@ library(MASS)
 library(diagram)
 library(ggthemes)
 library(extrafont)
+library(rgeos)
 
 #################################################################################
 ######################## BRING IN THE FORAGING ESTIMATES ########################
@@ -559,3 +583,105 @@ fEd[b]
 dloadLoc  = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
 gribFls = list.files(dloadLoc,pattern="*grib2.bin")
 if(any(gribFls == "Z__C_RJTD_20190824150000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"))
+
+###################################################################
+#################### 2019 YONE WIND FORAGING ######################
+###################################################################
+
+
+if(Sys.info()['sysname'] == "Darwin"){
+    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+} else {
+    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("G:/UTokyoDrive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "F:/UTokyoDrive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+}
+D19 <- bind_rows(Dat19)
+allD <- data.frame(DT=D19$DT,
+    lat = D19$Lat,
+    lon = D19$Lon,
+    tagID = D19$tagID,
+    Day = D19$Day,
+    Sex = D19$Sex,
+    distTrav = D19$recalDist,
+    spTrav = D19$spTrav,
+    recalSp = D19$recalSp,
+    distFk = D19$distFromFk,
+    tripN = D19$tripN,
+    tripL = D19$tripL,
+    tkb = D19$tkb,
+    dv = D19$dv,
+    UTME = D19$UTME,
+    UTMN =  D19$UTMN)
+allD$Year <- format(allD$DT, format = "%Y")
+allD$forage <- allD$dv == 1 | allD$tkb == 1
+# allD$forBeh <- NA
+# allD$forBeh[allD$dv == 1] <- "Dive"
+# allD$forBeh[allD$tkb == 1] <- "Surf"
+japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
+
+# CALCULATE RELATIVE WIND CONDITIONS FROM ESTIMATES WITH TIME/DISTANCE TO FORAGING
+if(Sys.info()['sysname'] == "Darwin"){
+    windLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+} else {
+    windLoc = "G:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+}
+windFiles <- dir(windLoc)
+for(b in 1:length(windFiles)){
+  if(b == 1){
+    WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = T)
+    colnames(WindDat) <- c("DT","Lat","Lon","Head","wDir","wSp","Resnorm")
+    WindDat$ID <- sub("*WindYone.txt", "", windFiles[b])
+    Wind.dec <- SpatialPoints(cbind(WindDat$Lon,WindDat$Lat), proj4string = CRS("+proj=longlat"))
+    UTMdat <- spTransform(Wind.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    WindDat$UTME <- UTMdat$coords.x1
+    WindDat$UTMN <- UTMdat$coords.x2
+  } else {
+    toAdd <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = T)
+    colnames(toAdd) <- c("DT","Lat","Lon","Head","wDir","wSp","Resnorm")
+    toAdd$ID <- sub("*WindYone.txt", "", windFiles[b])
+    Add.dec <- SpatialPoints(cbind(toAdd$Lon,toAdd$Lat), proj4string = CRS("+proj=longlat"))
+    UTMdat <- spTransform(Add.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    toAdd$UTME <- UTMdat$coords.x1
+    toAdd$UTMN <- UTMdat$coords.x2 
+    WindDat <- rbind(WindDat, toAdd)
+  }
+}
+WindDat$DT <- as.POSIXct(WindDat$DT, format = "%Y/%m/%d,%H:%M:%OS",tz="UTC")
+# remove missing wind values
+WindDat <- WindDat[!is.nan(WindDat$Resnorm),]
+# remove points within 5km of FkOshi
+FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
+FkOshi.dec <- SpatialPoints(cbind(FkOshi$Long,FkOshi$Lat),proj4string=CRS('+proj=longlat'))
+FkOshi.UTM <- spTransform(FkOshi.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+FkUTME <- FkOshi.UTM$coords.x1
+FkUTMN <- FkOshi.UTM$coords.x2
+
+WindDat$timeTo <- NA
+WindDat$distTo <- NA
+allD$forage[is.na(allD$forage)] <- 0
+tags <- unique(WindDat$ID)
+for(b in 1:nrow(WindDat)){ # for each row in WindDat
+  if(any(allD$forage[allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y") & allD$DT > WindDat$DT[b]] == 1)){ # if there are any foraging points after timepoint
+    point <- which(allD$lat == WindDat$Lat[b] & allD$lon == WindDat$Lon[b] & allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y")) # find the timepoint of the next foraging points
+    forInd <- min(which(allD$forage[point:max(which(allD$tagID == WindDat$ID[b] & allD$Year == format(WindDat$DT[b], "%Y")))] == 1)) + point - 1 # select the minimum (i.e. the next one)
+    WindDat$timeTo[b] <- as.numeric(difftime(allD$DT[point+forInd],WindDat$DT[b], units="secs"))
+    WindDat$distTo[b] <- sqrt((allD$UTMN[forInd] - allD$UTMN[point])^2 + (allD$UTME[forInd] - allD$UTME[point])^2)*10^-3
+  }
+}
+
+
+min(abs(as.numeric(difftime(allD$DT[allD$tagID == WindDat$ID[b]], WindDat$DT[b],units="secs"))))
+which(allD$DT == WindDat$DT[b]-lubridate::seconds(4) & allD$tagID == WindDat$ID[b])
+
+allD[393,]
+
+allD[11,]
+WindDat[b,]
+sqrt((WindDat$UTMN[b] - allD$UTMN[393])^2 + (WindDat$UTME[b] - allD$UTME[393])^2)
+
+
+range(WindDat$DT[WindDat$ID == WindDat$ID[b]])
+range(allD$DT[allD$tagID == WindDat$ID[b]])
