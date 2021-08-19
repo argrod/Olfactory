@@ -77,8 +77,8 @@ if(Sys.info()['sysname'] == "Darwin"){
 	outfile<-paste("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/", sep=",")
 	fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/AxyTrek/"
 } else {
-	outfile<-paste("F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinDat/", sep=",")
-	fileloc <- "F:/UTokyoDrive/PhD/Data/2018Shearwater/AxyTrek/"
+	outfile<-paste("G:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinDat/", sep=",")
+	fileloc <- "G:/UTokyoDrive/PhD/Data/2018Shearwater/AxyTrek/"
 }
 files <- list.files(fileloc, pattern = '.txt', recursive = T)
 
