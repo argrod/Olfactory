@@ -419,19 +419,19 @@ ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) 
 res<-cor.circular(valDat$estHead,valDat$gribHead, test = T)
 res
 # res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
-hdval <- ggplot(valDat, aes(x = gribHead, y = estHead)) +
+hdvalSub <- ggplot(valDat, aes(x = gribHead, y = estHead)) +
     geom_point(pch=21,fill="deepskyblue") +
     geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text",x=-pi,y=1,label="corr = 0.31",hjust=0) +
-    annotate("text",x=-pi,y=0.5,label="p = 0.002",hjust=0) +
-    annotate("text",x=-pi,y=0,label="n = 99",hjust=0) +
+    annotate("text",x=-pi,y=.5,label="corr = 0.31",hjust=0) +
+    annotate("text",x=-pi,y=0.,label="p = 0.002",hjust=0) +
+    annotate("text",x=-pi,y=-0.5,label="n = 99",hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name='Estimated headings (rad)') + scale_x_continuous(name='JMA headings (rad)')
 
 splm <- lm(estSpeed ~ gribSpeed, data = valDat)
 summary(splm)
-spdval <- ggplotRegression(splm) +
+spdvalSub <- ggplotRegression(splm) +
     geom_line(data=data.frame(x=0:max(valDat$gribSpeed),y=0:max(valDat$gribSpeed)),aes(x=x,y=y),colour="red",linetype='dashed') +
     annotate("text",x=min(valDat$gribSpeed),y=12.5,label="y = 0.33x + 2.94",hjust=0) +
     annotate("text",x=min(valDat$gribSpeed),y=11.5,label="p = 0.07",hjust=0) +
@@ -515,25 +515,30 @@ res
 splm <- lm(estSpeed ~ gribSpeed, data = OGdat)
 summary(splm)
 
-hdval <- ggplot(OGdat, aes(x = gribHead, y = estHead)) +
+hdvalOG <- ggplot(OGdat, aes(x = gribHead, y = estHead)) +
     geom_point(pch=21,fill="deepskyblue") +
     geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
     annotate("text",x=-pi,y=.5,label="corr = 0.21",hjust=0) +
     annotate("text",x=-pi,y=-0.,label="p < 0.03",hjust=0) +
+    annotate("text",x=-pi,y=-0.5,label="n = 93",hjust=0) +
     # annotate("text",x=-pi,y=0,label="n = 79",hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name='Estimated headings (rad)') + scale_x_continuous(name='JMA headings (rad)')
 
-spdval <- ggplotRegression(splm) +
+spdvalOG <- ggplotRegression(splm) +
     geom_line(data=data.frame(x=0:max(OGdat$gribSpeed),y=0:max(OGdat$gribSpeed)),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text",x=min(OGdat$gribSpeed),y=12.5,label="y = 0.23x + 3.6",hjust=0) +
-    annotate("text",x=min(OGdat$gribSpeed),y=11.5,label="p = 0.3",hjust=0) +
-    annotate("text",x=min(OGdat$gribSpeed),y=10.5,label=expression(paste(R^2," = 0.013")),hjust=0) +
+    annotate("text",x=min(OGdat$gribSpeed),y=13.5,label="y = 0.23x + 3.6",hjust=0) +
+    annotate("text",x=min(OGdat$gribSpeed),y=12.5,label="p = 0.3",hjust=0) +
+    annotate("text",x=min(OGdat$gribSpeed),y=11.5,label=expression(paste(R^2," = 0.013")),hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
-    scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(valDat$gribSpeed),max(valDat$gribSpeed)))
+    scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(OGdat$gribSpeed),max(OGdat$gribSpeed)))
 
+# combo original and subsample
+ggarrange(hdvalOG, hdvalSub, spdvalOG, spdvalSub, ncol=2,nrow=2, labels=c("a)","b)","c)","d)"),hjust=-3,vjust=2)
+ggsave(paste(figLoc,"141617windVal.svg",sep=""), device="svg", dpi = 300, height = 6.5,
+      width = 6.5, units = "in")
 
 ##########################################################################################################################
 ########################################### COMPARISON WITH CYBEROCEAN CALCULATIONS ######################################
