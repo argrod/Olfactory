@@ -4,7 +4,14 @@ library(sp)
 if(Sys.info()['sysname'] == "Darwin"){
     fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/AxyTrek/"
 } else {
-    fileloc <- "F:/UTokyoDrive/PhD/Data/2016Shearwater/AxyTrek/"
+    fileloc <- "G:/UTokyoDrive/PhD/Data/2016Shearwater/AxyTrek/"
+}
+if(Sys.info()['sysname'] == "Darwin"){
+  figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
+  # figLoc <- "/Documents/GitHub/PhD/Olfactory/"
+} else {
+  figLoc <- "G:/UTokyoDrive/PhD/Figures/Olfactory/"
+  # figLoc <- "G:/Documents/GitHub/PhD/Olfactory/"
 }
 
 detFl <- function(DT, lat, lon, fs){
@@ -81,7 +88,7 @@ for(b in 1:length(yoneDat)){
     gotoDat[[b]]$DT <- as.POSIXct(gotoDat[[b]]$DT, tz = "")
 }
 
-overDF <- data.frame(gotoDT=POSIXct(),yoneDT = POSIXct(),gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric(),yoneResN = numeric())
+overDF <- data.frame(gotoDT=as.POSIXct(character()),yoneDT = as.POSIXct(character()),gotoHead = numeric(), gotoX = numeric(), gotoY = numeric(), yoneY = numeric(), yoneX = numeric(),yoneResN = numeric())
 overlDat <- vector(mode="list",length=length(yoneDat))
 yoneDatrem <- yoneDat
 for(b in 1:length(yoneDat)){
@@ -110,6 +117,7 @@ allOverL <- bind_rows(overlDat)
 allOverL <- allOverL[!is.na(allOverL$gotoY),]
 library(circular)
 library(ggplot2)
+library(ggpubr)
 allOverL$gotoDir <- atan2(allOverL$gotoY,allOverL$gotoX)
 allOverL$yoneDir <- atan2(allOverL$yoneY,allOverL$yoneX)
 allOverL$gotoSpd <- sqrt(allOverL$gotoX^2 + allOverL$gotoY^2)
@@ -123,6 +131,7 @@ hdval <- ggplot(allOverL, aes(x = gotoDir, y = yoneDir)) +
     geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
     annotate("text",x=.5,y=3.1,label="corr = 0.27",hjust=0) +
     annotate("text",x=.5,y=2.6,label="p == 0",parse=T,hjust=0) +
+    annotate("text",x=.5,y=2.1,label="n == 1450",parse=T,hjust=0) +
     # annotate("text",x=-pi,y=0,label="n = 79",hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
@@ -142,9 +151,9 @@ ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) 
 spdval <- ggplotRegression(splm) +
     geom_line(data=data.frame(x=0:max(allOverL$gotoSpd),y=0:max(allOverL$gotoSpd)),aes(x=x,y=y),colour="red",linetype='dashed') +
     # geom_point(pch = 21, fill = allOverL$yoneResN) +
-    annotate("text",x=7.,y=10.5,label="y = 0.07x + 1.9",hjust=0) +
-    annotate("text",x=7.,y=9.5,label="p < 2 %*% 10^{-3}",parse=T,hjust=0) +
-    annotate("text",x=7.,y=8.5,label=expression(paste(R^2," = 0.007")),hjust=0) +
+    annotate("text",x=7.,y=10.5,label="y = -0.06x + 1.6",hjust=0) +
+    annotate("text",x=7.,y=9.5,label="p < 2 %*% 10^{-5}",parse=T,hjust=0) +
+    annotate("text",x=7.,y=8.5,label=expression(paste(R^2," = 0.01")),hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(allOverL$gotoSpd),max(allOverL$gotoSpd)))
@@ -169,8 +178,8 @@ if(Sys.info()['sysname'] == "Darwin"){
     oneloc14 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
     fiveloc14 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
 } else {
-    oneloc14 <- "F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
-    fiveloc14 <- "F:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
+    oneloc14 <- "G:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc14 <- "G:/UTokyoDrive/PhD/Data/2014Shearwater/WindEst/YoneMet/5sFix/"
 }
 
 onefiles14 <- list.files(oneloc14, pattern = '*.txt')
@@ -180,8 +189,8 @@ if(Sys.info()['sysname'] == "Darwin"){
     oneloc16 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/WindEst/YoneMet/1sFix/"
     fiveloc16 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/WindEst/YoneMet/5sFix/"
 } else {
-    oneloc16 <- "F:/UTokyoDrive/PhD/Data/2016Shearwater/WindEst/YoneMet/1sFix/"
-    fiveloc16 <- "F:/UTokyoDrive/PhD/Data/2016Shearwater/WindEst/YoneMet/5sFix/"
+    oneloc16 <- "G:/UTokyoDrive/PhD/Data/2016Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc16 <- "G:/UTokyoDrive/PhD/Data/2016Shearwater/WindEst/YoneMet/5sFix/"
 }
 
 onefiles16 <- list.files(oneloc16, pattern = '*.txt')
@@ -191,8 +200,8 @@ if(Sys.info()['sysname'] == "Darwin"){
     oneloc17 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/WindEst/YoneMet/1sFix/"
     fiveloc17 <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/WindEst/YoneMet/5sFix/"
 } else {
-    oneloc17 <- "F:/UTokyoDrive/PhD/Data/2017Shearwater/WindEst/YoneMet/1sFix/"
-    fiveloc17 <- "F:/UTokyoDrive/PhD/Data/2017Shearwater/WindEst/YoneMet/5sFix/"
+    oneloc17 <- "G:/UTokyoDrive/PhD/Data/2017Shearwater/WindEst/YoneMet/1sFix/"
+    fiveloc17 <- "G:/UTokyoDrive/PhD/Data/2017Shearwater/WindEst/YoneMet/5sFix/"
 }
 
 onefiles17 <- list.files(oneloc17, pattern = '*.txt')
@@ -328,13 +337,6 @@ spdval <- ggplotRegression(splm) +
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=(("Subsampled data wind speed (m/s)"))) + scale_x_continuous(name=(("Original data wind speed (m/s)")))
 
-if(Sys.info()['sysname'] == "Darwin"){
-  figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
-  # figLoc <- "/Documents/GitHub/PhD/Olfactory/"
-} else {
-  figLoc <- "F:/UTokyoDrive/PhD/Figures/Olfactory/"
-  # figLoc <- "F:/Documents/GitHub/PhD/Olfactory/"
-}
 ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-3,vjust=2)
 ggsave(paste(figLoc,"SubSampVal.svg",sep=""), device="svg", dpi = 300, height = 7,
       width = 3.5, units = "in")
@@ -400,7 +402,11 @@ library(circular)
 library(ggplot2)
 library(ggpubr)
 # 2014 and 2016
-valDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/WindEst/YoneMet/Comb201420162017Validation.csv",sep=",")
+if(Sys.info()['sysname'] == "Darwin"){
+    valDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/WindEst/YoneMet/Comb201420162017Validation.csv",sep=",")
+} else {
+    valDat <- read.delim("G:/UTokyoDrive/PhD/Data/2017Shearwater/WindEst/YoneMet/Comb201420162017Validation.csv",sep=",")
+}
 valDat$Time <- sub("T"," ",valDat$Time)
 valDat$Time <- as.POSIXct(valDat$Time,format="%Y-%m-%d %H:%M:%S",tz = "")
 head(valDat)
@@ -435,7 +441,7 @@ spdvalSub <- ggplotRegression(splm) +
     geom_line(data=data.frame(x=0:max(valDat$gribSpeed),y=0:max(valDat$gribSpeed)),aes(x=x,y=y),colour="red",linetype='dashed') +
     annotate("text",x=min(valDat$gribSpeed),y=12.5,label="y = 0.33x + 2.94",hjust=0) +
     annotate("text",x=min(valDat$gribSpeed),y=11.5,label="p = 0.07",hjust=0) +
-    annotate("text",x=min(valDat$gribSpeed),y=10.5,label=expression(paste(R^2," = 0.012")),hjust=0) +
+    annotate("text",x=min(valDat$gribSpeed),y=10.5,label=expression(paste(R^2," = 0.033")),hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(valDat$gribSpeed),max(valDat$gribSpeed)))
@@ -449,7 +455,11 @@ ggsave(paste(figLoc,"141617windVal.svg",sep=""), device="svg", dpi = 300, height
 ##################################################################################################
 
 # 2019
-valDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMethodValidation.csv",sep=",")
+if(Sys.info()['sysname'] == "Darwin"){
+    valDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMethodValidation.csv",sep=",")
+} else {
+    valDat <- read.delim("G:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMethodValidation.csv",sep=",")
+}
 valDat$Time <- sub("T"," ",valDat$Time)
 valDat$Time <- as.POSIXct(valDat$Time,format="%Y-%m-%d %H:%M:%S",tz = "")
 head(valDat)
@@ -473,6 +483,7 @@ hdval <- ggplot(valDat, aes(x = gribHead, y = estHead)) +
     geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
     annotate("text",x=-pi,y=.5,label="corr = 0.19",hjust=0) +
     annotate("text",x=-pi,y=-0.,label="p < 0.01",hjust=0) +
+    annotate("text",x=-pi,y=-0.5,label="n = 208",hjust=0) +
     # annotate("text",x=-pi,y=0,label="n = 79",hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
@@ -498,7 +509,11 @@ nrow(valDat)
 ################################ TEST METHOD ON ORIGINALLY SAMPLED DATA #############################
 #####################################################################################################
 
-OGdat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/WindEst/YoneMet/OG201420162017Validation.csv", sep = ",", header = T)
+if(Sys.info()['sysname'] == "Darwin"){
+    OGdat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/WindEst/YoneMet/OG201420162017Validation.csv", sep = ",", header = T)
+} else {
+    OGdat <- read.delim("G:/UTokyoDrive/PhD/Data/2017Shearwater/WindEst/YoneMet/OG201420162017Validation.csv", sep = ",", header = T)
+}
 OGdat$Time <- sub("T"," ",OGdat$Time)
 OGdat$Time <- as.POSIXct(OGdat$Time,format="%Y-%m-%d %H:%M:%S",tz = "")
 ggplotRegression <- function (fit) {
@@ -528,9 +543,9 @@ hdvalOG <- ggplot(OGdat, aes(x = gribHead, y = estHead)) +
 
 spdvalOG <- ggplotRegression(splm) +
     geom_line(data=data.frame(x=0:max(OGdat$gribSpeed),y=0:max(OGdat$gribSpeed)),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text",x=min(OGdat$gribSpeed),y=13.5,label="y = 0.23x + 3.6",hjust=0) +
-    annotate("text",x=min(OGdat$gribSpeed),y=12.5,label="p = 0.3",hjust=0) +
-    annotate("text",x=min(OGdat$gribSpeed),y=11.5,label=expression(paste(R^2," = 0.013")),hjust=0) +
+    annotate("text",x=min(OGdat$gribSpeed),y=12.5,label="y = 0.23x + 3.6",hjust=0) +
+    annotate("text",x=min(OGdat$gribSpeed),y=11.5,label="p = 0.3",hjust=0) +
+    annotate("text",x=min(OGdat$gribSpeed),y=10.5,label=expression(paste(R^2," = 0.013")),hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(OGdat$gribSpeed),max(OGdat$gribSpeed)))
@@ -548,7 +563,7 @@ ggsave(paste(figLoc,"141617windVal.svg",sep=""), device="svg", dpi = 300, height
 if(Sys.info()['sysname'] == "Darwin"){
     cDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/GypsyTranslocation/WindEst/YoneMet/N18031WindYone.txt",sep=",",header=T)
 } else {
-    cDat <- read.delim("F:/UTokyoDrive/PhD/Data/2018Shearwater/GypsyTranslocation/WindEst/YoneMet/N18031WindYone.txt",sep=",",header=T)
+    cDat <- read.delim("G:/UTokyoDrive/PhD/Data/2018Shearwater/GypsyTranslocation/WindEst/YoneMet/N18031WindYone.txt",sep=",",header=T)
 }
 cDat$time <- as.POSIXct(cDat$time,format="%d-%b-%Y %H:%M:%S",tz="")
 # remove extra rows
@@ -558,7 +573,7 @@ cDat <- cDat[!cDat$aveDir == 0,]
 if(Sys.info()['sysname'] == "Darwin"){
     oDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/GypsyTranslocation/CyberOceanwind18031.csv",sep=",",header=T)
 } else {
-    oDat <- read.delim("F:/UTokyoDrive/PhD/Data/2018Shearwater/GypsyTranslocation/CyberOceanwind18031.csv",sep=",",header=T)
+    oDat <- read.delim("G:/UTokyoDrive/PhD/Data/2018Shearwater/GypsyTranslocation/CyberOceanwind18031.csv",sep=",",header=T)
 }
 oDat$datetime <- as.POSIXct(oDat$datetime, format= "%Y/%m/%d %H:%M:%S")
 
