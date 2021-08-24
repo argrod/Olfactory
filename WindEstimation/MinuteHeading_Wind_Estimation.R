@@ -98,8 +98,8 @@ if(Sys.info()['sysname'] == "Darwin"){
 	outfile<-paste("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinuteGotoVersion/", sep=",")
 	infile <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/AxyTrek/"
 } else {
-	outfile<-paste("G:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinuteGotoVersion/", sep=",")
-	infile <- "G:/UTokyoDrive/PhD/Data/2018Shearwater/AxyTrek/"
+	outfile<-paste("E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinuteGotoVersion/", sep=",")
+	infile <- "E:/My Drive/PhD/Data/2018Shearwater/AxyTrek/"
 }
 
 files <- list.files(infile, pattern = '.txt', recursive = T)

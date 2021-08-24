@@ -501,6 +501,148 @@ plot!(0:10,0:10)
 
 # attempt reading in .nc file from sar-winds
 
+
+# TESTING YONEHARA METHOD WITH 3 HOUR AVERAGE #
+
+
+estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+# estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/2018/"
+cd(estLoc)
+EFiles = readdir(estLoc)
+EDat = DataFrame()
+outPt = DataFrame()
+
+for b = 1:length(EFiles)
+    append!(EDat,[CSV.File(string(estLoc,EFiles[b]), header = true) |> DataFrame fill("2019-"*EFiles[b][1:end-4],nrow(CSV.File(string(estLoc,EFiles[b]), header = true) |> DataFrame))])
+end
+rename!(EDat, [:DT,:Lat,:Lon,:BirdHead,:WDir,:WSpeed,:Resnorm,:ID]) 
+df = dateformat"y/m/d,H:M:S"
+EDat.DT = DateTime.(EDat.DT, df)
+sel = filter(:DT => x -> gribCond(x, 3, 90), EDat)
+gribsels = unique(gribGen.(sel.DT))
+
+# grib times to nearest hour
+gTimes = round.(sel.DT, Dates.Hour)
+# sel.GLat = roundF.(sel.Lat, .05)
+# sel.GLon = roundF.(sel.Lon, .0625)
+##
+WLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
+cd(WLoc)
+@rput gribsels
+
+gribTimes = unique(gribT.(sel.DT))
+@rput gribTimes
+## DOWNLOAD THE REQUIRED GRIBFILES
+R"""
+# save(list=c("gribsels","gribTimes"), file = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/2019YoneGribs.RData")
+# load("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/2019YoneGribs.RData")
+options(timeout=800)
+dloadLoc  = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
+gribFls = list.files(dloadLoc,pattern="*grib2.bin")
+for(b in 1:length(gribsels)){
+    if(any(gribFls == gribsels[b])){
+        next
+    } else {
+        download.file(paste("http://database.rish.kyoto-u.ac.jp/arch/jmadata/data/gpv/original/",substr(gribTimes[b],1,4),"/",substr(gribTimes[b],5,6),"/",substr(gribTimes[b],7,8),"/",gribsels[b],sep=""), 
+            destfile = paste(dloadLoc,gribsels[b], sep = ""))
+        }
+}
+"""
+
+outPt = DataFrame()
+for b = 1:length(EFiles)
+    EDat = CSV.File(string(estLoc,EFiles[b]), header = true) |> DataFrame
+    EDat.ID = fill("2019-"*EFiles[b][1:end-4],nrow(EDat))
+    rename!(EDat, [:DT,:Lat,:Lon,:BirdHead,:WDir,:WSpeed,:Resnorm,:ID]) 
+    # remove non-wind calculated rows
+    EDat = EDat[.!(EDat.WSpeed .== 0),:]
+    # convert to DateTime
+    df = dateformat"y/m/d,H:M:S"
+    EDat.DT = DateTime.(EDat.DT, df)
+    # select time points
+    compT = filter(:DT => x -> gribCond(x, 3, 5), EDat)
+    ts = DateTime.(unique(gribT.(compT.DT)),"yyyymmddHH")
+    cd("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/")
+    gribLs = findGribPoints.(ts,5,5000)
+    aveHeds = zeros(length(ts),1)
+    aveSpds = zeros(length(ts),1)
+    for tPoint = 1:length(ts)
+        gribD = gribSelect.(fill(ts[tPoint],nrow(gribLs[tPoint])),gribLs[tPoint].lat,gribLs[tPoint].lon)
+        if length(gribD) > 0
+            U = reduce(vcat,[x[1] for x in gribD])
+            V = reduce(vcat,[x[2] for x in gribD])
+            aveHeds[tPoint] = atan(mean(U),mean(V))
+            aveSpds[tPoint] = sqrt(mean(U)^2 + mean(V)^2)
+        else
+            aveHeds[tPoint] = NaN
+            aveSpds[tPoint] = NaN
+        end
+    end
+    # switch non-calculated wind speeds and directions to NaN
+    EDat.X = EDat.WSpeed.*(cos.(EDat.WDir))
+    EDat.Y = EDat.WSpeed.*(sin.(EDat.WDir))
+    add = DataFrame(hcat(ts, aveHeds, aveSpds, birdWindow.(ts,5),birdWSpeed.(ts,5),fill(EFiles[b][1:(end-4)],length(ts))), :auto)
+    rename!(add, [:Time,:gribHead,:gribSpeed,:estHead,:estSpeed,:tagID])
+    append!(outPt,add)
+end
+extra = outPt
+## FORMAT DATA INTO UTM, FIND XY AND WIND HEADING
+# rename!(EDat, [:DT,:Head,:X,:Y,:Lat,:Lon])
+rename!(EDat, [:DT,:Lat,:Lon,:Forage,:DistTo,:BirdHead,:WDir,:WSpeed,:ID]) 
+df = dateformat"d-m-y H:M:S"
+EDat.DT = DateTime.(EDat.DT, df)
+Ll = LLA.(EDat.Lat,EDat.Lon)
+UTMD = UTMZfromLLA(wgs84)
+utmDat = map(UTMD, Ll); utmDat = StructArray(utmDat)
+X = diff(utmDat.x)
+Y = diff(utmDat.y)
+head = atan.(X,Y)
+
+CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMethodValidation.csv", outPt)
+
+gribD = gribSelect.(sel.DT, sel.Lat, sel.Lon)
+##
+sel.U = reduce(vcat,[x[1] for x in gribD])
+sel.V = reduce(vcat,[x[2] for x in gribD])
+sel.WindHead = atan.(sel.V,sel.U)
+sel.EHead = atan.(sel.Y,sel.X)
+# plot(sel.WindHead, sel.Head, seriestype = :scatter)
+# plot(sqrt.(sel.X.^2 + sel.Y.^2), sqrt.(sel.U.^2 + sel.V.^2), seriestype = :scatter)
+sel.ESpd = sqrt.(sel.X.^2 + sel.Y.^2)
+sel.WSpd = sqrt.(sel.U.^2 + sel.V.^2)
+CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/gribSelectedProper.csv", outPt)
+##
+@rput outPt
+R"""
+library(circular)
+library(ggplot2)
+res<-cor.circular(outPt$estHead,outPt$gribHead, test = T)
+res
+# res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
+#ggplot(outPt, aes(x = EHead, y = gribHead)) +
+ #   geom_point() #+
+    # geom_line(aes(x=-3:3,y=-3:3))
+summary(res)
+# spres <- circular::cor.test(sel$ESpd, sel$WSpd)
+"""
+## 
+outPt
+plot(sel.WindHead, sel.EHead, seriestype = scatter)
+
+
+plot(sel.WindHead,sel.Head, seriestype = scatter)
+plot(sel.ESpd,sel.WSpd, seriestype = scatter)
+
+plot(outPt.estHead,outPt.gribHead,seriestype=scatter,legend=false,xlabel="Estimated wind direction ( rad)", ylabel="Validation wind direction (rad)")
+plot!(-pi:pi,-pi:pi)
+
+plot(outPt.gribSpeed,outPt.estSpeed,seriestype=scatter,legend=false,xlabel="Estimated wind speed (m/s)", ylabel="Validation wind speed (m/s)",fmt=:png)
+plot!(0:10,0:10)
+
+
+# attempt reading in .nc file from sar-winds
+
+
 #############################################################################
 ############### RUN FOR YONEHARA METHOD 2014, 2016, AND 2017 ################
 #############################################################################
