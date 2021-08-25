@@ -24,6 +24,7 @@ using RCall
 using NetCDF
 using DelimitedFiles
 using TimeZones
+using JLD
 
 ## FUNCTIONS
 ## FUNCTION TO FIND THE INDECES OF SUITABLE WIND ESTIMATIONS
@@ -31,6 +32,13 @@ function gribCond(dt, h, md)
     hr = Dates.hour(round(dt, Dates.Hour))
     min = Dates.minute(dt)
     iszero(hr%h) && (min > 60 - md || min < md)
+end
+## FUNCTION TO DEFINE THE NEAREST h HOUR VALUE
+function gribCondGT(dt, h)
+    hrs = (0:23)[iszero.((0:23).%h) .== 1]
+    hr = Dates.hour(round(dt, Dates.Hour))
+    chosen = maximum(hrs[hrs .<= hr])
+    DateTime(Int(Dates.year(dt)),Int(Dates.month(dt)),Int(Dates.day(dt)),chosen,0,0)
 end
 ## GENERATE GRIB FILENAME FROM DATETIME
 function gribGen(dt)
@@ -142,6 +150,32 @@ function findGribPoints(t,tgap,buff)
     @rget out
     return out
 end
+## FIND LAT AND LON WITHIN buff M OF TRACK
+function findGribPointsGT(ts,buff)
+    # isolate points along track to find lat lon ±50mins
+    isol = EDat[EDat.RoundDT .== ts,:]
+    isol = EDat
+    lon = isol.Lon
+    lat = isol.Lat
+    @rput lon lat buff
+    R"""
+    library(sp)
+    library(raster)
+    library(plyr)
+    pnts <- SpatialPoints(cbind(lon,lat),proj4string=CRS("+proj=longlat"))
+    pntsBuff <- buffer(pnts, buff)
+    # plot(pntsBuff)
+    # points(pnts,cex=.1)
+    # create grid of grib lat lons
+    bndris <- as.data.frame(bbox(pntsBuff[1][1,1]))
+    gribGrid <- SpatialPoints(expand.grid(seq(round_any(bndris$min[1],0.0625),round_any(bndris$max[1],0.0625),0.0625),
+        seq(round_any(bndris$min[2],0.05),round_any(bndris$max[2],0.05),0.05)),proj4string=CRS("+proj=longlat"))
+    out <- as.data.frame(coordinates(gribGrid[which(over(gribGrid, pntsBuff) == 1)]))
+    colnames(out) <- c("lon","lat")
+    """
+    @rget out
+    return out
+end
 ## FIND AVERAGE WIND HEADING WITHIN 5KM FOR GIVEN DATETIME LAT LON WITHIN tgap MINUTES
 function gribAve(tPoint,tgap, buff)
     iso = EDat[(tPoint - Minute(tgap)) .< EDat.DT .< (tPoint + Minute(tgap)),:]
@@ -172,6 +206,15 @@ function birdWindow(tPoints,tgap)
     # gribAve.(isol.DT, isol.Lon,isol.Lat)
     return aveWHd
 end
+## CALCULATE AVERAGE ESTIMATED WIND FOR ALL POINTS WITHIN 3 HOUR BLOCK
+function birdWindowGT(tPoints)
+    iso = EDat[EDat.RoundDT .== tPoints,:]
+    aveWHd = aveWind(iso.X,iso.Y)
+    # iso = EDat[(tPoints[b] - Minute(50)) .< EDat.DT .< (tPoints[b] + Minute(50)),:]
+    # isol = filter(:DT => x -> gribCond(x, 3, 50), iso)
+    # gribAve.(isol.DT, isol.Lon,isol.Lat)
+    return aveWHd
+end
 ##
 function birdWSpeed(tPoints,tgap)
     iso = EDat[(tPoints - Minute(tgap)) .< EDat.DT .< (tPoints + Minute(tgap)),:]
@@ -179,7 +222,13 @@ function birdWSpeed(tPoints,tgap)
     aveSpd = sqrt(mean(isol.X)^2 + mean(isol.Y)^2)
     return aveSpd
 end
-# ## 
+# ##
+function birdWSpeedGT(tPoints)
+    iso = EDat[EDat.RoundDT .== tPoints,:]
+    aveSpd = sqrt(mean(iso.X)^2 + mean(iso.Y)^2)
+    return aveSpd
+end 
+birdWindowGT
 # function WindVal(t, lat, lon)
 #     # calculate mean estimated heading for ±25 min
 #     estHdAve = birdWindow(t)
@@ -501,9 +550,9 @@ plot!(0:10,0:10)
 
 # attempt reading in .nc file from sar-winds
 
-
-# TESTING YONEHARA METHOD WITH 3 HOUR AVERAGE #
-
+#############################################################################################
+######################## TESTING YONEHARA METHOD WITH 3 HOUR AVERAGE ########################
+#############################################################################################
 
 estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 # estLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/WindEstTest/2018/"
@@ -518,8 +567,8 @@ end
 rename!(EDat, [:DT,:Lat,:Lon,:BirdHead,:WDir,:WSpeed,:Resnorm,:ID]) 
 df = dateformat"y/m/d,H:M:S"
 EDat.DT = DateTime.(EDat.DT, df)
-sel = filter(:DT => x -> gribCond(x, 3, 90), EDat)
-gribsels = unique(gribGen.(sel.DT))
+# sel = filter(:DT => x -> gribCond(x, 3, 90), EDat)
+gribsels = unique(gribGen.(gribCondGT.(EDat.DT,3)))
 
 # grib times to nearest hour
 gTimes = round.(sel.DT, Dates.Hour)
@@ -550,6 +599,12 @@ for(b in 1:length(gribsels)){
 """
 
 outPt = DataFrame()
+# save("/Volumes/GoogleDrive/My Drive/PhD/Data/3HourOutpt.jld","outPt",outPt)
+load("/Volumes/GoogleDrive/My Drive/PhD/Data/3HourOutpt.jld")
+# nrow(outPt)
+# 26+27+27+25+31+25+32+23
+
+# toAdd = DataFrame()
 for b = 1:length(EFiles)
     EDat = CSV.File(string(estLoc,EFiles[b]), header = true) |> DataFrame
     EDat.ID = fill("2019-"*EFiles[b][1:end-4],nrow(EDat))
@@ -559,29 +614,35 @@ for b = 1:length(EFiles)
     # convert to DateTime
     df = dateformat"y/m/d,H:M:S"
     EDat.DT = DateTime.(EDat.DT, df)
-    # select time points
-    compT = filter(:DT => x -> gribCond(x, 3, 5), EDat)
-    ts = DateTime.(unique(gribT.(compT.DT)),"yyyymmddHH")
+    EDat.RoundDT = gribCondGT.(EDat.DT, 3)
+    ts = unique(EDat.RoundDT)
     cd("/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/")
-    gribLs = findGribPoints.(ts,5,5000)
+    # gribLs = findGribPointsGT.(ts,5000)
     aveHeds = zeros(length(ts),1)
     aveSpds = zeros(length(ts),1)
     for tPoint = 1:length(ts)
-        gribD = gribSelect.(fill(ts[tPoint],nrow(gribLs[tPoint])),gribLs[tPoint].lat,gribLs[tPoint].lon)
-        if length(gribD) > 0
-            U = reduce(vcat,[x[1] for x in gribD])
-            V = reduce(vcat,[x[2] for x in gribD])
-            aveHeds[tPoint] = atan(mean(U),mean(V))
-            aveSpds[tPoint] = sqrt(mean(U)^2 + mean(V)^2)
-        else
-            aveHeds[tPoint] = NaN
-            aveSpds[tPoint] = NaN
+        try
+            gribD = gribSelect.(fill(ts[tPoint],nrow(gribLs[tPoint])),gribLs[tPoint].lat,gribLs[tPoint].lon)
+            if length(gribD) > 0
+                U = reduce(vcat,[x[1] for x in gribD])
+                V = reduce(vcat,[x[2] for x in gribD])
+                aveHeds[tPoint] = atan(mean(U),mean(V))
+                aveSpds[tPoint] = sqrt(mean(U)^2 + mean(V)^2)
+            else
+                aveHeds[tPoint] = NaN
+                aveSpds[tPoint] = NaN
+            end
+        catch 
+            print(tPoint)
+            print(b)
         end
     end
     # switch non-calculated wind speeds and directions to NaN
     EDat.X = EDat.WSpeed.*(cos.(EDat.WDir))
     EDat.Y = EDat.WSpeed.*(sin.(EDat.WDir))
-    add = DataFrame(hcat(ts, aveHeds, aveSpds, birdWindow.(ts,5),birdWSpeed.(ts,5),fill(EFiles[b][1:(end-4)],length(ts))), :auto)
+    # add = DataFrame(hcat(birdWindowGT.(ts),birdWSpeedGT.(ts)), :auto)
+    # append!(toAdd,add)
+    add = DataFrame(hcat(ts, aveHeds, aveSpds, birdWindowGT.(ts),birdWSpeedGT.(ts),fill(EFiles[b][1:(end-4)],length(ts))), :auto)
     rename!(add, [:Time,:gribHead,:gribSpeed,:estHead,:estSpeed,:tagID])
     append!(outPt,add)
 end
@@ -598,7 +659,7 @@ X = diff(utmDat.x)
 Y = diff(utmDat.y)
 head = atan.(X,Y)
 
-CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMethodValidation.csv", outPt)
+CSV.write("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMethodValidation3HrAve.csv", outPt)
 
 gribD = gribSelect.(sel.DT, sel.Lat, sel.Lon)
 ##
@@ -1119,3 +1180,4 @@ plot(outPt.gribSpeed,outPt.estSpeed,seriestype=scatter,legend=false,xlabel="Esti
 plot!(0:10,0:10)
 
 
+v
