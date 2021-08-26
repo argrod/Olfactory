@@ -266,7 +266,7 @@ for(b in 1:length(onefiles16)){
 for(b in 1:length(onefiles17)){
     ODat<-read.delim(paste(oneloc17,onefiles17[b],sep = ""),sep = ",",header=T)
     FDat<-read.delim(paste(fiveloc17,fivefiles17[b],sep = ""),sep = ",",header=T)
-    ODat$DT <- as.POSIXct(ODat$time,format="%Y/%m/%d,%H:%M:%S")
+    ODat$DT <- as.POSIXct(ODat$time,format="%d-%b-%Y %H:%M:%S")
     FDat$DT <- as.POSIXct(FDat$timeSub,format="%Y/%m/%d,%H:%M:%S")
     # remove NaN rows
     ODat <- ODat[!is.na(ODat$wDir),]
@@ -321,18 +321,19 @@ hdval <- ggplot(allSubD, aes(x = OwDir, y = FwDir)) +
     geom_point(pch=21,fill="deepskyblue") +
     geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
     annotate("text",x=-pi,y=1,label="corr = 0.94",hjust=0) +
-    annotate("text",x=-pi,y=0.5,label="p = 0",hjust=0) +
+    annotate("text",x=-pi,y=0.5,label="p < 0.0001",hjust=0) +
+    annotate("text",x=-pi,y=0,label="n = 8081",hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name='Subsampled wind heading (rad)') + scale_x_continuous(name='Original data wind headings (rad)')
 
 splm <- lm(OwSpd ~ FwSpd, data = allSubD)
-
+summary(splm)
 spdval <- ggplotRegression(splm) +
     geom_line(data=data.frame(x=0:max(allSubD$FwSpd),y=0:max(allSubD$FwSpd)),aes(x=x,y=y),colour="red",linetype='dashed') +
-    annotate("text", x = 0, y = 16, label = "y == 0.92*x + 0.40",parse = T,hjust=0) +
+    annotate("text", x = 0, y = 16, label = "y == 0.94*x + 0.30",parse = T,hjust=0) +
     annotate("text", x = 0, y = 14.5, label = "p < 2.2 %*% 10^{-16}",parse=T,hjust=0) + 
-    annotate("text",x=0,y=13,label=expression(paste(R^2," = 0.90")),hjust=0) +
+    annotate("text",x=0,y=13,label=expression(paste(R^2," = 0.91")),hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=(("Subsampled data wind speed (m/s)"))) + scale_x_continuous(name=(("Original data wind speed (m/s)")))
@@ -496,6 +497,60 @@ spdval <- ggplotRegression(splm) +
     annotate("text",x=min(valDat$gribSpeed),y=12.5,label="y = 0.05x + 2",hjust=0) +
     annotate("text",x=min(valDat$gribSpeed),y=11.5,label="p = 0.4",hjust=0) +
     annotate("text",x=min(valDat$gribSpeed),y=10.5,label=expression(paste(R^2," = 0.003")),hjust=0) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(valDat$gribSpeed),max(valDat$gribSpeed)))
+
+ggarrange(hdval,spdval, ncol=1,nrow=2, labels=c("a)","b)"),hjust=-3,vjust=2)
+ggsave(paste(figLoc,"19windVal.svg",sep=""), device="svg", dpi = 300, height = 7,
+      width = 3.5, units = "in")
+nrow(valDat)
+
+#############################################################################################################
+########################################### YONE METHOD 3 HOUR AVERAGE ######################################
+#############################################################################################################
+# 2019
+if(Sys.info()['sysname'] == "Darwin"){
+    valDat <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMethodValidation3HrAve.csv",sep=",")
+} else {
+    valDat <- read.delim("G:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMethodValidation3HrAve.csv",sep=",")
+}
+valDat$Time <- sub("T"," ",valDat$Time)
+valDat$Time <- as.POSIXct(valDat$Time,format="%Y-%m-%d %H:%M:%S",tz = "")
+head(valDat)
+cor.circular()
+head(valDat)
+
+ggplotRegression <- function (fit) {
+
+require(ggplot2)
+
+ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
+  geom_point(pch=21,fill="red") +
+  stat_smooth(method = "lm", col = "blue")
+}
+
+res<-cor.circular(valDat$estHead,valDat$gribHead, test = T)
+res
+# res<-cor.circular(atan2(sel$X,sel$Y), atan2(sel$U,sel$V))
+hdval <- ggplot(valDat, aes(x = gribHead, y = estHead)) +
+    geom_point(pch=21,fill="deepskyblue") +
+    geom_line(data=data.frame(x=-pi:pi,y=-pi:pi),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=-pi,y=.5,label="corr = 0.2",hjust=0) +
+    annotate("text",x=-pi,y=-0.,label="p < 0.002",hjust=0) +
+    annotate("text",x=-pi,y=-0.5,label="n = 251",hjust=0) +
+    # annotate("text",x=-pi,y=0,label="n = 79",hjust=0) +
+    theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
+    scale_y_continuous(name='Estimated headings (rad)') + scale_x_continuous(name='JMA headings (rad)')
+
+splm <- lm(estSpeed ~ gribSpeed, data = valDat)
+summary(splm)
+spdval <- ggplotRegression(splm) +
+    geom_line(data=data.frame(x=0:max(valDat$gribSpeed),y=0:max(valDat$gribSpeed)),aes(x=x,y=y),colour="red",linetype='dashed') +
+    annotate("text",x=min(valDat$gribSpeed),y=12.5,label="y = 0.08x + 1.8",hjust=0) +
+    annotate("text",x=min(valDat$gribSpeed),y=11.5,label="p = 0.05",hjust=0) +
+    annotate("text",x=min(valDat$gribSpeed),y=10.5,label=expression(paste(R^2," = 0.015")),hjust=0) +
     theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
     scale_y_continuous(name=(("Estimated wind speed (m/s)"))) + scale_x_continuous(name=(("JMA wind speed (m/s)")),limits=c(min(valDat$gribSpeed),max(valDat$gribSpeed)))
