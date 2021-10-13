@@ -36,9 +36,9 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
     outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("F:/UTokyoDrive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "F:/UTokyoDrive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D18 <- bind_rows(Dat)
 D19 <- bind_rows(Dat19)
@@ -70,7 +70,7 @@ japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 # if(Sys.info()['sysname'] == "Darwin"){
 #     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
 # } else {
-#     load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+#     load("E:/My Drive/PhD/Data/splitr/ForageDisps.RData")
 # }
 # calculate foraging starts/ends
 allD$forage[is.na(allD$forage)] <- 0
@@ -87,30 +87,30 @@ if(allD$forage[nrow(allD)] == 1){
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
+    load("E:/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 }
 # save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
 # LOAD IN THE LISTED DATA
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/ListD.RData")
+    load("E:/My Drive/PhD/Data/splitr/ListD.RData")
 }
 # LOAD WIND DATA
 if(Sys.info()['sysname'] == "Darwin"){
   load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
 } else {
-  load("F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
+  load("E:/My Drive/PhD/Data/WindCalc/windDatAll.RData")
 }
 allTraj <- bind_rows(outTraj)
-allTraj$relH <- allTraj$aveHd - allTraj$trjHd
+allTraj$relH <- allTraj$aveHd - allTraj$trjHd 
 
 # figure locations
 if(Sys.info()['sysname'] == "Darwin"){
   figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
   # figLoc <- "/Documents/GitHub/PhD/Olfactory/"
 } else {
-  figLoc <- "F:/UTokyoDrive/PhD/Figures/Olfactory/"
+  figLoc <- "E:/My Drive/PhD/Figures/Olfactory/"
   # figLoc <- "F:/Documents/GitHub/PhD/Olfactory/"
 }
 WindDat$WSpd <- sqrt(WindDat$X^2 + WindDat$Y^2)
@@ -176,7 +176,7 @@ for(b in 1:length(distGaps)){
     rm(tst)
 }
 summary(allD)
-save(pvals,avRelHd,one2Ten, file="F:/UTokyoDrive/PhD/Data/WindCalc/headings.RData")
+save(pvals,avRelHd,one2Ten, file="E:/My Drive/PhD/Data/WindCalc/headings.RData")
 
 distGaps <- seq(0,190,10)
 distGapsL <- distGaps+10
@@ -751,7 +751,7 @@ for(b in 1:length(distGaps)){
 #   WindDat$levRet[b] <- allList$levRet[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
 #   WindDat$tripL[b] <- allList$tripL[which(allList$DT > (WindDat$DT[b] - lubridate::seconds(30)) & allList$DT < (WindDat$DT[b] + lubridate::seconds(30)) & paste(allList$tagID,format(allList$DT,"%Y"),sep="") == WindDat$yrID[b])]
 # }
-# save(WindDat,file="F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
+# save(WindDat,file="E:/My Drive/PhD/Data/WindCalc/windDatAll.RData")
 
 allTraj <- bind_rows(outTraj)
 allTraj$distTo <- allTraj$distTo*10^-3
@@ -761,8 +761,8 @@ allTraj$relH[allTraj$relH < pi] = allTraj$relH[allTraj$relH < pi] + 2*pi
 allTraj$relH[allTraj$relH > pi] = allTraj$relH[allTraj$relH > pi] - 2*pi
 allTraj <- na.omit(allTraj)
 one2TenTr <- vector(mode="list",length=5)
-distGaps <- seq(0,8,2)
-distGapsL <- distGaps+2
+distGaps <- seq(0,9,1)
+distGapsL <- distGaps+1
 for(b in 1:length(distGaps)){
     RaylT <- r.test(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]])
     # tst<-HR_test(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]])
