@@ -1,0 +1,15 @@
+```julia; echo = false
+Pkg.add("Weave")
+Pkg.add("CSV")
+Pkg.add("Plots")
+Pkg.add("Pluto")
+using Pluto
+Pluto.run()
+```
+
+# Streaked shearwater track analysis
+
+Seabird GPS tracks in combination with understanding of concurrent behaviours are highly informative in understanding not only the ecology of the animals themselves, but also of the environment in which they live. The first and most direct method to understanding seabird behaviour is built from 
+
+```julia; echo = false
+```
