@@ -51,11 +51,6 @@ library(RColorBrewer)
 #################################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    exec_loc <- "/Users/aran/hysplit/"
-} else {
-    exec_loc <- "C:/hysplit/"
-}
-if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/Temp2018.RData")
 } else {
