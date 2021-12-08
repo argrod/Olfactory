@@ -45,8 +45,7 @@ ptrs = 1:length(data)
 y = zeros(length(data))
 
 
-wx(v) = v[1] * cosd(v[2])
-wy(v) = v[1] * sind(v[2])
+
 ea(c) = wy([c[1] c[2]]) * sind(gd) + wx([c[1] c[2]]) * cosd(gd) + 
     sqrt((wy([c[1] c[2]]) * sind(gd) + wx([c[1] c[2]]) * cos(gd))^2) - wx([c[1] c[2]])^2 - wx([c[1] c[2]])^2 + c[3]^2 - vg
 
@@ -88,26 +87,37 @@ out_data = [xp yp]
 
 circwind(vg,gd,c) = wy([c[1],c[2]])*sin(gd) + wx([c[1],c[2]])*cos(gd) + sqrt((wy([c[1],c[2]])*sin(gd) + wx([c[1],c[2]])*cos(gd))^2 - wy([c[1],c[2]])^2 - wx([c[1],c[2]])^2 + c[3]^2) - vg
 
-function fitmodel(x,p)
-    r =@view x[:,1]
-    T1 =@view x[:,2]
-    θ =@view x[:,3]
-    α1,α2,k,T2 = p
-
-    vcat( α1.*T1.^4 .+ k.*(T1.-T2) .- cosd.(θ)./r.^2 , α2.*T2^4 .+ k .* (T2.-T1) )
-end
-
 
 function scircwind(x,c)
-    vg = x[1]
-    gd = x[2]
-
-    wy([c[1],c[2]])*sin(gd) + wx([c[1],c[2]])*cos(gd) + sqrt((wy([c[1],c[2]])*sin(gd) + wx([c[1],c[2]])*cos(gd))^2 - wy([c[1],c[2]])^2 - wx([c[1],c[2]])^2 + c[3]^2) - vg
+    wx(v) = v[1] * cos(v[2])
+    wy(v) = v[1] * sin(v[2])
+    vg = @view x[:,1]
+    gd = @view x[:2]
+    α = c[1]
+    β = c[2]
+    γ = c[3]
+    wy([α,β])*sin(gd) + wx([α,β])*cos(gd) + sqrt((wy([α,β])*sin(gd) + wx([α,β])*cos(gd))^2 - wy([α,β])^2 - wx([α,β])^2 + γ^2) - vg
 end
 
-scircwind([spd[ss[300]],dir[ss[300]]],[3,0,9])
+scircwind([spd[ss[300]] dir[ss[300]]],[3,0,9])
+
+[spd[ss[300]] dir[ss[300]]][1,1]
+
+scircwind.([spd,dir],Ref([3,0,9]))
 
 
+
+tst=[spd dir]
+tst = Ref([3,0,9])
+
+
+
+tst = tst[2]
+
+@view tst[:,1]
+tst[:,2]
+
+[spd dir][2]
 
 
 #         # circwind(vg,gd,c) = wy([c[1],c[2]]).*sind.(gd) + wx([c[1],c[2]]).cosd.(gd) + sqrt.((wy([c[1],c[2]]).*sind.(gd) + wx([c[1],c[2]]).*cosd.(gd)).^2 - wy([c[1],c[2]])^2 - wx([c[1],c[2]])^2 + c[3]^2) - vg
