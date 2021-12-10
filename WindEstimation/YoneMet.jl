@@ -88,37 +88,6 @@ out_data = [xp yp]
 circwind(vg,gd,c) = wy([c[1],c[2]])*sin(gd) + wx([c[1],c[2]])*cos(gd) + sqrt((wy([c[1],c[2]])*sin(gd) + wx([c[1],c[2]])*cos(gd))^2 - wy([c[1],c[2]])^2 - wx([c[1],c[2]])^2 + c[3]^2) - vg
 
 
-function scircwind(x,c)
-    wx(v) = v[1] * cos(v[2])
-    wy(v) = v[1] * sin(v[2])
-    vg = @view x[:,1]
-    gd = @view x[:2]
-    α = c[1]
-    β = c[2]
-    γ = c[3]
-    wy([α,β])*sin(gd) + wx([α,β])*cos(gd) + sqrt((wy([α,β])*sin(gd) + wx([α,β])*cos(gd))^2 - wy([α,β])^2 - wx([α,β])^2 + γ^2) - vg
-end
-
-scircwind([spd[ss[300]] dir[ss[300]]],[3,0,9])
-
-[spd[ss[300]] dir[ss[300]]][1,1]
-
-scircwind.([spd,dir],Ref([3,0,9]))
-
-
-
-tst=[spd dir]
-tst = Ref([3,0,9])
-
-
-
-tst = tst[2]
-
-@view tst[:,1]
-tst[:,2]
-
-[spd dir][2]
-
 
 #         # circwind(vg,gd,c) = wy([c[1],c[2]]).*sind.(gd) + wx([c[1],c[2]]).cosd.(gd) + sqrt.((wy([c[1],c[2]]).*sind.(gd) + wx([c[1],c[2]]).*cosd.(gd)).^2 - wy([c[1],c[2]])^2 - wx([c[1],c[2]])^2 + c[3]^2) - vg
 #     # else
@@ -133,69 +102,7 @@ tst[:,2]
 #     fit = curve_fit(circwind,vecx,vecy,[3,0,9],lower=lb, upper = ub)
 # circwind(spd[ss[300]:se[300]],dir[ss[300]:se[300]],[3,0,9])
 # end
-    
-wy([c[1],c[2]]).*sin.(gd) .+ wx([c[1],c[2]]).*cos.(gd) + sqrt.((wy([c[1],c[2]]).*sin.(gd) .+ wx([c[1],c[2]]).*cos.(gd)).^2 - wy([c[1],c[2]])^2 - wx([c[1],c[2]])^2 + c[3]^2) - vg
 
-wy([1,3])*sin.(dir[ss[300]]) + wx([1,3])*cos.(dir[ss[300]]) + sqrt((wy([1,3])*sin(dir[ss[300]])
-
-
-circwind()
-
-f(gd,v,c) = wy(v)*sind(gd) + wx(v)*cosd(gd) + sqrt((wy(v)*sind(gd) + wx(v)*cos(gd))^2 - wy(v)^2 - wx(v)^2 + c^2)
-
-
-
-
-
-    sqrt((wy([c(1) c(2)]).*sin(gd)+wx([c(1) c(2)]).*cos(gd)).^2 - wy([c(1) c(2)]).^2 - wx([c(1) c(2)]).^2 + c(3)^2) - vg
-
-    sqrt((wy*sin(gd) + wx*cos(gd))^2 - wy^2 - wx^2 + c[3]^2)
-
-    u = wy[c[1] c[2]].*sin(gd) # y component of wind affecting bird (relative to bird)
-    u_c = wx[c[1] c[2]].*cos(gd) # x component of wind affecting bird (relative to bird)
-    α = vg^2 # R^2 of the circle, the air speed
-    # g(u, v) = (u − uc)^2 + (v − vc)^2 − α
-
-    # u^2 - 2u*uc + uc^2 + v^2 - 2*v*vc + vc^2 - α
-    # c[1] : wind speed
-    # c[2] : wind direction
-    # c[3] : air speed
-
-    # vg : ground speed i.e. the radius of the circle
-    # gd : ground direction
-    # wy*sin(gd) : y component of wind affecting bird (sin(gd) changes reference frame to bird)
-    # wx*cos(gd) : x component of wind affecting bird (cos(gd) changes reference frame to bird)
-
-    wy*sin(gd) + wx*cos(gd) + sqrt((wy*sin(gd) + wx*cos(gd))^2 - wy - wx) - vg
-# fitting
-options = optimoptions('lsqnonlin','Display','none');
-# minimize the sum of the squared residuals
-lb = [0 -pi 0];
-ub = [20 pi 20];
-[c,resnorm] = lsqnonlin(ea,c0,lb,ub,options);
-
-
-
-
-Plots.plot(data)
-
-circle_model(ptrs,p0)
-
-function circle_model(t,p)
-	out = []
-	x0,y0,r = p
-	for ptr ∈ ptrs
-		x,y = data[ptr]
-		push!(out,(x-x0)^2+(y-y0)^2-r^2)
-	end
-	out
-end
-	
-p0 = [0.0, 0.0, 1.0] # using 0.0 as initial radius fails
-	
-fit = curve_fit(circle_model, ptrs, y, p0)
-	
-fit.param
 
 function flightMask(time,lat,lon,threshold,consecutive)
     # get speeds, directions, and a flight mask
@@ -227,11 +134,6 @@ end
 
 spd, dir, vs, ve, rest = flightMask(sel.DT,sel.lat,sel.lon,5,2);
 
-spd2,dir2,vsShow,veShow = flightMask(sel.DT,sel.lat,sel.lon,tagDur,1)
-amount = zeros(Int,nrow(sel))
-for b = 1:length(vsShow)
-    amount[vsShow[b]:veShow[b]] .= 1
-end
 plot(sel.lon,sel.lat,label="")
 scatter!(sel.lon[amount .== 1],sel.lat[amount.==1],markersize = 2,markerstrokewidth=0,label="Flight")
 
@@ -274,6 +176,54 @@ function getsection(F,Win,delta,fs,fe,time)
 end
 
 ss,se = getsection(.2,300,60,vs,ve,sel.DT);
+
+function scircwind(x,c)
+    wx(v) = v[1] * cos(v[2])
+    wy(v) = v[1] * sin(v[2])
+    vg =x[:,1][1]
+    gd =x[:,2][1]
+    α,β,γ = c
+    wy([α,β])*sin(gd) + wx([α,β])*cos(gd) + sqrt((wy([α,β])*sin(gd) + wx([α,β])*cos(gd))^2 - wy([α,β])^2 - wx([α,β])^2 + γ^2) - vg
+end
+
+scircwind([spd[ss[300]] dir[ss[300]]],[3,0,9])
+
+[spd[ss[300]] dir[ss[300]]][2]
+[spd[ss[300]] dir[ss[300]]][:,2][1]
+scircwind.([spd  dir],Ref([ 3, 0, 9]))
+
+@view [spd[300] dir[300]][:,1]
+
+scircwind([12 1],[3, 0, 9])
+
+sin([spd[300] dir[300]][:,2][1])
+
+
+[spd[ss[300]] dir[ss[300]]][1,1]
+
+[scircwind([spd[x],dir[x]],[3,0,9]) for x = 1:length(spd)]
+
+@view [spd[300],dir[300]][2]
+
+scircwind([spd[300],dir[300]],[3,0,9])
+scircwind.([spd,dir],Ref.([3,0,9]))
+
+tst = Ref([3,0,9])
+
+tst
+
+f(x,y) = sum(x) + y
+f([1,2,3], 4) #-> 10
+f([1,2,3], 5) #-> 11
+
+f.([1,2,3], [4,5])    # -> error
+
+f.(([1,2,3],), [4,5])
+
+scircwind.([spd,dir],([3,0,9],))
+
+([3,0,9],)
+
 eg = 300
 egSel = sel[ss[eg]:se[eg],:]
 plot(sel.lon[ss[eg]:se[eg]],sel.lat[ss[eg]:se[eg]])
@@ -290,38 +240,6 @@ for x = 1:length(ss)
 end
 
 flRange = [ss[x]:se[x] for x = 1:length(ss)]
-
-plotlyjs()
-plot(sel.lon,sel.lat)
-scatter!(sel.lon[reduce(vcat,collect.(flRange))],sel.lat[reduce(vcat,collect.(flRange))])
-
-d=sel[ss[300]:se[300],:]
-
-plot(d.lon,d.lat)
-scatter(dir[ss[300]:se[300]],spd[ss[300]:se[300]],xlim=[-pi,pi],ylim=[-25,25])
-
-scatter(spd[ss[300]:se[300]].*cos.(dir[ss[300]:se[300]]),spd[ss[300]:se[300]].*sin.(dir[ss[300]:se[300]]))
-
-histogram(dir)
-
-histogram(dir[ss[300]:se[300]])
-
-
-sel
-
-filter(x->ss[x] <=)
-
-latFl = sel.lat
-
-tst = 1:nrow(sel)
-[ss[i] <= tst <= se[i] for i = 1:length(ss)]
-
-ss:se
-
-y[i] = map(t->t>ymax[i] ? missing : t, y[i])
-
-
-wy([c(1) c(2)]).*sin(gd) + wx([c(1) c(2)]).*cos(gd) + sqrt((wy([c(1) c(2)]).*sin(gd)+wx([c(1) c(2)]).*cos(gd)).^2 - wy([c(1) c(2)]).^2 - wx([c(1) c(2)]).^2 + c(3)^2)
 
 function windestimates(spd, dir, ss, se)
     vw = zeros(Float64,length(ss),1)
