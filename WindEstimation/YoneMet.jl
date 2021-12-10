@@ -91,21 +91,25 @@ circwind(vg,gd,c) = wy([c[1],c[2]])*sin(gd) + wx([c[1],c[2]])*cos(gd) + sqrt((wy
 function scircwind(x,c)
     wx(v) = v[1] * cos(v[2])
     wy(v) = v[1] * sin(v[2])
-    vg = @view x[:,1]
-    gd = @view x[:2]
+    vg = x[1]
+    gd = x[2]
     α = c[1]
     β = c[2]
     γ = c[3]
     wy([α,β])*sin(gd) + wx([α,β])*cos(gd) + sqrt((wy([α,β])*sin(gd) + wx([α,β])*cos(gd))^2 - wy([α,β])^2 - wx([α,β])^2 + γ^2) - vg
 end
 
+[spd[31] dir[31]][2]
+
+
+
 scircwind([spd[ss[300]] dir[ss[300]]],[3,0,9])
 
 [spd[ss[300]] dir[ss[300]]][1,1]
 
-scircwind.([spd,dir],Ref([3,0,9]))
+scircwind.([spd dir],Ref([3,0,9]))
 
-
+[spd dir]
 
 tst=[spd dir]
 tst = Ref([3,0,9])
@@ -227,11 +231,11 @@ end
 
 spd, dir, vs, ve, rest = flightMask(sel.DT,sel.lat,sel.lon,5,2);
 
-spd2,dir2,vsShow,veShow = flightMask(sel.DT,sel.lat,sel.lon,tagDur,1)
-amount = zeros(Int,nrow(sel))
-for b = 1:length(vsShow)
-    amount[vsShow[b]:veShow[b]] .= 1
-end
+# spd2,dir2,vsShow,veShow = flightMask(sel.DT,sel.lat,sel.lon,tagDur,1)
+# amount = zeros(Int,nrow(sel))
+# for b = 1:length(vsShow)
+#     amount[vsShow[b]:veShow[b]] .= 1
+# end
 plot(sel.lon,sel.lat,label="")
 scatter!(sel.lon[amount .== 1],sel.lat[amount.==1],markersize = 2,markerstrokewidth=0,label="Flight")
 
