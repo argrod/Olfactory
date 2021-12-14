@@ -1,7 +1,7 @@
 if ismac()
     fileloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/AxyTrek/";
 else
-    fileloc = "F:/UTokyoDrive/PhD/Data/2019Shearwater/AxyTrek/";
+    fileloc = "E:/My Drive/PhD/Data/2019Shearwater/AxyTrek/";
 end
 files = dir2(strcat(fileloc,"**/*.txt"));
 %files = files(3:end);
