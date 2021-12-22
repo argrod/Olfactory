@@ -1084,3 +1084,13 @@ ggplot(egDat, aes(x=hed, y=spd) ) +
   theme(
     legend.position='none'
   ) + coord_polar()
+
+ggplot() +
+  geom_sf(data=japan,fill="#3849B5") + 
+  theme(panel.background = element_rect("#F1F1EF"),
+  panel.grid.minor = element_blank(),
+  panel.grid.major = element_blank()) +
+  scale_x_continuous("",limits = c(132,145)) +
+  scale_y_continuous("",limits = c(30,45)) +
+  geom_point(data=FkOshi, aes(x=Long,y=Lat),pch=21,fill="#E82237",size = 5)
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021Funder/FkOshimap.svg", dpi = 300,height=8.81,units="cm")
