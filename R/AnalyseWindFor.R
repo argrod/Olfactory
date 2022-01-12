@@ -518,7 +518,7 @@ plot
 
 # bring in wind and foraging data
 if(Sys.info()['sysname'] == "Darwin"){
-    fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
     fileloc <- "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 }
@@ -535,13 +535,19 @@ for(b in 1:length(files)){
         dat <- rbind(dat,toAdd)
     }
 }
-dat$time <- as.POSIXct(dat$time, format = "%d-%m-%Y %H:%M:%S", tz = "")
+dat$time <- as.POSIXct(dat$time, format = "%Y/%m/%d,%H:%M:%S", tz = "")
 dat$rwh <- dat$aveDir - dat$wDir
 dat$rwh[dat$aveDir == 0] <- NA
 dat$U <- dat$wSp*cos(dat$wDir)
 dat$V <- dat$wSp*sin(dat$wDir)
 
 selectDat <- dat[!is.na(dat$rwh),]
+
+colnames(dat)
+unique()
+ggplot() + 
+    geom_point(data = dat[dat$ID == unique(dat$ID)[1],],
+        aes(x=time,y=rwh))
 
 ggplot(dat[dat$distTo < 10 & dat$forage != 1,]) + geom_point(aes(y = rwh, x = distTo)) + scale_x_continuous(limits=c(-180,180))
 hist(dat$distTo)
