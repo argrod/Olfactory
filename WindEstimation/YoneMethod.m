@@ -4,7 +4,7 @@ set(groot,'defaultAxesCreateFcn',@(ax,~)set(ax.Toolbar,'Visible','off'))
 if ismac()
     fileloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/AxyTrek/";
 else
-    fileloc = "F:/UTokyoDrive/PhD/Data/2016Shearwater/AxyTrek/";
+    fileloc = "E:/My Drive/PhD/Data/2016Shearwater/AxyTrek/";
 end
 files = dir2(strcat(fileloc,"**/*.txt"));
 %files = files(3:end);

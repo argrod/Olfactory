@@ -80,7 +80,6 @@ sel = EDat[findall(x->x==tags[1],EDat.ID),:];
 function flightMask(time,lat,lon,threshold,consecutive)
     # get speeds, directions, and a flight mask
     # requires datetime of data (in datetime format), latitudel, longitude, speed threshold for flight (m/s), and how many slow speed values constitute rest
-
     # first find UTM values
     Ll = LLA.(lat,lon)
     UTMD = UTMZfromLLA(wgs84)
@@ -147,26 +146,57 @@ function scircwind(gd,c)
     wx(v) = v[1] * cos(v[2])
     wy(v) = v[1] * sin(v[2])
     α,β,γ = c
-    wy([α,β])*sin(gd) + wx([α,β])*cos(gd) + sqrt((wy([α,β])*sin(gd) + wx([α,β])*cos(gd))^2 - wy([α,β])^2 - wx([α,β])^2 + γ^2)
+    wy([α,β]).*sin.(gd) .+ wx([α,β]).*cos.(gd) .+ sqrt.((wy([α,β]).*sin.(gd) .+ wx([α,β]).*cos.(gd)).^2 .- wy([α,β]).^2 .- wx([α,β]).^2 .+ γ.^2)
 end
 
+function circwind(gd,c)
+    wx(v) = v[1] * cos(v[2])
+    wy(v) = v[1] * sin(v[2])
+    α,β,γ = c
+    wy([α,β])*sin(gd) + wx([α,β])*cos(gd) + sqrt((wy([α,β])*sin(gd) + wx([α,β])*cos(gd))^2 - wy([α,β])^2 .- wx([α,β]).^2 + γ^2)
+end
 
+circwind.(dir[ss[13]:se[13]],Ref([3,0,9]))
+
+curve_fit(circwind, dir[ss[13]:se[13]], spd[ss[13]:se[13]],[3,0,9],lower = [0.0, -pi, 0.0], upper = [20.0, pi, 20.0])
 
 scircwind.(dir[ss[13]:se[13]],[3,0,9])
+
+fit=curve_fit(scircwind,dir[ss[g]:se[g]],spd[ss[g]:se[g]],[3.0,0.0,9.0],lower = [0.0, -pi, 0.0], upper = [20.0, pi, 20.0])
+fit.param
+
+Plots.plot(sel.lon,sel.lat)
+
 fit = curve_fit(scircwind, dir[ss[13]:se[13]], spd[ss[13]:se[13]],[3.0,0.0,9.0],lower = [0.0, -pi, 0.0], upper = [20.0, pi, 20.0])
 fit.param
 
 Plots.scatter(dir[ss[13]:se[13]],spd[ss[13]:se[13]])
 Plots.plot!([-pi:.01:pi],scircwind(-pi:.01:pi,fit.param))
 
+Plots.plot(sel.lon,sel.lat,legend=false)
+Plots.scatter!(sel.lon[reduce(vcat, ranges)],sel.lat[reduce(vcat, ranges)],markersize=3,legend=false)
+
+findall(ss.==1318)
+se
+
+sel.lon[ranges]
+
+[collect(ss[g]:se[g]) for g in 1:length(ss)]
+
+ranges = [collect(ss[g]:se[g]) for g = 1:length(ss)]
+
+
+identity(ranges)
+ss:se
+
 
 function calcWind(Dat::DataFrame,ID::String)
     sel = Dat[Dat.ID .== ID,:]
     spd, dir, vs, ve, rest = flightMask(sel.DT,sel.lat,sel.lon,5,2)
     ss,se = getsection(.2,300,60,vs,ve,sel.DT)
-    fits = [curve_fit(scircwind, dir[ss[g]:se[g]], spd[ss[g]:se[g]],[3.0,0.0,9.0],lower = [0.0, -pi, 0.0], upper = [20.0, pi, 20.0]).param for g = 1:length(ss)]
+    fits = [curve_fit(scircwind, dir[ss[g]:se[g]], spd[ss[g]:se[g]],[3.0,0.0,9.0],lower = [0.0, -pi, 0.0], upper = [20.0, pi, 20.0]).param for g = 1:length(ss)].param
         fits = fit.param
-
+ 
 fits = [0.0 0.0 0.0]
 for b = 1:length(unique(EDat.ID))
     sel = EDat[EDat.ID .== tags[b],:]

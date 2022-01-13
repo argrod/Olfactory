@@ -53,9 +53,9 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/Temp2018.RData")
     # outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("F:/UTokyoDrive/PhD/Data/Temp2018.RData")
-    # outloc <- "F:/UTokyoDrive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("E:/My Drive/PhD/Data/Temp2018.RData")
+    # outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 # D18 <- bind_rows(Dat)
 ###############################################################################
@@ -65,7 +65,7 @@ if(Sys.info()['sysname'] == "Darwin"){
 if(Sys.info()['sysname'] == "Darwin"){
     windLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
 } else {
-    windLoc <- 'F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinDat/'
+    windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
 }
 windFiles <- dir(windLoc)
 
@@ -519,65 +519,83 @@ plot
 # bring in wind and foraging data
 if(Sys.info()['sysname'] == "Darwin"){
     fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    forLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
 } else {
-    fileloc <- "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    fileloc <- "E:/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    forLoc <- "E:/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
 }
 
 files <- dir(fileloc)
+forFiles <- dir(forLoc, pattern = "*ForageGPS.txt")
 
+tags = unique(sub("_S.*", "",forFiles))
+
+# read in the foraging data
+forD <- vector(mode="list", length=length(tags))
+for (t in 1:length(tags)) {
+    dayFiles = forFiles[grepl(paste("^",tags[t],"_S.*",sep=""),forFiles)]
+    ds <- data.frame(DT=character(),lat=numeric(),lon=numeric(),Forage=integer())
+    outpt <- ds
+    for (d in 1:length(dayFiles)){
+        outpt <- rbind(outpt,read.delim(paste(forLoc,dayFiles[d],sep=""),sep=",",header=T))
+    }
+    outpt$DT <- as.POSIXct(outpt$DT,"%d-%b-%Y %H:%M:%S",tz="")
+    outpt$ID <- tags[t]
+    w.dec <- SpatialPoints(cbind(outpt$Lon,outpt$Lat),proj4string = CRS("+proj=longlat"))
+    UTMdat <- spTransform(w.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    outpt$UTME <- UTMdat$coords.x1
+    outpt$UTMN <- UTMdat$coords.x2
+    forD[[t]] <- outpt
+}
+# read in wind data
+wind <- vector(mode="list",length=length(tags))
 for(b in 1:length(files)){
-    if(b == 1){
-        dat <- read.delim(paste(fileloc,files[b], sep = ""), sep = ",", header = T)
-        dat$ID <- sub("Wind.*","",files[b])
-    } else {
-        toAdd <- read.delim(paste(fileloc,files[b], sep = ""), sep = ",", header = T)
-        toAdd$ID <- sub("Wind.*","",files[b])
-        dat <- rbind(dat,toAdd)
+    wind[[b]] <- read.delim(paste(fileloc,files[b],sep=""),sep=",",header=T)
+    wind[[b]]$time <- as.POSIXct(wind[[b]]$time,"%Y/%m/%d,%H:%M:%S",tz="")
+    w.dec <- SpatialPoints(cbind(wind[[b]]$lon,wind[[b]]$lat),proj4string = CRS("+proj=longlat"))
+    UTMdat <- spTransform(w.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    wind[[b]]$UTME <- UTMdat$coords.x1
+    wind[[b]]$UTMN <- UTMdat$coords.x2
+    wind[[b]] <- wind[[b]][!is.nan(wind[[b]]$Resnorm),]
+    wind[[b]]$timeTo <- NA
+    wind[[b]]$distTo <- NA
+    for (g in 1:nrow(wind[[b]])){
+        if (any(forD[[b]]$Forage[forD[[b]]$DT > wind[[b]]$time[g]] == 1)) {
+            point <- which(abs(forD[[b]]$DT - wind[[b]]$time[g]) == min(abs(forD[[b]]$DT - wind[[b]]$time[g])))
+            forInd <- min(which(forD[[b]]$Forage[point:nrow(forD[[b]])] == 1)) + point - 1 # select the minimum (i.e. the next one)
+            wind[[b]]$timeTo[g] <- as.numeric(difftime(forD[[b]]$DT[forInd],wind[[b]]$time[g],units="secs"))
+            wind[[b]]$distTo[g] <- sqrt( (forD[[b]]$UTMN[forInd] - forD[[b]]$UTMN[point])^2 + 
+                (forD[[b]]$UTME[forInd] - forD[[b]]$UTME[point])^2 ) * 10^(-3)
+        }
     }
-}
-dat$time <- as.POSIXct(dat$time, format = "%d-%m-%Y %H:%M:%S", tz = "")
-dat$rwh <- dat$aveDir - dat$wDir
-dat$rwh[dat$aveDir == 0] <- NA
-dat$U <- dat$wSp*cos(dat$wDir)
-dat$V <- dat$wSp*sin(dat$wDir)
-
-selectDat <- dat[!is.na(dat$rwh),]
-
-ggplot(dat[dat$distTo < 10 & dat$forage != 1,]) + geom_point(aes(y = rwh, x = distTo)) + scale_x_continuous(limits=c(-180,180))
-hist(dat$distTo)
-
-# get the foraging start points
-fSt <- which(diff(dat$forage) == 1) + 1
-fEd <- which(diff(dat$forage) == -1)
-
-hist(fSt[2:length(fSt)] - fEd[1:(length(fSt)-1)])
-
-
-toRm <- which(as.numeric(difftime(dat$time[fSt[2:length(fSt)]],dat$time[fEd[1:(length(fSt)-1)]],units = "secs")) < 60*10)
-for(b in 1:length(toRm)){
-    dat[fEd[toRm[b]]:fSt[toRm[b] + 1], c("aveDir","wDir","wSp")] <- NA
+    wind[[b]]$rwh <- wind[[b]]$aveDir - wind[[b]]$wDir
+    wind[[b]]$ID <- tags[b]
 }
 
-toUse <- which(as.numeric(difftime(dat$time[fSt[2:length(fSt)]],dat$time[fEd[1:(length(fSt)-1)]],units = "secs")) > 60*10)
+windAll <- bind_rows(wind)
 
-b = 1
+ggplot(windAll) + 
+    geom_point(aes(x = rwh*(pi/180), y = distTo)) + coord_polar() + scale_x_continuous(limits = c(-pi,pi))
 
-ggplot(dat[fEd[toUse[b]]:fSt[toUse[b] + 1],]) + geom_path(aes(x = lon, y = lat)) + 
-
-difftime(dat$time[1:(nrow(dat)-1)],dat$time[2:nrow(dat)],units= "secs")
-
-
-difftime(dat$time[fEd[49]],dat$time[fSt[50]])
-
-for(b in 1:length(fSt)){
-    if(b == 1){
-        inds <- c(min(which(dat$ID[1:fSt[b]] == dat$ID[fSt[b]] & dat$forage[1:fSt[b]] == 0)),fSt[b] - 1)
-    } else {
-        inds <- c(min(which(dat$ID[fEd[b - 1]:fSt[b]] == dat$ID[fSt[b]] & dat$forage[fEd[b - 1]:fSt[b]] == 0)),fSt[b] - 1)
-    }
+FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
+FkOshi.dec <- SpatialPoints(cbind(FkOshi$Long,FkOshi$Lat),proj4string=CRS('+proj=longlat'))
+FkOshi.UTM <- spTransform(FkOshi.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+FkUTME <- FkOshi.UTM$coords.x1
+FkUTMN <- FkOshi.UTM$coords.x2
+for (b in 1:length(wind)){
+    wind[[b]]$distFromFk <- sqrt((wind[[b]]$UTMN - FkUTMN)^2 + (wind[[b]]$UTME - FkUTME)^2) * 10^(-3)
+    wind[[b]]$tSinceStart <- difftime(wind[[b]]$time, wind[[b]]$time[1], units="secs")
 }
-fSt[b]
-fEd[b]
+
+# go through each individuals tracks
+ggplot(wind[[6]]) +
+    geom_point(aes(x=rwh,y=timeTo/60)) + coord_polar() #+
+    #geom_line(aes(x=rwh,y=distFromFk))
+    # + facet_grid(~ ID) 
+colnames(windAll)
+
+ggplot(windAll[windAll$distTo < 30,]) +
+    geom_point(aes(x = rwh*(pi/180), y = distTo, fill = ID),pch=21, alpha=.3) + coord_polar(start=pi)
 
 
 dloadLoc  = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
@@ -594,9 +612,9 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
     outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("G:/UTokyoDrive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "F:/UTokyoDrive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=D19$DT,
