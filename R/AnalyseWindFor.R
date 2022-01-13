@@ -518,8 +518,7 @@ plot
 
 # bring in wind and foraging data
 if(Sys.info()['sysname'] == "Darwin"){
-    fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
-    forLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
+    fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
     fileloc <- "E:/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
     forLoc <- "E:/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
@@ -571,8 +570,22 @@ for(b in 1:length(files)){
     wind[[b]]$rwh <- wind[[b]]$aveDir - wind[[b]]$wDir
     wind[[b]]$ID <- tags[b]
 }
+dat$time <- as.POSIXct(dat$time, format = "%Y/%m/%d,%H:%M:%S", tz = "")
+dat$rwh <- dat$aveDir - dat$wDir
+dat$rwh[dat$aveDir == 0] <- NA
+dat$U <- dat$wSp*cos(dat$wDir)
+dat$V <- dat$wSp*sin(dat$wDir)
 
-windAll <- bind_rows(wind)
+selectDat <- dat[!is.na(dat$rwh),]
+
+colnames(dat)
+unique()
+ggplot() + 
+    geom_point(data = dat[dat$ID == unique(dat$ID)[1],],
+        aes(x=time,y=rwh))
+
+ggplot(dat[dat$distTo < 10 & dat$forage != 1,]) + geom_point(aes(y = rwh, x = distTo)) + scale_x_continuous(limits=c(-180,180))
+hist(dat$distTo)
 
 ggplot(windAll) + 
     geom_point(aes(x = rwh*(pi/180), y = distTo)) + coord_polar() + scale_x_continuous(limits = c(-pi,pi))
