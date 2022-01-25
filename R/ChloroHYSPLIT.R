@@ -44,9 +44,9 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
     outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("F:/UTokyoDrive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "F:/UTokyoDrive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D18 <- bind_rows(Dat)
 D19 <- bind_rows(Dat19)
@@ -68,7 +68,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     UTMN = c(D18$UTMN, D19$UTMN))
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
-write.table(allD, file = "F:/UTokyoDrive/PhD/Data/allD.txt")
+write.table(allD, file = "E:/My Drive/PhD/Data/allD.txt")
 japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 # functions to extract HYSPLIT model data
 find_hull <- function(df) df[chull(df$lon, df$lat), ]
@@ -232,14 +232,14 @@ ggplot(sel, aes(x = lon, y = lat)) + geom_point()
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
+    load("E:/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
 }
 # save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
 # LOAD IN THE LISTED DATA
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/ListD.RData")
+    load("E:/My Drive/PhD/Data/splitr/ListD.RData")
 }
 summary(outTraj)
 
@@ -763,7 +763,7 @@ ggplot() +
 if(Sys.info()['sysname'] == "Darwin"){
     windLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
 } else {
-    windLoc = "F:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinDat/"
+    windLoc = "E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
 }
 windFiles <- dir(windLoc)
 for(b in 1:length(windFiles)){
@@ -803,7 +803,7 @@ for(b in 1:nrow(WindDat)){ # for each row in WindDat
 if(Sys.info()['sysname'] == "Darwin"){
     windLoc19 = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
 } else {
-    windLoc19 = "F:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/MinDat/"
+    windLoc19 = "E:/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
 }
 windFiles19 <- dir(windLoc19,pattern=".csv")
 for(b in 1:length(windFiles19)){
@@ -842,14 +842,14 @@ for(g in 1:nrow(WindDat19)){
     next
   }
 }
-# save(WindDat19,file="/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDat19.RData")
+# save(WindDat19,file="E:/My Drive/PhD/Data/WindCalc/windDat19.RData")
 
 if(Sys.info()['sysname'] == "Darwin"){
   load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDat.RData")
   load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDat19.RData")
 } else {
-  load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat.RData")
-  load("F:/UTokyoDrive/PhD/Data/WindCalc/windDat19.RData")
+  load("E:/My Drive/PhD/Data/WindCalc/windDat.RData")
+  load("E:/My Drive/PhD/Data/WindCalc/windDat19.RData")
 }
 colnames(WindDat)
 # remove data points after the last foraging points
@@ -877,12 +877,12 @@ WindDat$yrID <- NA
 for(b in 1:nrow(WindDat)){
   WindDat$yrID[b] <- paste(totalDat$tagID[which(totalDat$DT > WindDat$DT[b] - lubridate::minutes(1) & totalDat$DT < WindDat$DT[b] + lubridate::minutes(1) & totalDat$Lat == WindDat$Lat[b] & totalDat$Lon == WindDat$Lon[b])], format(totalDat$DT[which(totalDat$DT > WindDat$DT[b] - lubridate::minutes(1) & totalDat$DT < WindDat$DT[b] + lubridate::minutes(1) & totalDat$Lat == WindDat$Lat[b] & totalDat$Lon == WindDat$Lon[b])],format="%Y"),sep="")
 }
-# save(WindDat,file="/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
+# save(WindDat,file="E:/My Drive/PhD/Data/WindCalc/windDatAll.RData")
 # LOAD WIND DATA
 if(Sys.info()['sysname'] == "Darwin"){
   load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
 } else {
-  load("F:/UTokyoDrive/PhD/Data/WindCalc/windDatAll.RData")
+  load("E:/My Drive/PhD/Data/WindCalc/windDatAll.RData")
 }
 
 # bayesian circular mixed-effects model
@@ -1618,7 +1618,7 @@ TrackDisp <- function(DT, lat, lon, hrs){
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ForageDisps.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/ForageDisps.RData")
+    load("E:/My Drive/PhD/Data/splitr/ForageDisps.RData")
 }
 
 # FORAGING TRAJECTORIES (BACKWARD)
@@ -1841,7 +1841,7 @@ ggplot() +
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/WithinDisp.RData")
 } else {
-    load("F:/UTokyoDrive/PhD/Data/splitr/WithinDisp.RData")
+    load("E:/My Drive/PhD/Data/splitr/WithinDisp.RData")
 }
 
 forDispTrav <- forDispTrav[!is.na(forDispTrav)]
@@ -1937,7 +1937,7 @@ ggplot() +
 if(Sys.info()['sysname'] == "Darwin"){
     netcdLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/Oceanographic/"
 } else {
-    netcdLoc <- "F:/UTokyoDrive/PhD/Data/Oceanographic"
+    netcdLoc <- "E:/My Drive/PhD/Data/Oceanographic"
 }
 ncFiles <- list.files(netcdLoc, pattern = "*.hdf")
 mcFiles <- ncFiles[!grepl(pattern="*.hdf.gz",list.files(netcdLoc))]
@@ -2269,7 +2269,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     tkb = c(D18$tkb, D19$tkb),
     dv = c(D18$dv, D19$dv),
     UTME = c(D18$UTME, D19$UTME),
-    UTMN = c(D18$UTMN, D19$UTMN),
+    UTMN = c(D18$UTMN, D19$UTMN))#,
     x = c(D18$x,D19$x),
     y = c(D18$y,D19$y),
     tdiff = c(D18$tdiff,D19$tdiff))
@@ -2297,9 +2297,9 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
     outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
 } else {
-    # load("F:/UTokyoDrive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("F:/UTokyoDrive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "F:/UTokyoDrive/PhD/Figures/Olfactory/"
+    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "E:/My Drive/PhD/Figures/Olfactory/"
 }
 D19 <- bind_rows(Dat19)
 # read in the 2019 wind estimates

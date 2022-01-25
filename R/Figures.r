@@ -33,11 +33,13 @@ options(timeout = 800)
 
 if(Sys.info()['sysname'] == "Darwin"){
     # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2018.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    load("E:/My Drive/PhD/Data/DatEth2018.RData")
+    load("E:/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D18 <- bind_rows(Dat)

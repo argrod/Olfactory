@@ -92,6 +92,9 @@ ggplot(WindDat[WindDat$ID == "1_S2",], aes(x = lon, y = lat)) +
         aes(x = lon, y = lat, angle = WindDat$WHead[WindDat$ID == "1_S2"], col = WindDat$WSpeed[WindDat$ID == "1_S2"], radius = scales::rescale(WindDat$WSpeed[WindDat$ID == "1_S2"], c(.1, .5)))) +
     scale_colour_gradient("Wind speed", low = "yellow", high = "red")
 
+ggplot(WindDat[WindDat$ID == "1_S2",], aes(x = DT, y = head-WHead)) +
+    geom_point()
+
 #################################################################################################################
 ############################  FINDING FORAGING WITH WIND CALCULATED BEFORE (30 MINS) ############################
 #################################################################################################################
