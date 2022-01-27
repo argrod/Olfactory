@@ -3,6 +3,14 @@ library(splitr)
 library(dplyr)
 library(plyr)
 library(ggplot2)
+library(devtools)
+devtools::install_github("ropenscilabs/rnaturalearth")
+devtools::install_github("ropenscilabs/rnaturalearthdata")
+install.packages("rnaturalearthhires",
+                 repos = "http://packages.ropensci.org",
+                 type = "source")
+install.packages('sf')
+library(sf)
 library(rnaturalearth)
 library(sp)
 # devtools::install_github('ropensci/plotdap')
@@ -85,19 +93,19 @@ if(allD$forage[nrow(allD)] == 1){
   forEd <- c(forEd, nrow(allD))
 }
 
-# LOAD IN THE STEP LENGTHS TRAJECTORIES
-if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
-} else {
-    load("E:/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
-}
-# save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
-# LOAD IN THE LISTED DATA
-if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
-} else {
-    load("E:/My Drive/PhD/Data/splitr/ListD.RData")
-}
+# # LOAD IN THE STEP LENGTHS TRAJECTORIES
+# if(Sys.info()['sysname'] == "Darwin"){
+#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
+# } else {
+#     load("E:/My Drive/PhD/Data/splitr/StepsTrajTimeChgNew.RData")
+# }
+# # save(ListD, file="/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
+# # LOAD IN THE LISTED DATA
+# if(Sys.info()['sysname'] == "Darwin"){
+#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/splitr/ListD.RData")
+# } else {
+#     load("E:/My Drive/PhD/Data/splitr/ListD.RData")
+# }
 # LOAD WIND DATA
 if(Sys.info()['sysname'] == "Darwin"){
   load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/windDatAll.RData")
@@ -124,7 +132,8 @@ ggplot(WindDat[WindDat$distTo < 10,]) +
     coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("-180/180","-90","0","90"), limits = c(-pi,pi)) + 
     theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
         family = "Arial"), axis.text = element_text(size = 12, family = "Arial"))
-
+ggplot(WindDat) +
+  geom_histogram(aes(x=RelHead,colour=yrID),position='dodge')
 one2Ten <- vector(mode="list", length = length(distGaps))
 distGaps <- seq(0,40,10)
 distGapsL <- distGaps+10
