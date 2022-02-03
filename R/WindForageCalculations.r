@@ -40,10 +40,10 @@ options(timeout = 800)
 ##############################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2018.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2019.RData")
-    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2018.RData")
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
     load("E:/My Drive/PhD/Data/DatEth2018.RData")
@@ -77,7 +77,7 @@ japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 ###############################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
+    windLoc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
 } else {
     windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
 }
@@ -96,7 +96,7 @@ for(b in 1:length(windFiles)){
 
 # repeat for 2019
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
+    windLoc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/"
 } else {
     windLoc <- 'E:/My Drive/PhD/Data/2019Shearwater/WindEst/MinDat/'
 }
