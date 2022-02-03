@@ -110,7 +110,7 @@ Sharing information across conspecifics would optimise foraging trips through di
 Studying behaviours of marine species has inherent difficulties in observing these species both above and, more importantly, below the water surface. The field of biologging, where tags recording data attached to animals enable collection of information on their movements during natural behaviours, provided an innovative solution to this challenge. This information can then be used to infer behaviour or explore the effects of external factors of study species. Since the inception of biologging, using capillary tubes and ink to measure maximum pressures experienced by seals during dives \citep{Kooyman_1965}, development of smaller and more sophisticated tags has expanded the possibilities of biologging studies through recording of novel data types and the use of innovative analytical methods \citep{Kooyman_2004}. In biologging studies, ensuring tagged individuals do not experience any reduction of fitness or ability to perform typical behaviours is paramount. This is a key factor when conceiving a biologging-based study and has proved to be a considerable challenge in previous research \citep{Gessaman_1988, Bowlin_2010}. As flight and flight efficiency is of utmost importance to seabirds, tag mass is a key factor in ensuring this lack of unintended impact during tag deployments. As a result, tagging of seabirds is often limited by the relative mass of tags to the tagged individual's body mass.
 
 % NOVEL ASPECTS
-Thus far, studies on the effects of wind and/or the the sensory capabilities of foraging seabirds have relied on satellite data gathered through tools such as the Advanced SCATterometer (ASCAT) \citep{Bentamy2012}. However, these data differ both temporally and spatially from the changes in foraging routes performed by seabirds. Recent studies have developed means to estimate wind conditions from seabird GPS tracks, using the relationship between ground speeds and heading \citep{Yonehara_2016}, and the relationship of the bird headings to the mean track vector \citep{Goto_2017}.
+Thus far, studies on the effects of wind and/or the the sensory capabilities of foraging seabirds have relied on satellite data gathered through tools such as the Advanced SCATterometer (ASCAT) \citep{Bentamy_2012}. However, these data differ both temporally and spatially from the changes in foraging routes performed by seabirds. Recent studies have developed means to estimate wind conditions from seabird GPS tracks, using the relationship between ground speeds and heading \citep{Yonehara_2016}, and the relationship of the bird headings to the mean track vector \citep{Goto_2017}.
 
 In combination with estimates of foraging method, we can investigate the search behaviour as the animals travel towards their foraging locations.  
 
@@ -129,6 +129,10 @@ Include department, institution, and complete address, with the ZIP/postal code,
 All authors must submit their articles at \href{http://www.pnascentral.org/cgi-bin/main.plex}{PNAScentral}. If you are using Overleaf to write your article, you can use the ``Submit to PNAS'' option in the top bar of the editor window. 
 
 \subsection*{Format}
+
+\section{Results}
+
+\section{Discussion}
 
 Many authors find it useful to organize their manuscripts with the following order of sections;  title, author line and affiliations, keywords, abstract, significance statement, introduction, results, discussion, materials and methods, acknowledgments, and references. Other orders and headings are permitted.
 
@@ -226,10 +230,28 @@ Supply Audio Video Interleave (avi), Quicktime (mov), Windows Media (wmv), anima
 
 Supply a composable U3D or PRC file so that it may be edited and composed. Authors may submit a PDF file but please note it will be published in raw format and will not be edited or composed.
 
+\subsection{Results}
 
-\matmethods{Please describe your materials and methods here. This can be more than one paragraph, and may contain subsections and equations as required. 
+In 2018, wind vectors were calculated for $7 \pm 3\%$ (mean $\pm$ standard deviation) of tag recording minutes, and $5 \pm 3\%$ in 2019.
 
-\subsection*{Subsection for Method}
+
+    The wind estimation method was applied to GPS recordings from 20 individuals in 2018 and 2019 (one example Fig. \ref{fig:EgWind}), generating wind vectors for portions of all individuals' tracks. In 2018, wind vectors were calculated for $7 \pm 3\%$ (mean $\pm$ standard deviation) of tag recording minutes, and $5 \pm 3\%$ in 2019. The wind estimation maximum likelihood was to pass two conditions about the estimations: anisotropic heading vector probability distribution and angle between mean heading and mean track vector is less than 90{\degree}. The goodness of fit was then verified by checking that the bird's heading and heading speed were distributed according to the Weibull and von Mises distribution, respectively, using a Kolmogorov-Smirnov test, and that the heading and heading speed were uncorrelated using a Pearson's correlation test. Wind estimates were only accepted once all these tests were passed. GPS data for the model were filtered to remove speeds under 15 kph (derived from \citep{Shiomi_2012}), and the 51-minute model windows were required to contain at least 45 data points. Wind vectors were calculated within 10 km of the next foraging spot for 19 individuals, within 5 km for 15 individuals, and within 1 km for 11 individuals. Foraging trip durations of wind vectors calculated within 10 km of the next foraging spot ranged from 1 to 8 days. 
+
+\subsection{Wind conditions across foraging trips}
+    As shearwaters approached foraging spots, their use of wind conditions shifted from sidewind focussed distributions to near headwind conditions (Figures \cref{fig:largeDists, fig:distDest}). From 100 to 20 km from the next foraging foraging spot, birds showed a bimodal distribution of side-to-head winds. This transitions to greater use of headwinds when within 
+
+    All 1 and 10 km binned relative wind heading distributions less than 10 km from the next foraging spot were found to be non-uniformly distributed ($p < 0.01$, Hermans-Rasson test) and mean headings indicated birds flew in headwind conditions when approaching foraging spots (Fig. \ref{fig:globfig}). Of the 1 km binned distributions, the only two that were significantly different in their distribution ($p < 0.05$, Watson-Wheeler test) were those from 2-1 and 1-0 km from the next foraging spot (Table \ref{tab:WatWheel}).
+
+    $\bar{r}$ values of mean relative wind headings (the amount of the birds deviated from a steady course relative to wind headings) increased with proximity to foraging, particularly between 15 to 10 km (Fig. \ref{fig:DispDist}). From 10 km up to the foraging spots themselves, their relative wind heading dispersals increased, suggesting they no longer travelled according to wind headings as diligently. From 40 km to the next foraging spot, wind speeds remained relatively stable around 3 ms$^{-1}$ (Fig. \ref{fig:dispSpeed}). When leaving the nest colony, shearwaters used sidewind conditions during both long and short foraging trips when within 200 km of the nest colony (Fig. \ref{fig:leaveHeads}). Birds performing longer foraging trips began to vary in their wind conditions use between 200 km, mostly using head/sidewind conditions. At high wind speeds, birds flew in side to headwind conditions (Fig. \ref{fig:speedAngles}) with lower wind speeds making up the straight head and tailwinds the birds experienced. Ground speeds of shearwaters were highest in tailwind conditions and slowest in headwind conditions (Fig. \ref{fig:groundSpeedAngles}).
+
+\matmethods{
+    Streaked shearwaters were tagged in Funakoshi-Ohshima Island (39\textdegree24'N,141\textdegree59'E) during the breeding seasons of 2018 and 2019 (see \citep{Garrod_2021} for full details). Birds were tagged with GPS and acceleration (AxyTrek) tags (Axy-Trek Marine, Technosmart, Guidonia Montecelio, Italy) attached to the back feathers with waterproof tape (Tesa, Hamburg, Germany) and instant glue (Loctite, D{\"u}sseldorf, Germany). Eleven of 12 attached tags (7 male, 4 female) were successfully recovered in 2018 and nine tags (7 male, 2 female) in 2019.
+
+\subsection*{Wind estimation}
+The wind estimations were calculated using the method of  methods were derived from \citep{Goto_2017}. GPS data were subsampled to a sample rate of one fix per second to reflect that of the original study. Relative wind headings (the direction of the bird relative to the bird's direction of travel) were calculated by subtracting the b
+}
+
+\subsection*{Data analysis}
 Example text for subsection.
 }
 
