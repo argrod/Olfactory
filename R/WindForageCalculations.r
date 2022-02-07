@@ -114,8 +114,8 @@ WindDat$WHead <- atan2(WindDat$Y, WindDat$X)
 WindDat$WSpeed <- sqrt(WindDat$X^2 + WindDat$Y^2)
 Wind.dec <- SpatialPoints(cbind(WindDat$lon,WindDat$lat), proj4string = CRS("+proj=longlat"))
 UTMdat <- spTransform(Wind.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
-WindDat$UTME <- coordinates(UTMdat)[, 1]
-WindDat$UTMN <- coordinates(UTMdat)[, 2] 
+WindDat$UTME <- UTMdat$coords.x1
+WindDat$UTMN <- UTMdat$coords.x2
 
 WindDat$timeTo <- NA
 WindDat$distTo <- NA

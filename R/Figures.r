@@ -39,6 +39,10 @@ library(png)
 library(ggspatial)
 options(timeout = 800)
 
+###################################################################################################################################
+############################################################# READ IN #############################################################
+###################################################################################################################################
+
 if(Sys.info()['sysname'] == "Darwin"){
     # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2018.RData")
@@ -70,6 +74,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     UTMN = c(D18$UTMN, D19$UTMN))
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
+allD$yrID <- paste(format(allD$DT,'%Y'),"_",sub("\\_S.*","",allD$tagID),sep="")
 # allD$forBeh <- NA
 # allD$forBeh[allD$dv == 1] <- "Dive"
 # allD$forBeh[allD$tkb == 1] <- "Surf"
@@ -115,12 +120,16 @@ if(Sys.info()['sysname'] == "Darwin"){
 allTraj <- bind_rows(outTraj)
 allTraj$relH <- allTraj$aveHd - allTraj$trjHd 
 
+##################################################################################################################
+################################################ OUTPUT LOCATIONS ################################################
+##################################################################################################################
+
 # figure locations
 if(Sys.info()['sysname'] == "Darwin"){
-  figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Olfactory/"
+  figLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/WindManuscript/"
   # figLoc <- "/Documents/GitHub/PhD/Olfactory/"
 } else {
-  figLoc <- "E:/My Drive/PhD/Figures/Olfactory/"
+  figLoc <- "E:/My Drive/PhD/Figures/WindManuscript/"
   # figLoc <- "F:/Documents/GitHub/PhD/Olfactory/"
 }
 WindDat$WSpd <- sqrt(WindDat$X^2 + WindDat$Y^2)
@@ -134,9 +143,14 @@ ggplot(WindDat[WindDat$distTo < 10,]) +
         family = "Arial"), axis.text = element_text(size = 12, family = "Arial"))
 ggplot(WindDat) +
   geom_histogram(aes(x=RelHead,colour=yrID),position='dodge')
-one2Ten <- vector(mode="list", length = length(distGaps))
-distGaps <- seq(0,40,10)
+
+##################################################################################################################
+################################### HEADINGS AND HR TEST FOR 10 KM BINS 100:10 ###################################
+##################################################################################################################
+
+distGaps <- seq(0,90,10)
 distGapsL <- distGaps+10
+one2Ten <- vector(mode="list", length = length(distGaps))
 signif.ceiling <- function(x, n){
   pow <- floor( log10( abs(x) ) ) + 1 - n
   y <- ceiling(x / 10 ^ pow) * 10^pow
@@ -144,6 +158,7 @@ signif.ceiling <- function(x, n){
   y[x==0] <- 0
   y
 }
+
 avRelHd <- NA
 pvals<-NA
 for(b in 1:length(distGaps)){
@@ -537,7 +552,7 @@ for(b in 1:length(retlengths)){
   }
 }
 save(retShrtDat,file="/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalc/shrtretDat.RData")
-retShrtDat <- retShrtDat[!is.na(retShrtDat$dist),]\
+retShrtDat <- retShrtDat[!is.na(retShrtDat$dist),]
 
 # retShrtDat <- data.frame(dist = retlengths, aveHd = unlist(lapply(1:length(retlengths), function(x) circ.mean(leavingshrt$RelHead[leavingshrt$distFromFk >= retlengths[x] & leavingshrt$distFromFk < retlengthsL[x]]))),
   # disp = unlist(lapply(1:length(retlengths), function(x) circ.disp(leavingshrt$RelHead[leavingshrt$distFromFk >= retlengths[x] & leavingshrt$distFromFk < retlengthsL[x]])$var)),
@@ -619,7 +634,7 @@ ggsave(paste(figLoc,"DispersalOverDistIndivs.svg",sep=""), device="svg", dpi = 3
       width = 6, units = "in")
 
 
-breaks<-seq(from=0,to=round_any(max(WindDat$distTo),10,f=ceiling),by=10)
+breaks<-seq(from=0,to=round_any(max(WindDat$distTo,na.rm=T),10,f=ceiling),by=10)
 mnW <- ddply(WindDat, "bin10", summarise, grp.mean=mean(aligned))
 WindDat$bin10 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
@@ -750,8 +765,8 @@ for(b in 1:length(distGaps)){
     }
     # Cairo(width=8, height = 8, file = paste(figLoc,"RelHead",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
     print(one2Ten[[b]])
-    ggsave(paste(figLoc,"RelHeadLeavingHR",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
-      width = 3, units = "in")
+    # ggsave(paste(figLoc,"RelHeadLeavingHR",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
+      # width = 3, units = "in")
 }
 
 # allList <- bind_rows(ListD)
@@ -771,9 +786,9 @@ allTraj$relH <- allTraj$aveHd - allTraj$trjHd
 allTraj$relH[allTraj$relH < pi] = allTraj$relH[allTraj$relH < pi] + 2*pi
 allTraj$relH[allTraj$relH > pi] = allTraj$relH[allTraj$relH > pi] - 2*pi
 allTraj <- na.omit(allTraj)
-one2TenTr <- vector(mode="list",length=5)
 distGaps <- seq(0,9,1)
 distGapsL <- distGaps+1
+one2TenTr <- vector(mode="list",length=length(distGaps))
 for(b in 1:length(distGaps)){
     RaylT <- r.test(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]])
     # tst<-HR_test(allTraj$relH[allTraj$distTo >= distGaps[b] & allTraj$distTo < distGapsL[b]])
@@ -800,7 +815,7 @@ for(b in 1:length(distGaps)){
         # + geom_label(aes(x = pi/4, y = max(ggplot_build(roseplt)$data[[1]]$count)), label = paste("p value = ",as.character(signif(RaylT$p.value, 3)), sep = ""))
     }
     # Cairo(width=8, height = 8, file = paste(figLoc,"relH",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
-    # print(one2Ten[[b]])
+    print(one2Ten[[b]])
     # ggsave(paste(figLoc,"relHHermansRasson",as.character(distGaps[b]),"-",as.character(distGapsL[b]),".svg",sep=""), device="svg", dpi = 300, height = 3.5,
     #   width = 3, units = "in")
 }

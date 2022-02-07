@@ -50,14 +50,37 @@ library(rgeos)
 
 if(Sys.info()['sysname'] == "Darwin"){
     # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/Temp2018.RData")
-    # outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2018.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("E:/My Drive/PhD/Data/Temp2018.RData")
-    # outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    load("E:/My Drive/PhD/Data/DatEth2018.RData")
+    load("E:/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
-# D18 <- bind_rows(Dat)
+D18 <- bind_rows(Dat)
+D19 <- bind_rows(Dat19)
+allD <- data.frame(DT=c(D18$DT, D19$DT),
+    lat = c(D18$Lat, D19$Lat),
+    lon = c(D18$Lon, D19$Lon),
+    forage = c(D18$Forage,D19$Forage),
+    tagID = c(D18$tagID, D19$tagID),
+    Day = c(D18$Day, D19$Day),
+    Sex = c(D18$Sex, D19$Sex),
+    distTrav = c(D18$recalDist, D19$recalDist),
+    spTrav = c(D18$spTrav, D19$spTrav),
+    recalSp = c(D18$recalSp, D19$recalSp),
+    distFk = c(D18$distFromFk, D19$distFromFk),
+    tripN = c(D18$tripN, D19$tripN),
+    tripL = c(D18$tripL, D19$tripL),
+    tkb = c(D18$tkb, D19$tkb),
+    dv = c(D18$dv, D19$dv),
+    UTME = c(D18$UTME, D19$UTME),
+    UTMN = c(D18$UTMN, D19$UTMN))
+allD$Year <- format(allD$DT, format = "%Y")
+allD$forage <- allD$dv == 1 | allD$tkb == 1
+allD$yrID <- paste(format(allD$DT,"%Y"),sub('\\_S.*','',allD$tagID),sep="_")
 ###############################################################################
 ######################## BRING IN THE WIND ESTIMATIONS ########################
 ###############################################################################
@@ -533,22 +556,22 @@ forFiles <- dir(forLoc, pattern = "*ForageGPS.txt")
 tags = unique(sub("_S.*", "",forFiles))
 
 # read in the foraging data
-forD <- vector(mode="list", length=length(tags))
-for (t in 1:length(tags)) {
-    dayFiles = forFiles[grepl(paste("^",tags[t],"_S.*",sep=""),forFiles)]
-    ds <- data.frame(DT=character(),lat=numeric(),lon=numeric(),Forage=integer())
-    outpt <- ds
-    for (d in 1:length(dayFiles)){
-        outpt <- rbind(outpt,read.delim(paste(forLoc,dayFiles[d],sep=""),sep=",",header=T))
-    }
-    outpt$DT <- as.POSIXct(outpt$DT,"%d-%b-%Y %H:%M:%S",tz="")
-    outpt$ID <- tags[t]
-    w.dec <- SpatialPoints(cbind(outpt$Lon,outpt$Lat),proj4string = CRS("+proj=longlat"))
-    UTMdat <- spTransform(w.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
-    outpt$UTME <- UTMdat$coords.x1
-    outpt$UTMN <- UTMdat$coords.x2
-    forD[[t]] <- outpt
-}
+# forD <- vector(mode="list", length=length(tags))
+# for (t in 1:length(tags)) {
+#     dayFiles = forFiles[grepl(paste("^",tags[t],"_S.*",sep=""),forFiles)]
+#     ds <- data.frame(DT=character(),lat=numeric(),lon=numeric(),Forage=integer())
+#     outpt <- ds
+#     for (d in 1:length(dayFiles)){
+#         outpt <- rbind(outpt,read.delim(paste(forLoc,dayFiles[d],sep=""),sep=",",header=T))
+#     }
+#     outpt$DT <- as.POSIXct(outpt$DT,"%d-%b-%Y %H:%M:%S",tz="")
+#     outpt$ID <- tags[t]
+#     w.dec <- SpatialPoints(cbind(outpt$Lon,outpt$Lat),proj4string = CRS("+proj=longlat"))
+#     UTMdat <- spTransform(w.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+#     outpt$UTME <- UTMdat$coords.x1
+#     outpt$UTMN <- UTMdat$coords.x2
+#     forD[[t]] <- outpt
+# }
 # read in wind data
 wind <- vector(mode="list",length=length(tags))
 for(b in 1:length(files)){
