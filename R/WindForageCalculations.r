@@ -141,6 +141,31 @@ for(b in 1:nrow(WindDat)){
   inds <- which(allD$yrID == WindDat$yrID[b] & allD$DT > (WindDat$DT[b] - lubridate::seconds(5)) & allD$DT < (WindDat$DT[b] + lubridate::seconds(5)))
   WindDat$spTrav[b] <- mean(allD$spTrav[inds])
 }
+WindDat$tripL <- NA
+for(b in 1:nrow(WindDat)){
+    ind = which(abs(allD$DT[allD$yrID == WindDat$yrID[b]] - WindDat$DT[b]) == min(abs(allD$DT[allD$yrID == WindDat$yrID[b]] - WindDat$DT[b])))
+    WindDat$tripL[b] <- allD$tripL[which(allD$yrID == WindDat$yrID[b])[ind]]
+}
+# add foraging number for each indiv
+WindDat$forNo <- NA
+# add a column of transitions to foraging (foraging starts)
+forChg = diff(allD$forage) == 1
+if(allD$forage[1] == 1){
+    forChg <- c(TRUE,forChg)
+} else {
+    forChg <- c(FALSE,forChg)
+}
+allD$forChg <- forChg
+# add up all previous transitions to foraging, therefore giving the foraging number
+for(b in 1:nrow(WindDat)){
+    # find next foraging point
+    if(any(allD$yrID == WindDat$yrID[b] & allD$DT > WindDat$DT[b] & allD$forage == 1)){
+        nxtForInd <- min(which(allD$yrID == WindDat$yrID[b] & allD$DT > WindDat$DT[b] & allD$forage == 1),na.rm=T)
+        # sum(allD$forage[1:nxtForInd][allD$yrID == WindDat$yrID[b]])
+        WindDat$forNo[b] <- sum(allD$forChg[allD$yrID == WindDat$yrID[b] & allD$DT <= allD$DT[nxtForInd]])
+    }
+}
+
 save(WindDat,file='E:/My Drive/PhD/Data/WindCalculations1819.RData')
 
 WindDat$RelHead <- WindDat$head-WindDat$WHead

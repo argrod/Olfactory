@@ -619,7 +619,7 @@ ggsave(paste(figLoc,"DispersalOverDist.svg",sep=""), device="svg", dpi = 300, he
 dispDistPlots <- vector(mode="list",length=length(unique(WindDat$yrID)))
 indivWinds <- unique(WindDat$yrID)
 for(b in 1:length(dispDistPlots)){
-  lengths<-seq(from=0,to=max(WindDat$distTo[WindDat$yrID == indivWinds[b]])-1, by = 1)
+  lengths<-seq(from=0,to=max(WindDat$distTo[WindDat$yrID == indivWinds[b]],na.rm=T)-1, by = 1)
   lengthsL <- lengths+1 
   binDat <- data.frame(dist = lengthsL, aveHd = unlist(lapply(1:length(lengths), function(x) circ.mean(WindDat$RelHead[WindDat$distTo >= lengths[x] & WindDat$distTo < lengthsL[x] & WindDat$yrID == indivWinds[b]]))),
     disp = unlist(lapply(1:length(lengths), function(x) circ.disp(WindDat$RelHead[WindDat$distTo >= lengths[x] & WindDat$distTo < lengthsL[x] & WindDat$yrID == indivWinds[b]])$var)))
@@ -836,14 +836,39 @@ ggsave(paste(figLoc,"EmptyWindPlot.svg",sep=""), device="svg", dpi = 300, height
 inters <- seq(52.5, 2.5, by=-1)
 # create a circular class from RelHead
 relHCirc <- circular(WindDat$RelHead, unit = "radians",rotation="counter")
-aveHCirc <- circular(WindDat$Head, units = "radians",rotation="counter")
+aveHCirc <- circular(WindDat$head, units = "radians",rotation="counter")
 lapply(inters, function(x) watson.test(relHCirc[WindDat$distTo > (x - 5) & WindDat$distTo <= x], alpha = 0.05, dist = "vonmises"))
 
-cirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 2])))
+# run for each individual
+allOut = vector(mode="list",length=length(unique(WindDat$yrID)))
+for(yrid in 1:length(unique(WindDat$yrID))){
+  sel <- WindDat[WindDat$yrID == unique(WindDat$yrID)[yrid],]
+  LcirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2])))
+  # add the 90th and 10th %ile of est wind speed
+  LcirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(sel$WSpd[sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2], probs = c(.1,.9))))
+  LcirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(sel$WSpd[sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel  $tripL > 2])))
+  LaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2])))  
+  allOut[[yrid]] <- c(data.frame("dis"=inters,"yrID"=unique(WindDat$yrID)[yrid]),LcirDistEst)
+}
+allRbar = bind_rows(allOut)
+colnames(allRbar)
+ggplot() + geom_line(data=allRbar,aes(x = dis, y = rbar,colour=yrID)) +
+  # geom_line(data = data.frame(inters,aveHDistEst), aes(x = inters, y = rbar, linetype = "dotted")) +
+  scale_x_reverse(name = "") + scale_y_continuous(name = expression(bar(italic(r))))
+
+LcirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1])))
 # add the 90th and 10th %ile of est wind speed
-cirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 2], probs = c(.1,.9))))
-cirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 2])))
-aveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5)])))
+LcirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1], probs = c(.1,.9))))
+LcirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1])))
+LaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1])))
+Lnums <- sapply(inters, function(x) sum(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1))
+
+ScirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1])))
+# add the 90th and 10th %ile of est wind speed
+ScirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1], probs = c(.1,.9))))
+ScirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1])))
+SaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1])))
+Snums <- sapply(inters, function(x) sum(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1))
 
 plot()
 
@@ -852,16 +877,17 @@ sapply(inters, function(x) length(unique(WindDat$yrID[WindDat$distTo > (x - 2.5)
 plot(rev(inters[cirDistEst$n>30]),rev(cirDistEst$rbar[cirDistEst$n>30]))
 
 # dispersal of relHead vs dispersal of bird head
-dispG <- ggplot() + geom_line(data=data.frame(inters, cirDistEst),aes(x = inters, y = rbar,linetype="solid")) +
-  geom_line(data = data.frame(inters,aveHDistEst), aes(x = inters, y = rbar, linetype = "dotted")) +
-  scale_x_reverse(name = "") + scale_y_continuous(name = expression(bar(italic(r)))) +
-  scale_linetype_manual(name = "", values=c("dotted","solid"), labels=c("Average Bird\nHeadings", "Relative Wind\nHeadings")) +
-  theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,
-                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) +
-  annotate("text", x = 50, y = 0.8, label = "A)")
+dispG <- ggplot() + geom_line(data=data.frame(inters, LcirDistEst),aes(x = inters, y = rbar,linetype="solid")) +
+  geom_line(data=data.frame(inters, ScirDistEst),aes(x = inters, y = rbar,linetype="dotted")) +
+  # geom_line(data = data.frame(inters,aveHDistEst), aes(x = inters, y = rbar, linetype = "dotted")) +
+  scale_x_reverse(name = "Distance to next foraging point (km)") + scale_y_continuous(name = expression(bar(italic(r)))) +
+  scale_linetype_manual(name = "", values=c("dotted","solid"), labels=c("Short trip\n(<3 days)", "Long trip\n(>2 days")) +
+  theme_bw() + theme(panel.grid = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+                family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) #+
+  # annotate("text", x = 50, y = 0.8, label = "A)")
 
-ggsave(paste(figLoc,"dispDist.svg",sep=""), device="svg", dpi = 300, height = 3,
-      width = 5, units = "in")
+ggsave(paste(figLoc,"dispDist.svg",sep=""), device="svg", dpi = 300, height = 7,
+      width = 8.7, units = "cm")
 
 
 
