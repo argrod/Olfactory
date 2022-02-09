@@ -136,6 +136,11 @@ for(b in 1:nrow(WindDat)){ # for each row in WindDat
     WindDat$distTo[b] <- sqrt((allD$UTMN[point] - WindDat$UTMN[b])^2 + (allD$UTME[point] - WindDat$UTME[b])^2)*10^-3
   }
 }
+WindDat$spTrav <- NA
+for(b in 1:nrow(WindDat)){
+  inds <- which(allD$yrID == WindDat$yrID[b] & allD$DT > (WindDat$DT[b] - lubridate::seconds(5)) & allD$DT < (WindDat$DT[b] + lubridate::seconds(5)))
+  WindDat$spTrav[b] <- mean(allD$spTrav[inds])
+}
 save(WindDat,file='E:/My Drive/PhD/Data/WindCalculations1819.RData')
 
 WindDat$RelHead <- WindDat$head-WindDat$WHead
