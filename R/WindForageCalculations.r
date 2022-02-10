@@ -166,7 +166,12 @@ for(b in 1:nrow(WindDat)){
     }
 }
 
-save(WindDat,file='E:/My Drive/PhD/Data/WindCalculations1819.RData')
+if(Sys.info()['sysname'] == "Darwin"){
+    save(WindDat,file='/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalculations1819.RData')
+} else {
+    save(WindDat,file='E:/My Drive/PhD/Data/WindCalculations1819.RData')
+}
+
 
 WindDat$RelHead <- WindDat$head-WindDat$WHead
 WindDat$RelHead[WindDat$RelHead < -pi] <- WindDat$RelHead[WindDat$RelHead < -pi] + 2*pi
@@ -175,20 +180,122 @@ WindDat$aligned <- WindDat$RelHead + pi
 WindDat$aligned[WindDat$aligned > pi] <- WindDat$aligned[WindDat$aligned > pi] - 2*pi
 
 
+# TEST THE OFFSET FROM HEADWINDS (PI/2 RWH)
+WindDat$HdOff <- abs(pi/2 - WindDat$RelHead)
+# ggplot(WindDat[WindDat$distTo < 90,]) +
+    # geom_point(aes(x = HdOff, y = distTo)) +
+    # coord_polar()
+WindDat$HdOff[WindDat$HdOff > pi] <- WindDat$HdOff[WindDat$HdOff > pi] - pi
+plot(WindDat$distTo,WindDat$HdOff)
+
+# READ IN RAW GPS DATA
+
+if(Sys.info()['sysname'] == "Darwin"){
+    fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/AxyTrek/"
+} else {
+    fileloc <- "E:/My Drive/PhD/Data/2018Shearwater/AxyTrek/"
+}
+
+tags <- dir(fileloc)
+GPSDat <- data.frame("GPS"=double(),"Lat"=numeric(),"Lon"=numeric(),"yrID"=character())
+for(tag in tags){
+    tmp <-  read.table(paste(fileloc,tag,'/',dir(paste(fileloc,tag,sep=""),pattern="*.txt"),sep=""),
+        sep='\t',header=FALSE,colClasses=c("character","numeric","numeric",rep("NULL",5)))
+    colnames(tmp) <- c("DT","Lat","Lon")
+    tmp$yrID <- paste("2018_",sub("*_S.*","",dir(paste(fileloc,tag,sep=""),pattern="*.txt")),sep="")
+    tmp$DT <- as.POSIXct(tmp$DT, format = "%d/%m/%Y,%H:%M:%S") + (9*3600)
+    GPSDat <- rbind(GPSDat,tmp)
+    rm(tmp)
+}
+# include 2019 data
+if(Sys.info()['sysname'] == "Darwin"){
+    fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/AxyTrek/"
+} else {
+    fileloc <- "E:/My Drive/PhD/Data/2019Shearwater/AxyTrek/"
+}
+tags <- dir(fileloc)
+for(tag in tags){
+    tmp <-  read.table(paste(fileloc,tag,'/',dir(paste(fileloc,tag,sep=""),pattern="*.txt"),sep=""),
+        sep='\t',header=FALSE,colClasses=c("character","numeric","numeric",rep("NULL",5)))
+    colnames(tmp) <- c("DT","Lat","Lon")
+    tmp$yrID <- paste("2019_",sub("*_S.*","",dir(paste(fileloc,tag,sep=""),pattern="*.txt")),sep="")
+    tmp$DT <- as.POSIXct(tmp$DT, format = "%Y/%m/%d,%H:%M:%S") + (9*3600)
+    GPSDat <- rbind(GPSDat,tmp)
+    rm(tmp)
+}
+# add UTM values and format datetime
+GPS.dec <- SpatialPoints(cbind(GPSDat$Lon,GPSDat$Lat), proj4string = CRS("+proj=longlat"))
+UTMdat <- spTransform(GPS.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+GPSDat$UTME <- UTMdat$coords.x1
+GPSDat$UTMN <- UTMdat$coords.x2
+
+# calculate the immediate bird heading for each WindDat value
+WindDat$bHead <- NA
+for(b in 1:nrow(WindDat)){
+    # pointInd <- max(which(GPSDat$yrID == WindDat$yrID[b] & GPSDat$DT <= WindDat$DT[b]),na.rm=T)
+    # pointAfter <- min(which(GPSDat$yrID == WindDat$yrID[b] & GPSDat$DT > WindDat$DT[b]),na.rm=T)
+    WindDat$bHead[b] <- atan2(GPSDat$UTMN[min(which(GPSDat$yrID == WindDat$yrID[b] & GPSDat$DT > WindDat$DT[b]),na.rm=T)] - GPSDat$UTMN[max(which(GPSDat$yrID == WindDat$yrID[b] & GPSDat$DT <= WindDat$DT[b]),na.rm=T)],
+        GPSDat$UTME[min(which(GPSDat$yrID == WindDat$yrID[b] & GPSDat$DT > WindDat$DT[b]),na.rm=T)] - GPSDat$UTME[max(which(GPSDat$yrID == WindDat$yrID[b] & GPSDat$DT <= WindDat$DT[b]),na.rm=T)])
+}
+
+# WindDat = na.omit(WindDat)
+WindDat$rwh <- WindDat$bHead - WindDat$WHead
+WindDat$rwh[WindDat$rwh < -pi] <- WindDat$rwh[WindDat$rwh < -pi] + 2*pi
+WindDat$rwh[WindDat$rwh > pi] <- WindDat$rwh[WindDat$rwh > pi] - 2*pi
+WindDat$rAligned <- WindDat$rwh + pi
+WindDat$rAligned[WindDat$rAligned > pi] <- WindDat$rAligned[WindDat$rAligned > pi] - 2*pi
+
+plot(WindDat$RelHead,WindDat$rwh)
+
+# RETRY DISTRELHEAD WITH NEW BIRD HEADINGS
 breaks<-seq(from=0,to=round_any(max(WindDat$distTo,na.rm=T),10,f=ceiling),by=10)
-mnW <- ddply(WindDat, "bin10", summarise, grp.mean=mean(aligned))
 WindDat$bin10 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
+mnW <- ddply(WindDat, "bin10", summarise, grp.mean=mean(rAligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 bin10ns <- WindDat[WindDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
-
-ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = aligned, colour = bin10)) +
+ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")
-  geom_density(alpha=.2,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), size=1.5, geom="line",position="identity") +# coord_polar(start=pi) +
+  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"Blues")),
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$bin10[WindDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
-  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"YlOrRd")),
-    labels=paste(sort(unique(WindDat$bin10[WindDat$distTo < 90])),", n = ", as.character(unlist(bin10ns[,2])),sep="")) +
-  scale_y_continuous(name="Proportion across all birds (%)", breaks=seq(0,0.3,.1),labels=seq(0,30,10))
-ggsave(paste(figLoc,"DistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 5,
-      width = 5, units = "in")
+  scale_y_continuous(name="Proportion across all birds (%)", breaks=seq(0,0.6,.1),labels=seq(0,60,10))
+
+
+# split into long and short foraging trips
+LwDat <- WindDat[WindDat$tripL >= 2,]
+breaks<-seq(from=0,to=round_any(max(LwDat$distTo,na.rm=T),10,f=ceiling),by=10)
+LwDat$bin10 <- cut(LwDat$distTo, breaks = breaks, include.lowest=T,right=F)
+mnW <- ddply(LwDat, "bin10", summarise, grp.mean=mean(rAligned))
+# Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
+bin10ns <- LwDat[LwDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
+lDists <- ggplot(LwDat[LwDat$distTo > 0 &LwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(LwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")
+  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"Blues")),
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(LwDat$bin10[LwDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+  scale_y_continuous(name="Proportion across all birds (%)", breaks=seq(0,0.6,.1),labels=seq(0,60,10))
+
+# split into long and short foraging trips
+SwDat <- WindDat[WindDat$tripL < 2,]
+breaks<-seq(from=0,to=round_any(max(SwDat$distTo,na.rm=T),10,f=ceiling),by=10)
+SwDat$bin10 <- cut(SwDat$distTo, breaks = breaks, include.lowest=T,right=F)
+mnW <- ddply(SwDat, "bin10", summarise, grp.mean=mean(rAligned))
+# Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
+bin10ns <- SwDat[SwDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
+sDists <- ggplot(SwDat[SwDat$distTo > 0 &SwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(SwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")
+  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"Blues")),
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(SwDat$bin10[SwDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+  scale_y_continuous(name="Proportion across all birds (%)", breaks=seq(0,0.6,.1),labels=seq(0,60,10))
+
+ggarrange(lDists,sDists,nrow=2)

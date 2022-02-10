@@ -636,12 +636,12 @@ ggsave(paste(figLoc,"DispersalOverDistIndivs.svg",sep=""), device="svg", dpi = 3
 
 breaks<-seq(from=0,to=round_any(max(WindDat$distTo,na.rm=T),10,f=ceiling),by=10)
 WindDat$bin10 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
-mnW <- ddply(WindDat, "bin10", summarise, grp.mean=mean(aligned))
+mnW <- ddply(WindDat, "bin10", summarise, grp.mean=mean(rAligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 bin10ns <- WindDat[WindDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
-ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = aligned, colour = bin10)) +
+ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")
-  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"Blues")),
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$bin10[WindDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
@@ -652,6 +652,44 @@ ggsave(paste(figLoc,"DistRelDensity.svg",sep=""), device="svg", dpi = 300, heigh
       width = 9, units = "cm")
 
 
+# split into long and short foraging trips
+LwDat <- WindDat[WindDat$tripL >= 2,]
+breaks<-seq(from=0,to=round_any(max(LwDat$distTo,na.rm=T),10,f=ceiling),by=10)
+LwDat$bin10 <- cut(LwDat$distTo, breaks = breaks, include.lowest=T,right=F)
+mnW <- ddply(LwDat, "bin10", summarise, grp.mean=mean(rAligned))
+# Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
+bin10ns <- LwDat[LwDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
+lDists <- ggplot(LwDat[LwDat$distTo > 0 &LwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(LwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")
+  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"Blues")),
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(LwDat$bin10[LwDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+  scale_y_continuous(name="", breaks=seq(0,0.7,.1),labels=seq(0,70,10),limits = c(0,.75))
+
+# split into long and short foraging trips
+SwDat <- WindDat[WindDat$tripL < 2,]
+breaks<-seq(from=0,to=round_any(max(SwDat$distTo,na.rm=T),10,f=ceiling),by=10)
+SwDat$bin10 <- cut(SwDat$distTo, breaks = breaks, include.lowest=T,right=F)
+mnW <- ddply(SwDat, "bin10", summarise, grp.mean=mean(rAligned))
+# Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
+bin10ns <- SwDat[SwDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
+sDists <- ggplot(SwDat[SwDat$distTo > 0 &SwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(SwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")
+  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"Blues")),
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(SwDat$bin10[SwDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+  scale_y_continuous(name="", breaks=seq(0,0.7,.1),labels=seq(0,70,10),limits=c(0,.75))
+
+fig <- ggarrange(lDists,sDists,nrow=2,common.legend = T,legend='right',labels=c("L","S"),hjust=-4,vjust=2)
+annotate_figure(fig,left=text_grob("Proportion of relative wind headings (%)",rot=90,size=10,vjust=1.5))
+ggsave(paste(figLoc,"LSDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 8,
+      width = 9, units = "cm")
 
 bin10s <- bin10ns[,2]
 typeof(WindDat$bin10)
