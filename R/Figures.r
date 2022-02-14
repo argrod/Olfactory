@@ -77,7 +77,8 @@ allD$yrID <- paste(format(allD$DT,'%Y'),"_",sub("\\_S.*","",allD$tagID),sep="")
 # allD$forBeh <- NA
 # allD$forBeh[allD$dv == 1] <- "Dive"
 # allD$forBeh[allD$tkb == 1] <- "Surf"
-japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
+japan <- ne_countries(scale = "medium", country
+ = "Japan", returnclass = "sf")
 # distances <- allD %>% filter(forage==1) %>% group_by(tagID, forBeh, Year) %>% dplyr::summarise(mxdist=median(distFk))
 # distances %>% group_by(forBeh,Year) %>% dplyr::summarise(mean(mxdist))
 # FORAGING SPOT DISPERSALS
@@ -1184,3 +1185,63 @@ ggplot() +
   scale_y_continuous("",limits = c(30,45)) +
   geom_point(data=FkOshi, aes(x=Long,y=Lat),pch=21,fill="#E82237",size = 5)
 ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021Funder/FkOshimap.svg", dpi = 300,height=8.81,units="cm")
+
+################################################################################
+########################### FIGURE FOR MEXT SLIDE ##############################
+################################################################################
+
+FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
+ggplot() + geom_sf(data = japan, fill = 'grey64', colour = 'grey64') +
+    coord_sf(xlim = c(139, 147), ylim = c(39, 45)) +
+    geom_path(data = allD,aes(x=lon,y=lat),size=.1,colour="grey40") +
+  geom_point(data = allD[allD$forage==1,],aes(x=lon,y=lat,colour='#CC3300'), pch=16,size=2) + 
+  scale_x_continuous(name="Longitude", breaks=seq(139,147,1)) +
+  scale_y_continuous(name="Latitude", breaks=seq(39,45,1)) +
+  geom_point(data = FkOshi, aes(x = Long, y = Lat, colour = "chartreuse3"), fill = "chartreuse3", pch = 24,size = 3) +
+  scale_colour_manual(name = "", values = c("#CC3300","black"), labels=c("Nest colony","Foraging points")) +
+  scale_shape_manual(name = "", values = c(24,16)) +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12),
+    axis.text = element_text(size = 10),legend.position="top",
+    legend.text = element_text(size = 12)) + 
+    guides(colour = guide_legend(override.aes = list(size=3,shape=c(24,16),colour=c("black","#CC3300"))))
+    #annotation_scale(location = 'br')
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Figures/Grants/ExampleForageAll.svg", device="svg", dpi = 300, height = 10,
+      width = 10, units = "in")
+
+###############################################################################
+######################## INDIVIDUAL TRACK AND WINDS ###########################
+###############################################################################
+
+
+tmp50 = [df.loc[df[df['distTo']<50].index,:].groupby('forageNo').size() for df in wDat]
+# find the largest number of wind data before foraging point for within 50km in each tag (nan refers to no data under those conditions)
+toTst = []
+for tmp in range(len(tmp50)):
+    try:
+        toTst.append(tmp50[tmp].idxmax())
+    except:
+        toTst.append(np.nan)
+toTst
+# take example of tag b
+b = 4
+sub = wDat[b].loc[(wDat[b]['forageNo'] == toTst[b]) & (wDat[b]['distTo'] < 50),:].copy()
+for df in forDat:
+        if df.loc[0,'yrID'] == sub['yrID'].iloc[0]:
+            ind = df.copy()
+
+nxtForPt = np.nanmin(np.where((ind['Forage'] == 1) & (ind['DT'] > sub['DT'].iloc[0])))
+cm = 1/2.54  # centimeters in inches
+fig,ax = plt.subplots(figsize=(9*cm, 9*cm))
+plt.plot(ind.loc[(ind['DT'] >= sub['DT'].iloc[0]) & (ind['DT'] < (ind.loc[nxtForPt,'DT'])),'Lon'],
+ind.loc[(ind['DT'] >= sub['DT'].iloc[0]) & (ind['DT'] < (ind.loc[nxtForPt,'DT'])),'Lat'],zorder=0)
+arrows=plt.quiver(sub['Lon'],sub['Lat'],sub['X'],sub['Y'],sub['wSp'])
+plt.scatter(ind.loc[nxtForPt,'Lon'],ind.loc[nxtForPt,'Lat'],c='Green',label='Foraging point')
+font = font_manager.FontProperties(family='Arial',
+                                   style='normal', size=12)
+plt.legend(scatterpoints=1, frameon=False, labelspacing=1,prop=font)
+cb=plt.colorbar(arrows)
+cb.set_label("Wind speed (m/s)",fontname="Arial",fontsize=12)
+plt.xlabel('Lon',fontname="Arial",fontsize=12)
+plt.ylabel('Lat',fontname="Arial",fontsize=12)
+plt.title("Wind vectors <50km from next foraging point",fontname="Arial",fontsize=12)

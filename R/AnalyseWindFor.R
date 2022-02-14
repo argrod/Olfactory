@@ -19,7 +19,7 @@ install.packages("MASS")
 install.packages("diagram")
 install.packages("ggthemes")
 install.packages("extrafont")
-
+install.packages("bpnreg")
 
 library(Gmisc)
 library(sf)
@@ -43,16 +43,17 @@ library(diagram)
 library(ggthemes)
 library(extrafont)
 library(rgeos)
+library(bpnreg)
 
 #################################################################################
 ######################## BRING IN THE FORAGING ESTIMATES ########################
 #################################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2018.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2019.RData")
-    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2018.RData")
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
     load("E:/My Drive/PhD/Data/DatEth2018.RData")
@@ -86,7 +87,7 @@ allD$yrID <- paste(format(allD$DT,"%Y"),sub('\\_S.*','',allD$tagID),sep="_")
 ###############################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
+    windLoc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
 } else {
     windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
 }
@@ -375,7 +376,7 @@ ggplot(WindDat, aes(x = WHead, y = BSpd)) +
 # geom_point(aes(x = Lon, y = Lat, col = tFromFor)) +
 # geom_point(data = DatSel[DatSel$Forage == 1,], aes(x = Lon, y = Lat), col = 'red')
 
-sel <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",", header = T)
+sel <- read.delim("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",", header = T)
 sel$EHead <- atan2(sel$X,sel$Y)
 sel$WHead <- atan2(sel$U,sel$V)
 ggplot() +
@@ -386,7 +387,7 @@ ggplot() +
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated headings") +
     scale_x_continuous("JMA headings")
-ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/WindCorr.png", , dpi = 300, height = 6,
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021SeabirdSymposium/WindCorr.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 library(circular)
@@ -400,7 +401,7 @@ ggplot() +
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)") +
     scale_x_continuous("JMA wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/SpeedCorr.png", , dpi = 300, height = 6,
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021SeabirdSymposium/SpeedCorr.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -413,7 +414,7 @@ ggplot() +
     theme(panel.border = element_blank(), text = element_text(size = 14,
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindCol.png", , dpi = 300, height = 6,
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindCol.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -425,7 +426,7 @@ ggplot() +
     theme(panel.border = element_blank(), text = element_text(size = 14,
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindBW.png", , dpi = 300, height = 6,
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindBW.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -637,7 +638,7 @@ ggplot(windAll[windAll$distTo < 30,]) +
     geom_point(aes(x = rwh*(pi/180), y = distTo, fill = ID),pch=21, alpha=.3) + coord_polar(start=pi)
 
 
-dloadLoc  = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
+dloadLoc  = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/gribs/"
 gribFls = list.files(dloadLoc,pattern="*grib2.bin")
 if(any(gribFls == "Z__C_RJTD_20190824150000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"))
 
@@ -647,9 +648,9 @@ if(any(gribFls == "Z__C_RJTD_20190824150000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"
 
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
     load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
@@ -681,7 +682,7 @@ japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 
 # CALCULATE RELATIVE WIND CONDITIONS FROM ESTIMATES WITH TIME/DISTANCE TO FORAGING
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    windLoc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
     windLoc = "G:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 }
@@ -729,16 +730,11 @@ for(b in 1:nrow(WindDat)){ # for each row in WindDat
   }
 }
 
+#####################################################################################################
+############################### BAYESIAN CIRCULAR MIXED EFFECTS MODEL ###############################
+#####################################################################################################
 
-min(abs(as.numeric(difftime(allD$DT[allD$tagID == WindDat$ID[b]], WindDat$DT[b],units="secs"))))
-which(allD$DT == WindDat$DT[b]-lubridate::seconds(4) & allD$tagID == WindDat$ID[b])
-
-allD[393,]
-
-allD[11,]
-WindDat[b,]
-sqrt((WindDat$UTMN[b] - allD$UTMN[393])^2 + (WindDat$UTME[b] - allD$UTME[393])^2)
+fit.Motor <- bpnr(pred.I = Phaserad ~ 1 + Cond, data = Motor, its = 10000, burn = 100, n.lag = 3, seed = 101)
 
 
-range(WindDat$DT[WindDat$ID == WindDat$ID[b]])
-range(allD$DT[allD$tagID == WindDat$ID[b]])
+traceplot(fit.Motor,parameter="beta1")

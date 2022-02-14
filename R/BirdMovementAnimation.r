@@ -51,11 +51,15 @@ library(RColorBrewer)
 #################################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive/My Drive/PhD/Data/Temp2018.RData")
+    # load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2018.RData")
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("E:/My Drive/PhD/Data/Temp2018.RData")
+    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("E:/My Drive/PhD/Data/DatEth2018.RData")
+    load("E:/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D18 <- bind_rows(Dat)
 D19 <- bind_rows(Dat19)
@@ -73,6 +77,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     dv = c(D18$dv, D19$dv))
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
+allD$yrID <- paste(format(allD$DT,'%Y'),"_",sub("\\_S.*","",allD$tagID),sep="")
 japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 
 # prepare data (2018)
@@ -171,3 +176,88 @@ adding +(geom_point(data = indD, aes(x = lon, y = lat,
             colour = as.character(IndCols$Cols[IndCols$Inds == ind]),
        alpha = 1-(as.numeric(difftime(selD$DT[b],indD$DT,units="secs"))/30*60)), size = 2, pch = 1) +
        theme(legend.position = "none"))
+
+################################################################################
+######################### ANIMATE WITH FORAGING POINTS #########################
+################################################################################
+
+
+# prepare data (2018)
+selD <- allD[format(allD$DT,"%Y") == "2018",]
+# reorder by time
+selD <- selD[order(selD$DT),]
+
+# prepare n colours (based on number of individuals in data)
+n <- length(unique(selD$tagID))
+IndCols <- brewer.pal(length(unique(selD$tagID)), name = "Paired")
+names(IndCols) <- levels(as.factor(selD$tagID))
+colScale <- scale_colour_manual(name = "tagID", values = IndCols, drop = F)
+
+p1 = ggplot(selD) +
+    geom_point(aes(x = lon, y = lat, colour = tagID), alpha = 0) +
+    scale_colour_manual(name = "Tag ID", values = IndCols, drop = F)+
+    guides(colour = guide_legend(override.aes = list(alpha=1))) +
+    geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    coord_sf(xlim = c(140, 146), ylim = c(39, 44)) + 
+    theme_bw() + theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()) + 
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10)) +
+    scale_x_continuous("Longitude") + scale_y_continuous("Latitude")
+    
+if(Sys.info()['sysname'] == "Darwin"){
+    dir_out <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/"
+} else {
+    dir_out <- "E:/My Drive/PhD/Admin/AORIPresentation/Animation/"
+}
+
+tseq <- seq(selD$DT[1], selD$DT[nrow(selD)],by = "15 mins")
+selD$forage[is.na(selD$forage)] = 0
+for (b in 984:length(tseq)) {
+    Indivs <- unique(selD$tagID[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b]])
+    # select data within 5 mins
+    # subD <- selD[selD$DT > (tseq[b] - minutes(60)) & selD$DT <= tseq[b],]
+    # number of indivs
+    # Indivs <- unique(subD$tagID)
+    adding <- p1
+    for (ind in 1:length(Indivs)) {
+        agrad <- 1 + as.numeric(difftime(selD$DT[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind]],max(selD$DT[selD$DT <= tseq[b] & selD$tagID == Indivs[ind]]),units='secs'))/(1800)
+        if(length(agrad) > 1){
+            agrad[2:length(agrad)] <- agrad[2:length(agrad)] - .2
+        }
+        # agrad <- 1-(as.numeric(difftime(selD$DT[b],indD$DT,units="secs"))/(60*60))
+        # select only that indiv
+        # indD <- subD[subD$tagID == Indivs[ind],]
+        # apply alpha gradient by time difference from original time
+        # agrad <- 1-(as.numeric(difftime(selD$DT[b],indD$DT,units="secs"))/(60*60))
+        adding <- adding + geom_point(data = selD[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind],],
+            aes(x = lon, y = lat, group = tagID,
+            colour = tagID), alpha = agrad, size = 3) + colScale + 
+            scale_colour_manual(name = "Tag ID", values = IndCols, drop = F)
+    }
+    # add dot if foraging
+    if(any(selD$forage[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind]]==1)){
+        adding <- adding + geom_point(data=selD[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind] & selD$forage == 1,],
+            aes(x = lon, y = lat),pch=21, colour = "red", size = 1)
+    }
+    if(b > 1){
+        # add expanding dot for previous foraging
+        if(any(selD$forage[selD$DT > (tseq[b-1] - minutes(15)) & selD$DT <= tseq[b-1]]==1)){
+            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-1] - minutes(15)) & selD$DT <= tseq[b-1] & selD$forage == 1,],
+                aes(x = lon, y = lat),pch=21,colour = 'red', size = 2,alpha = .5)
+        }
+    }
+    if(b > 2){
+        # add expanding dot for previous foraging
+        if(any(selD$forage[selD$DT > (tseq[b-2] - minutes(15)) & selD$DT <= tseq[b-2]]==1)){
+            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-2] - minutes(15)) & selD$DT <= tseq[b-2] & selD$forage == 1,],
+                aes(x = lon, y = lat),pch=21, colour = "red", size = 3,alpha = .2)
+        }
+    }
+    adding <- adding + annotate(geom="text", x = 140, y = 44, label = as.character(tseq[b]), hjust = 0)
+    fp = file.path(dir_out, paste0(as.character(b),".png"))
+
+    ggsave(plot = adding,
+        filename = fp,
+        device = "png")
+
+    rm(adding)
+}
