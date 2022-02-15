@@ -198,7 +198,7 @@ p1 = ggplot(selD) +
     scale_colour_manual(name = "Tag ID", values = IndCols, drop = F)+
     guides(colour = guide_legend(override.aes = list(alpha=1))) +
     geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-    coord_sf(xlim = c(140, 146), ylim = c(39, 44)) + 
+    coord_sf(xlim = c(140, 148), ylim = c(39, 44)) + 
     theme_bw() + theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()) + 
     theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10)) +
     scale_x_continuous("Longitude") + scale_y_continuous("Latitude")
@@ -211,7 +211,7 @@ if(Sys.info()['sysname'] == "Darwin"){
 
 tseq <- seq(selD$DT[1], selD$DT[nrow(selD)],by = "15 mins")
 selD$forage[is.na(selD$forage)] = 0
-for (b in 984:length(tseq)) {
+for (b in 1:length(tseq)) {
     Indivs <- unique(selD$tagID[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b]])
     # select data within 5 mins
     # subD <- selD[selD$DT > (tseq[b] - minutes(60)) & selD$DT <= tseq[b],]
@@ -236,20 +236,34 @@ for (b in 984:length(tseq)) {
     # add dot if foraging
     if(any(selD$forage[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind]]==1)){
         adding <- adding + geom_point(data=selD[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind] & selD$forage == 1,],
-            aes(x = lon, y = lat),pch=21, colour = "red", size = 1)
+            aes(x = lon, y = lat),pch=21, colour = "red", size = 2)
     }
     if(b > 1){
         # add expanding dot for previous foraging
         if(any(selD$forage[selD$DT > (tseq[b-1] - minutes(15)) & selD$DT <= tseq[b-1]]==1)){
             adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-1] - minutes(15)) & selD$DT <= tseq[b-1] & selD$forage == 1,],
-                aes(x = lon, y = lat),pch=21,colour = 'red', size = 2,alpha = .5)
+                aes(x = lon, y = lat),pch=1,colour = 'red', size = 3,alpha = .7)
         }
     }
     if(b > 2){
         # add expanding dot for previous foraging
         if(any(selD$forage[selD$DT > (tseq[b-2] - minutes(15)) & selD$DT <= tseq[b-2]]==1)){
             adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-2] - minutes(15)) & selD$DT <= tseq[b-2] & selD$forage == 1,],
-                aes(x = lon, y = lat),pch=21, colour = "red", size = 3,alpha = .2)
+                aes(x = lon, y = lat),pch=1, colour = "red", size = 4,alpha = .5)
+        }
+    }
+    if(b > 3){
+        # add expanding dot for previous foraging
+        if(any(selD$forage[selD$DT > (tseq[b-3] - minutes(15)) & selD$DT <= tseq[b-3]]==1)){
+            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-3] - minutes(15)) & selD$DT <= tseq[b-3] & selD$forage == 1,],
+                aes(x = lon, y = lat),pch=1, colour = "red", size = 5,alpha = .4)
+        }
+    }
+    if(b > 4){
+        # add expanding dot for previous foraging
+        if(any(selD$forage[selD$DT > (tseq[b-4] - minutes(15)) & selD$DT <= tseq[b-4]]==1)){
+            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-4] - minutes(15)) & selD$DT <= tseq[b-4] & selD$forage == 1,],
+                aes(x = lon, y = lat),pch=1, colour = "red", size = 6,alpha = .3)
         }
     }
     adding <- adding + annotate(geom="text", x = 140, y = 44, label = as.character(tseq[b]), hjust = 0)
