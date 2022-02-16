@@ -194,28 +194,33 @@ names(IndCols) <- levels(as.factor(selD$tagID))
 colScale <- scale_colour_manual(name = "tagID", values = IndCols, drop = F)
 
 FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
-p1 = ggplot(selD) +
-    geom_point(aes(x = lon, y = lat), alpha = 0) +
-    geom_point(data = FkOshi, aes(x = Long, y = Lat, colour = "Black"), fill = "chartreuse3", pch = 24,size = 3) +
-    scale_colour_manual(name = "", values="black",labels = 'Nest colony', drop = F)+
+p1 = ggplot() +
     geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-    coord_sf(xlim = c(140, 148), ylim = c(39, 44)) + 
+    coord_sf(xlim = c(140, 146), ylim = c(39, 44)) + 
+    geom_point(data=selD,aes(x = lon, y = lat,fill="deepskyblue"),colour="deepskyblue", alpha = 0) +
+    geom_point(data = FkOshi, aes(x = Long, y = Lat, fill = "chartreuse3"), colour = "black", pch = 24,size = 3) +
+    geom_point(data=selD[selD$forage==1,],aes(x=lon,y=lat,fill="#CC3300"),colour="#CC3300",alpha=0,stroke=2)+
+    scale_fill_manual(name = "", values=c("deepskyblue","chartreuse3","#CC3300"),labels = c('Nest colony',"Kevin","Foraging"), drop = F)+
+    guides(fill = guide_legend(override.aes = list(colour=c("black","deepskyblue","#CC3300"),fill=c("chartreuse3","deepskyblue","white"),stroke=c(1,1,2),pch=c(24,16,1)))) +
     theme_bw() + theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()) + 
     theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10)) +
     scale_x_continuous("Longitude") + scale_y_continuous("Latitude")
-p1    
+p1
 if(Sys.info()['sysname'] == "Darwin"){
-    dir_out <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/"
+    dir_out <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/WithPrev/"
 } else {
-    dir_out <- "E:/My Drive/PhD/Admin/AORIPresentation/Animation/"
+    dir_out <- "E:/My Drive/PhD/Admin/AORIPresentation/Animation/WithPrev/"
 }
 
 selD <- allD[allD$yrID == "2018_6",]
-tseq <- seq(selD$DT[1], selD$DT[nrow(selD)],by = "15 mins")
+tseq <- seq(selD$DT[1], selD$DT[nrow(selD)],by = "30 mins")
 selD$forage[is.na(selD$forage)] = 0
 for(b in 1:length(tseq)){
     adding <- p1
-    agrad <- 1 + as.numeric(difftime(selD$DT[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b]],max(selD$DT[selD$DT <= tseq[b]]),units='secs'))/(1800)
+    # add previous foraging points and track, comment out if not needed
+    adding <- adding + geom_path(data=selD[selD$DT <= tseq[b],],aes(x=lon,y=lat),size=.3,alpha=.5) +
+        geom_point(data=selD[selD$DT <= tseq[b] & selD$forage == 1,],aes(x=lon,y=lat),pch=1,colour="#CC3300",size=1,stroke=1.2)
+    agrad <- 1 + as.numeric(difftime(selD$DT[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b]],max(selD$DT[selD$DT <= tseq[b]]),units='secs'))/(3600)
         if(length(agrad) > 1){
             agrad[2:length(agrad)] <- agrad[2:length(agrad)] - .2
         }
@@ -227,111 +232,44 @@ for(b in 1:length(tseq)){
         adding <- adding + geom_point(data = selD[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b],],
             aes(x = lon, y = lat),colour = 'deepskyblue', alpha = agrad, size = 3)
         # add dot if foraging
-    if(any(selD$forage[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b]]==1)){
-        adding <- adding + geom_point(data=selD[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b] & selD$forage == 1,],
-            aes(x = lon, y = lat),pch=1, colour = "#CC3300", size = 2)
+    if(any(selD$forage[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b]]==1)){
+        adding <- adding + geom_point(data=selD[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b] & selD$forage == 1,],
+            aes(x = lon, y = lat),pch=1, colour = "#CC3300", size = 2,alpha = .7,stroke = 2)
     }
     if(b > 1){
         # add expanding dot for previous foraging
-        if(any(selD$forage[selD$DT > (tseq[b-1] - minutes(15)) & selD$DT <= tseq[b-1]]==1)){
-            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-1] - minutes(15)) & selD$DT <= tseq[b-1] & selD$forage == 1,],
-                aes(x = lon, y = lat),pch=1,colour = '#CC3300', size = 3,alpha = .7)
+        if(any(selD$forage[selD$DT > (tseq[b-1] - minutes(30)) & selD$DT <= tseq[b-1]]==1)){
+            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-1] - minutes(30)) & selD$DT <= tseq[b-1] & selD$forage == 1,],
+                aes(x = lon, y = lat),pch=1,colour = '#CC3300', size = 3,alpha = .4,stroke = 2)
         }
     }
     if(b > 2){
         # add expanding dot for previous foraging
-        if(any(selD$forage[selD$DT > (tseq[b-2] - minutes(15)) & selD$DT <= tseq[b-2]]==1)){
-            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-2] - minutes(15)) & selD$DT <= tseq[b-2] & selD$forage == 1,],
-                aes(x = lon, y = lat),pch=1, fill = "#CC3300", size = 4,alpha = .5)
+        if(any(selD$forage[selD$DT > (tseq[b-2] - minutes(30)) & selD$DT <= tseq[b-2]]==1)){
+            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-2] - minutes(30)) & selD$DT <= tseq[b-2] & selD$forage == 1,],
+                aes(x = lon, y = lat),pch=1, colour = "#CC3300", size = 4,alpha = .3,stroke = 2)
         }
     }
     if(b > 3){
         # add expanding dot for previous foraging
-        if(any(selD$forage[selD$DT > (tseq[b-3] - minutes(15)) & selD$DT <= tseq[b-3]]==1)){
-            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-3] - minutes(15)) & selD$DT <= tseq[b-3] & selD$forage == 1,],
-                aes(x = lon, y = lat),pch=1, colour = "#CC3300", size = 5,alpha = .4)
+        if(any(selD$forage[selD$DT > (tseq[b-3] - minutes(30)) & selD$DT <= tseq[b-3]]==1)){
+            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-3] - minutes(30)) & selD$DT <= tseq[b-3] & selD$forage == 1,],
+                aes(x = lon, y = lat),pch=1, colour = "#CC3300", size = 5,alpha = .2,stroke = 2)
         }
     }
     if(b > 4){
         # add expanding dot for previous foraging
-        if(any(selD$forage[selD$DT > (tseq[b-4] - minutes(15)) & selD$DT <= tseq[b-4]]==1)){
-            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-4] - minutes(15)) & selD$DT <= tseq[b-4] & selD$forage == 1,],
-                aes(x = lon, y = lat),pch=1, colour = "#CC3300", size = 6,alpha = .3)
+        if(any(selD$forage[selD$DT > (tseq[b-4] - minutes(30)) & selD$DT <= tseq[b-4]]==1)){
+            adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-4] - minutes(30)) & selD$DT <= tseq[b-4] & selD$forage == 1,],
+                aes(x = lon, y = lat),pch=1, colour = "#CC3300", size = 6,alpha = .1,stroke =2)
         }
     }
     adding <- adding + annotate(geom="text", x = 140, y = 44, label = as.character(tseq[b]), hjust = 0)
     fp = file.path(dir_out, paste0(as.character(b),".png"))
 
     ggsave(plot = adding,
-        filename = fp,
+        filename = fp, width = 5, height = 5, units = "in",
         device = "png")
 
     rm(adding)
 }
-
-# for (b in 1:length(tseq)) {
-#     Indivs <- unique(selD$tagID[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b]])
-#     # select data within 5 mins
-#     # subD <- selD[selD$DT > (tseq[b] - minutes(60)) & selD$DT <= tseq[b],]
-#     # number of indivs
-#     # Indivs <- unique(subD$tagID)
-#     adding <- p1
-#     for (ind in 1:length(Indivs)) {
-#         agrad <- 1 + as.numeric(difftime(selD$DT[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b]],max(selD$DT[selD$DT <= tseq[b]]),units='secs'))/(1800)
-#         if(length(agrad) > 1){
-#             agrad[2:length(agrad)] <- agrad[2:length(agrad)] - .2
-#         }
-#         # agrad <- 1-(as.numeric(difftime(selD$DT[b],indD$DT,units="secs"))/(60*60))
-#         # select only that indiv
-#         # indD <- subD[subD$tagID == Indivs[ind],]
-#         # apply alpha gradient by time difference from original time
-#         # agrad <- 1-(as.numeric(difftime(selD$DT[b],indD$DT,units="secs"))/(60*60))
-#         adding <- adding + geom_point(data = selD[selD$DT > (tseq[b] - minutes(30)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind],],
-#             aes(x = lon, y = lat, group = tagID,
-#             colour = tagID), alpha = agrad, size = 3) + colScale + 
-#             scale_colour_manual(name = "Tag ID", values = IndCols, drop = F)
-#     }
-#     # add dot if foraging
-#     if(any(selD$forage[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind]]==1)){
-#         adding <- adding + geom_point(data=selD[selD$DT > (tseq[b] - minutes(15)) & selD$DT <= tseq[b] & selD$tagID == Indivs[ind] & selD$forage == 1,],
-#             aes(x = lon, y = lat),pch=21, colour = "red", size = 2)
-#     }
-#     if(b > 1){
-#         # add expanding dot for previous foraging
-#         if(any(selD$forage[selD$DT > (tseq[b-1] - minutes(15)) & selD$DT <= tseq[b-1]]==1)){
-#             adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-1] - minutes(15)) & selD$DT <= tseq[b-1] & selD$forage == 1,],
-#                 aes(x = lon, y = lat),pch=1,colour = 'red', size = 3,alpha = .7)
-#         }
-#     }
-#     if(b > 2){
-#         # add expanding dot for previous foraging
-#         if(any(selD$forage[selD$DT > (tseq[b-2] - minutes(15)) & selD$DT <= tseq[b-2]]==1)){
-#             adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-2] - minutes(15)) & selD$DT <= tseq[b-2] & selD$forage == 1,],
-#                 aes(x = lon, y = lat),pch=1, colour = "red", size = 4,alpha = .5)
-#         }
-#     }
-#     if(b > 3){
-#         # add expanding dot for previous foraging
-#         if(any(selD$forage[selD$DT > (tseq[b-3] - minutes(15)) & selD$DT <= tseq[b-3]]==1)){
-#             adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-3] - minutes(15)) & selD$DT <= tseq[b-3] & selD$forage == 1,],
-#                 aes(x = lon, y = lat),pch=1, colour = "red", size = 5,alpha = .4)
-#         }
-#     }
-#     if(b > 4){
-#         # add expanding dot for previous foraging
-#         if(any(selD$forage[selD$DT > (tseq[b-4] - minutes(15)) & selD$DT <= tseq[b-4]]==1)){
-#             adding <- adding + geom_point(data=selD[selD$DT > (tseq[b-4] - minutes(15)) & selD$DT <= tseq[b-4] & selD$forage == 1,],
-#                 aes(x = lon, y = lat),pch=1, colour = "red", size = 6,alpha = .3)
-#         }
-#     }
-#     adding <- adding + annotate(geom="text", x = 140, y = 44, label = as.character(tseq[b]), hjust = 0)
-#     fp = file.path(dir_out, paste0(as.character(b),".png"))
-
-#     ggsave(plot = adding,
-#         filename = fp,
-#         device = "png")
-
-#     rm(adding)
-# }
-
-p1 + geom_path(data=selD, aes(x = lon, y = lat, colour = tagID))
