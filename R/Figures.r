@@ -1213,35 +1213,53 @@ ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Figures/Grants/E
 ######################## INDIVIDUAL TRACK AND WINDS ###########################
 ###############################################################################
 
+tmp50 <- WindDat[WindDat$distTo < 50,] %>% group_by(yrID,forNo) %>%
+  summarise(wind_num = n()) %>% filter(wind_num == max(wind_num))
 
-tmp50 = [df.loc[df[df['distTo']<50].index,:].groupby('forageNo').size() for df in wDat]
-# find the largest number of wind data before foraging point for within 50km in each tag (nan refers to no data under those conditions)
-toTst = []
-for tmp in range(len(tmp50)):
-    try:
-        toTst.append(tmp50[tmp].idxmax())
-    except:
-        toTst.append(np.nan)
-toTst
+tmp50
 # take example of tag b
-b = 4
-sub = wDat[b].loc[(wDat[b]['forageNo'] == toTst[b]) & (wDat[b]['distTo'] < 50),:].copy()
-for df in forDat:
-        if df.loc[0,'yrID'] == sub['yrID'].iloc[0]:
-            ind = df.copy()
+b = 7
+sub = WindDat[WindDat$forNo == tmp50$forNo[b] & WindDat$distTo < 50 & WindDat$yrID == tmp50$yrID[b],]
+nxtForPt = min(which(allD$forage == 1 & allD$DT > sub$DT[1] & allD$yrID == tmp50$yrID[b]))
 
-nxtForPt = np.nanmin(np.where((ind['Forage'] == 1) & (ind['DT'] > sub['DT'].iloc[0])))
-cm = 1/2.54  # centimeters in inches
-fig,ax = plt.subplots(figsize=(9*cm, 9*cm))
-plt.plot(ind.loc[(ind['DT'] >= sub['DT'].iloc[0]) & (ind['DT'] < (ind.loc[nxtForPt,'DT'])),'Lon'],
-ind.loc[(ind['DT'] >= sub['DT'].iloc[0]) & (ind['DT'] < (ind.loc[nxtForPt,'DT'])),'Lat'],zorder=0)
-arrows=plt.quiver(sub['Lon'],sub['Lat'],sub['X'],sub['Y'],sub['wSp'])
-plt.scatter(ind.loc[nxtForPt,'Lon'],ind.loc[nxtForPt,'Lat'],c='Green',label='Foraging point')
-font = font_manager.FontProperties(family='Arial',
-                                   style='normal', size=12)
-plt.legend(scatterpoints=1, frameon=False, labelspacing=1,prop=font)
-cb=plt.colorbar(arrows)
-cb.set_label("Wind speed (m/s)",fontname="Arial",fontsize=12)
-plt.xlabel('Lon',fontname="Arial",fontsize=12)
-plt.ylabel('Lat',fontname="Arial",fontsize=12)
-plt.title("Wind vectors <50km from next foraging point",fontname="Arial",fontsize=12)
+ggplot() + 
+  geom_quiver(data=sub,aes(x=lon,y=lat,u=WSpd*cos(WHead),v=WSpd*sin(WHead)))
+
+
+ggplot() + 
+  geom_point(data=sub,aes(x=lon,y=lat,colour=DT))
+
+ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    coord_sf(xlim = c(142.3, 142.7), ylim = c(39.5, 39.75)) +
+    geom_path(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),],aes(x=lon,y=lat)) +
+  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[a] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
+    aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.05,"inches")), alpha = .6,
+    radius = .3*(WindDat$WSpd[WindDat$yrID == indivWinds[a] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpd[WindDat$yrID == indivWinds[a]]))) +  
+  geom_point(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) +
+  # geom_segment(data = allD[allD$yrID==indivWinds[a],],aes(x=lon[seq(1,nrow(sbst)-1,50)],xend=lon[seq(2,nrow(sbst),50)],
+    # y=lat[seq(1,nrow(sbst)-1,50)],yend=lat[seq(2,nrow(sbst),50)]),arrow = arrow(length = unit(0.08,"inches"))) +
+  scale_x_continuous(name="Lon", breaks=seq(142.3,142.7,.2)) +
+  scale_y_continuous(name="Lat", breaks=seq(39.5,39.7,.2)) +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
+  scale_fill_manual(name = "Foraging points", values = "deepskyblue", labels="") +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial")) + 
+    annotation_scale(location = 'br')
+
+
+ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    geom_path(data=allD[allD$yrID == tmp50$yrID[6],], aes(x = lon, y = lat)) + geom_point(data=allD[allD$yrID == tmp50$yrID[6] & allD$forage == 1 & allD$DT > as.POSIXct("2018/09/08 10:20:00") & allD$DT > as.POSIXct("2018/09/08 10:30:00"),],
+    aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
+  geom_spoke(data = WindDat[WindDat$yrID == tmp50$yrID[6],], aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.05,"inches")),
+  radius = .5*(WindDat$WSpd[WindDat$yrID == tmp50$yrID[6]]/max(WindDat$WSpd[WindDat$yrID == tmp50$yrID[6]]))) +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
+  geom_segment(aes(x=allD[allD$yrID == tmp50$yrID[6],]$lon[seq(1,nrow(allD[allD$yrID == tmp50$yrID[6],])-1,200)],xend=allD[allD$yrID == tmp50$yrID[6],]$lon[seq(2,nrow(allD[allD$yrID == tmp50$yrID[6],]),200)],
+    y=allD[allD$yrID == tmp50$yrID[6],]$lat[seq(1,nrow(allD[allD$yrID == tmp50$yrID[6],])-1,200)],yend=allD[allD$yrID == tmp50$yrID[6],]$lat[seq(2,nrow(allD[allD$yrID == tmp50$yrID[6],]),200)]),arrow = arrow(length = unit(0.1,"inches"))) +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 8,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+    annotation_scale(location = 'br') +
+    coord_sf(xlim = c(139, 145), ylim = c(39, 43)) +
+    scale_y_continuous(breaks = c(39,41,43), labels = c("39","41","43"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
+    scale_x_continuous(breaks=c(139,141,143,145),labels = c("139", "141", "143", "145"), name = paste("Longitude (","\u00b0E",")", sep = ""))
