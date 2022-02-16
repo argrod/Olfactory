@@ -299,3 +299,17 @@ sDists <- ggplot(SwDat[SwDat$distTo > 0 &SwDat$distTo < 90,], aes(x = rAligned, 
   scale_y_continuous(name="Proportion across all birds (%)", breaks=seq(0,0.6,.1),labels=seq(0,60,10))
 
 ggarrange(lDists,sDists,nrow=2)
+
+# circular bayesian mixed effects model
+# explanatory variables: distance from (and/or time from or interaction term?) + foraging duration?
+
+# example from Cremers et al. 2018
+# fit.Maps <- bpnme(pred.I = Error.rad ~ Maze + Trial.type + L.c + (1|Subject), data = Maps, its = 10000, burn = 1000, n.lag = 3, seed = 101)
+WindSel <- na.omit(WindDat)
+WindSel$yrIDn <- as.numeric(unclass(as.factor(WindSel$yrID)))
+WindSel$bin10n <- as.numeric(WindSel$bin10)
+WindSel$forNo <- as.numeric(WindSel$forNo)
+class(WindSel$bin10n)
+fit.Frst <- bpnme(pred.I = rAligned ~ bin10n + (1|yrIDn) + (1|forNo),data=WindSel, its = 10000, burn = 1000, n.lag=3, seed = 101)
+colnames(WindSel)
+class(WindSel$bin10)

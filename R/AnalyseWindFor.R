@@ -738,3 +738,21 @@ fit.Motor <- bpnr(pred.I = Phaserad ~ 1 + Cond, data = Motor, its = 10000, burn 
 
 
 traceplot(fit.Motor,parameter="beta1")
+
+#####################################################################################################
+####################################### STRAIGHTNESS OF TRACK #######################################
+#####################################################################################################
+
+library(geosphere)
+HdistTrav <- lapply(unique(allD$yrID), function(x) c(NA,distHaversine(cbind(allD$lon[allD$yrID==x][1:(length(allD$lon[allD$yrID==x])-1)],allD$lat[allD$yrID==x][1:(length(allD$lat[allD$yrID==x])-1)]),
+    cbind(allD$lon[allD$yrID==x][2:(length(allD$lon[allD$yrID==x]))],allD$lat[allD$yrID==x][2:(length(allD$lat[allD$yrID==x]))]))))
+
+length(HdistTrav[[1]])
+
+nrow(allD)
+
+distHaversine(cbind(allD$lon[allD$yrID==x][1:(length(allD$lon[allD$yrID==x])-1)],allD$lat[allD$yrID==x][1:(length(allD$lat[allD$yrID==x])-1)]),
+    cbind(allD$lon[allD$yrID==x][2:(length(allD$lon[allD$yrID==x]))],allD$lat[allD$yrID==x][2:(length(allD$lat[allD$yrID==x]))]))
+
+ SpatialPoints(cbind(WindSel$lon[(splits[b]+1):splits[b+1]], WindSel$lat[(splits[b]+1):splits[b+1]]),
+            proj4string=CRS("+proj=longlat"))
