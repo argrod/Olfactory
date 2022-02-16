@@ -1218,9 +1218,24 @@ tmp50 <- WindDat[WindDat$distTo < 50,] %>% group_by(yrID,forNo) %>%
 
 tmp50
 # take example of tag b
-b = 7
+b = 11
 sub = WindDat[WindDat$forNo == tmp50$forNo[b] & WindDat$distTo < 50 & WindDat$yrID == tmp50$yrID[b],]
 nxtForPt = min(which(allD$forage == 1 & allD$DT > sub$DT[1] & allD$yrID == tmp50$yrID[b]))
+
+sub = na.omit(sub)
+ggplot() +
+  geom_spoke(data = sub,
+    aes(x = UTME, y = UTMN, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.05,"inches")), alpha = .6,
+    radius = 2000*sub$WSpeed/max(sub$WSpeed,na.rm=T)) +
+  geom_point(data=allD[nxtForPt,],aes(x=UTME,y=UTMN,fill="deepskyblue"),pch=21,size=3) +
+  geom_path(data=allD[allD$DT > (sub$DT[1]-1800) & allD$DT <= allD$DT[nxtForPt] & allD$yrID == tmp50$yrID[b],],aes(x=UTME,y=UTMN)) +
+  scale_x_continuous(name="Easting") +
+  scale_y_continuous(name="Northing") +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
+  scale_fill_manual(name = "Foraging points", values = "deepskyblue", labels="") +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 10, family = "Arial"))
 
 ggplot() + 
   geom_quiver(data=sub,aes(x=lon,y=lat,u=WSpd*cos(WHead),v=WSpd*sin(WHead)))

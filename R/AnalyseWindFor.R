@@ -87,37 +87,39 @@ allD$yrID <- paste(format(allD$DT,"%Y"),sub('\\_S.*','',allD$tagID),sep="_")
 ###############################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
+    # windLoc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalculations1819.RData")
 } else {
-    windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
+    # windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
+    load('E:/My Drive/PhD/Data/WindCalculations1819.RData')
 }
-windFiles <- dir(windLoc)
+# windFiles <- dir(windLoc)
 
-for(b in 1:length(windFiles)){
-    if(b == 1){
-        WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
-        WindDat$ID <- sub("*.csv", "", windFiles[b])
-    } else {
-        toAdd <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
-        toAdd$ID <- sub("*.csv", "", windFiles[b])
-        WindDat <- rbind(WindDat, toAdd)
-    }
-}
-colnames(WindDat) <- c("DT","lat","lon","head","X","Y","ID")
-WindDat$DT <- as.POSIXct(WindDat$DT, format = "%Y-%m-%d %H:%M:%OS", tz = "")
+# for(b in 1:length(windFiles)){
+#     if(b == 1){
+#         WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
+#         WindDat$ID <- sub("*.csv", "", windFiles[b])
+#     } else {
+#         toAdd <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
+#         toAdd$ID <- sub("*.csv", "", windFiles[b])
+#         WindDat <- rbind(WindDat, toAdd)
+#     }
+# }
+# colnames(WindDat) <- c("DT","lat","lon","head","X","Y","ID")
+# WindDat$DT <- as.POSIXct(WindDat$DT, format = "%Y-%m-%d %H:%M:%OS", tz = "")
 
-WindDat$WHead <- atan2(WindDat$Y, WindDat$X)
-WindDat$WSpeed <- sqrt(WindDat$X^2 + WindDat$Y^2)
+# WindDat$WHead <- atan2(WindDat$Y, WindDat$X)
+# WindDat$WSpeed <- sqrt(WindDat$X^2 + WindDat$Y^2)
 
-ggplot(WindDat[WindDat$ID == "1_S2",], aes(x = lon, y = lat)) +
-    geom_point() +
-    geom_spoke(data = WindDat[WindDat$ID == "1_S2",], arrow = arrow(length = unit(WindDat$WSpeed[WindDat$ID == "1_S2"]/max(
-        WindDat$WSpeed[WindDat$ID == "1_S2"])*0.15, 'inches')),
-        aes(x = lon, y = lat, angle = WindDat$WHead[WindDat$ID == "1_S2"], col = WindDat$WSpeed[WindDat$ID == "1_S2"], radius = scales::rescale(WindDat$WSpeed[WindDat$ID == "1_S2"], c(.1, .5)))) +
-    scale_colour_gradient("Wind speed", low = "yellow", high = "red")
+# ggplot(WindDat[WindDat$ID == "1_S2",], aes(x = lon, y = lat)) +
+#     geom_point() +
+#     geom_spoke(data = WindDat[WindDat$ID == "1_S2",], arrow = arrow(length = unit(WindDat$WSpeed[WindDat$ID == "1_S2"]/max(
+#         WindDat$WSpeed[WindDat$ID == "1_S2"])*0.15, 'inches')),
+#         aes(x = lon, y = lat, angle = WindDat$WHead[WindDat$ID == "1_S2"], col = WindDat$WSpeed[WindDat$ID == "1_S2"], radius = scales::rescale(WindDat$WSpeed[WindDat$ID == "1_S2"], c(.1, .5)))) +
+#     scale_colour_gradient("Wind speed", low = "yellow", high = "red")
 
-ggplot(WindDat[WindDat$ID == "1_S2",], aes(x = DT, y = head-WHead)) +
-    geom_point()
+# ggplot(WindDat[WindDat$ID == "1_S2",], aes(x = DT, y = head-WHead)) +
+#     geom_point()
 
 #################################################################################################################
 ############################  FINDING FORAGING WITH WIND CALCULATED BEFORE (30 MINS) ############################
@@ -692,7 +694,7 @@ for(b in 1:length(windFiles)){
     WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = T)
     colnames(WindDat) <- c("DT","Lat","Lon","Head","wDir","wSp","Resnorm")
     WindDat$ID <- sub("*WindYone.txt", "", windFiles[b])
-    Wind.dec <- SpatialPoints(cbind(WindDat$Lon,WindDat$Lat), proj4string = CRS("+proj=longlat"))
+    Wind.dec <- SpatialPoints(cbind(WindDat$Lon,WindDat$Lat), proj4string = CRS("+proj=longlat"))   
     UTMdat <- spTransform(Wind.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
     WindDat$UTME <- UTMdat$coords.x1
     WindDat$UTMN <- UTMdat$coords.x2
