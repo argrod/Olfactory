@@ -758,3 +758,40 @@ distHaversine(cbind(allD$lon[allD$yrID==x][1:(length(allD$lon[allD$yrID==x])-1)]
 
  SpatialPoints(cbind(WindSel$lon[(splits[b]+1):splits[b+1]], WindSel$lat[(splits[b]+1):splits[b+1]]),
             proj4string=CRS("+proj=longlat"))
+
+sapply(unique(allD$Day[allD$yrID=="2018_9"]), function(x) sum(allD$distTrav[allD$yrID=="2018_9" & allD$Day == x],na.rm=T))
+
+Dat[[11]]$tagID[1]
+sapply(unique(Dat[[11]]$Day), function(x) sum(Dat[[11]]$distTrav[Dat[[1]]$Day == x],na.rm=T))
+
+
+ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    geom_path(data=ListD[[6]][ListD[[6]]$DT > as.POSIXct("2018/09/08 10:20:00") & ListD[[6]]$DT > as.POSIXct("2018/09/08 10:30:00"),], aes(x = Lon, y = Lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1 & 
+      allD$DT > as.POSIXct("2018/09/08 10:20:00") & allD$DT > as.POSIXct("2018/09/08 10:30:00"),],
+    aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
+  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[6],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")),
+  radius = .5*(WindDat$WSpd[WindDat$yrID == indivWinds[6]]/max(WindDat$WSpd[WindDat$yrID == indivWinds[6]]))) +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
+  geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,200)],xend=sbst$lon[seq(2,nrow(sbst),200)],
+    y=sbst$lat[seq(1,nrow(sbst)-1,200)],yend=sbst$lat[seq(2,nrow(sbst),200)]),arrow = arrow(length = unit(0.1,"inches"))) +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 8,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+    annotation_scale(location = 'br') +
+    scale_y_continuous(breaks = c(39,40,41,42), labels = c("39","40","41","42"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
+    scale_x_continuous(labels = c("140", "141", "142", "143", "144"), name = paste("Longitude (","\u00b0E",")", sep = ""))
+
+
+adding + geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.05,"inches")),
+  radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"]))) +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "GnBu")+ 
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
+    annotation_scale(location = 'br') +
+    scale_y_continuous(breaks = c(39:44), labels = c("39","40","41","42","43","44"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
+    scale_x_continuous(labels = c("140", "141", "142", "143", "144","145","146"), name = paste("Longitude (","\u00b0E",")", sep = ""))
+
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/Finished.png", device = "png", dpi = 300, height = 5,
+    width = 5, units = "in")
+dev.off()
+colnames(WindDat)

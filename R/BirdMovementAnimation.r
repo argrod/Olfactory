@@ -207,12 +207,12 @@ p1 = ggplot() +
     scale_x_continuous("Longitude") + scale_y_continuous("Latitude")
 p1
 if(Sys.info()['sysname'] == "Darwin"){
-    dir_out <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/WithPrev/"
+    dir_out <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/WithPrev9/"
 } else {
-    dir_out <- "E:/My Drive/PhD/Admin/AORIPresentation/Animation/WithPrev/"
+    dir_out <- "E:/My Drive/PhD/Admin/AORIPresentation/Animation/WithPrev9/"
 }
 
-selD <- allD[allD$yrID == "2018_6",]
+selD <- allD[allD$yrID == "2018_9",]
 tseq <- seq(selD$DT[1], selD$DT[nrow(selD)],by = "30 mins")
 selD$forage[is.na(selD$forage)] = 0
 for(b in 1:length(tseq)){
@@ -273,3 +273,4 @@ for(b in 1:length(tseq)){
 
     rm(adding)
 }
+

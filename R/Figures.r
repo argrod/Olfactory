@@ -204,19 +204,36 @@ for(b in 1:length(distGaps)){
 summary(allD)
 save(pvals,avRelHd,one2Ten, file="E:/My Drive/PhD/Data/WindCalc/headings.RData")
 
-distGaps <- seq(0,9,1)
-distGapsL <- distGaps+1
-avRelHd <- NA
+distGaps <- seq(0,90,10)
+distGapsL <- distGaps+10
+# avRelHd <- NA
+outVals <- data.frame(dist=distGapsL,avRelHd=rep(NA,length(distGaps)),avDisp=rep(NA,length(distGaps)))
 for(b in 1:length(distGaps)){
-    RaylT <- r.test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
+    RaylT <- CircStats::r.test(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]))
     # tst<-HR_test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
     if(RaylT$p.value < 0.05){
     # if(tst[2] < .01){
-      avRelHd[b] <- circ.mean(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])
+      outVals$avRelHd[b] <- circ.mean(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]]))
+      outVals$avDisp[b] <- circ.disp((na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])))$var
     } else {
-      avRelHd[b] <- NA
+      outVals$avRelHd[b] <- NA
+      outVals$avDisp[b] <- NA
     }
 }
+
+p1 <- ggplot(outVals) + geom_point(aes(x = avRelHd,y=dist)) + coord_polar(start=pi) + theme_bw() +
+  scale_x_continuous(name="Average relative wind heading (rad)") +
+  scale_y_continuous(name = "Distance to next foraging point (km)")+ 
+  theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10),
+    axis.text = element_text(size = 8))
+
+p2 <- ggplot(outVals) + geom_point(aes(x = dist,y=avDisp)) + theme_bw() +
+  scale_x_continuous(name = "Distance to next foraging point (km)") +
+  scale_y_continuous(name = "Circular variance") + 
+  theme(panel.grid.minor = element_blank(),panel.grid.major = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10),
+    axis.text = element_text(size = 8))
+
+ggarrange(p1,p2,nrow=1,widths=c(1,1))
 # apply(distGaps, function(x) watson.wheeler.test(WindDat$RelHead[WindDat$distTo >= x & WindDat$distTo < (x+1)]))
 
 ggplot(WindDat, aes(x = spTrav, y = WSpeed)) + geom_point() +# coord_polar(start = pi) +
@@ -1278,3 +1295,76 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     coord_sf(xlim = c(139, 145), ylim = c(39, 43)) +
     scale_y_continuous(breaks = c(39,41,43), labels = c("39","41","43"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
     scale_x_continuous(breaks=c(139,141,143,145),labels = c("139", "141", "143", "145"), name = paste("Longitude (","\u00b0E",")", sep = ""))
+
+
+
+# extra figures for AORI presentation
+sbst = allD[allD$yrID == indivWinds[5] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),]
+ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    coord_sf(xlim = c(142.3, 142.7), ylim = c(39.5, 39.75)) +
+    geom_path(data = allD[allD$yrID == indivWinds[5] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),],aes(x=lon,y=lat)) +
+  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[5] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
+    aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.05,"inches")), alpha = .6,
+    radius = .3*(WindDat$WSpeed[WindDat$yrID == indivWinds[5] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpeed[WindDat$yrID == indivWinds[5]])),size=1.5) +  
+  geom_point(data = allD[allD$yrID == indivWinds[5] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill="deepskyblue"), pch=21,size=2) +
+  geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,50)],xend=sbst$lon[seq(2,nrow(sbst),50)],
+    y=sbst$lat[seq(1,nrow(sbst)-1,50)],yend=sbst$lat[seq(2,nrow(sbst),50)]),arrow = arrow(length = unit(0.08,"inches"))) +
+  scale_x_continuous(name="Lon", breaks=seq(142.3,142.7,.2)) +
+  scale_y_continuous(name="Lat", breaks=seq(39.5,39.7,.2)) +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "GnBu") +
+  scale_fill_manual(name = "", values = c("deepskyblue",""), labels=c("Foraging points","")) +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10),
+    axis.text = element_text(size = 10)) 
+
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/NearWind.png", device = "png", dpi = 300, height = 5,
+    width = 5, units = "in")
+
+
+
+
+
+WindDat$WSpd <- sqrt(WindDat$X^2 + WindDat$Y^2)
+ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+  geom_spoke(data = WindDat, aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.03,"inches")),
+  radius = .4*(WindDat$WSpd/max(WindDat$WSpd)),size=.7) +
+  coord_sf(xlim = c(141, 147), ylim = c(39, 44)) +
+  scale_colour_viridis(name="Wind Speed (m/s)", option = "magma") +
+  theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
+    annotation_scale(location = 'br') +
+    scale_y_continuous(name = paste("Latitude (","\u00b0N",")", sep = "")) +
+    scale_x_continuous(name = paste("Longitude (","\u00b0E",")", sep = ""))
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/ALlWind.png", device = "png", dpi = 300, height = 5,
+    width = 5, units = "in")
+  
+
+allPts <- data.frame(x = allD$lon,y=allD$lat)
+ch <- chull(allPts)
+coords <- allPts[c(ch,ch[1]),]
+
+FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
+ggplot() + 
+  geom_polygon(data=coords,aes(x=x,y=y),fill = "brown3",alpha=.4) +
+  geom_sf(data = japan, fill = '#969696', colour = '#969696',alpha=1) +
+  geom_point(data = FkOshi, aes(x = Long, y = Lat), fill = "chartreuse3", pch = 24,size = 7) +
+  theme_bw() + theme(panel.grid = element_blank()) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
+  annotation_scale(location = 'br') +
+  scale_y_continuous(name = paste("Latitude (","\u00b0N",")", sep = "")) +
+  scale_x_continuous(name = paste("Longitude (","\u00b0E",")", sep = ""))
+ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/Area.png", device = "png", dpi = 300, height = 5,
+    width = 5, units = "in")
+
+ggplot() + 
+    geom_polygon(data=birdPath,aes(x=x,y=y),fill="") +
+    geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+    geom_spoke(data = WindDat, aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.03,"inches")),
+    radius = .4*(WindDat$WSpd/max(WindDat$WSpd)),size=.7) +
+    coord_sf(xlim = c(141, 147), ylim = c(39, 44)) +
+    scale_colour_viridis(name="Wind Speed (m/s)", option = "magma") +
+    theme_bw() + theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
+    annotation_scale(location = 'br') +
+    scale_y_continuous(name = paste("Latitude (","\u00b0N",")", sep = "")) +
+    scale_x_continuous(name = paste("Longitude (","\u00b0E",")", sep = ""))
