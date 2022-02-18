@@ -783,10 +783,10 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
 
 
 adding + 
-#   geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat), angle = WHead, colour = "black", arrow = arrow(length = unit(0.02,"inches")),
-#   radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"])),size=1.3) +
-  geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, angle = WHead), arrow = arrow(length = unit(0.02,"inches")),
-  radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"])),size=.5) +
+  geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, angle = WHead), colour = "black", arrow = arrow(length = unit(0.02,"inches")),
+  radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"])),size=1.3) +
+  geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.02,"inches")),
+  radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"]))) +
   scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "GnBu") + 
   theme_bw() + theme(panel.grid = element_blank()) +
     theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
