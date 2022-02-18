@@ -1345,11 +1345,14 @@ coords <- allPts[c(ch,ch[1]),]
 
 FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
 ggplot() + 
-  geom_polygon(data=coords,aes(x=x,y=y),fill = "brown3",alpha=.4) +
-  geom_sf(data = japan, fill = '#969696', colour = '#969696',alpha=1) +
-  geom_point(data = FkOshi, aes(x = Long, y = Lat), fill = "chartreuse3", pch = 24,size = 7) +
+  geom_polygon(data=coords,aes(x=x,y=y,fill = "brown3"),alpha=.4) +
+  geom_sf(data = japan, colour = '#969696',alpha=1) +
+  geom_point(data = FkOshi, aes(x = Long, y = Lat,colour = "black"),fill="chartreuse3", pch = 24,size = 4) +
   theme_bw() + theme(panel.grid = element_blank()) +
-  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
+  scale_fill_manual(name="",labels="Area usage",values="brown3") +
+  scale_colour_manual(name="",labels='Colony',values="black") +
+  guides(colour = guide_legend(override.aes = list(shape=24,colour="black"))) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8),legend.text = element_text(size = 12)) + 
   annotation_scale(location = 'br') +
   scale_y_continuous(name = paste("Latitude (","\u00b0N",")", sep = "")) +
   scale_x_continuous(name = paste("Longitude (","\u00b0E",")", sep = ""))
