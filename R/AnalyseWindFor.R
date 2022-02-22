@@ -44,6 +44,7 @@ library(ggthemes)
 library(extrafont)
 library(rgeos)
 library(bpnreg)
+library(circular)
 
 #################################################################################
 ######################## BRING IN THE FORAGING ESTIMATES ########################
@@ -796,35 +797,15 @@ minT <- function(dt, x, window, units="mins") {
     }
 }
 
-# find "window" minute period and calculate straightness of track (central point window)
-straightness <- function(wdt,wID,window,tType="mins") {
-    return(distHaversine(cbind(allD$lon[min(which(allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$yrID == wID))],
-        allD$lat[min(which(allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$yrID == wID))]),
-        cbind(allD$lon[max(which(allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID))],
-        allD$lat[max(which(allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID))]))/
-    sum(distHaversine(cbind(allD$lon[allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID],
-        allD$lat[allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID]))))
-}
-
-# NO IDEA WHY THIS ISN'T WORKING WITH MAPPLY OR APPLY. NEEDS WORK AS SLOW AS HELL
-tst <- NA
-for(b in 11757:nrow(WindDat)){
-    tst[b] <- straightness(WindDat$DT[b],WindDat$yrID[b],10)
-}
-
-WindDat$straightness <- c(tst,rep(NA,nrow(WindDat)-length(tst)))
-
-
-allD[allD$DT == WindDat$DT[b],]
-cbind(WindDat$lon[b],WindDat$lat[b])
+ggplot(WindDat) +
+    geom_point(aes(x=distTo,y=straightness))
 
 
 
-allD$DT[allD$yrID=="2019_5"][63000]
-distHaversine(cbind(allD$lon[min(which(allD$DT >= (WindDat$DT[b] - as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]))],
-        allD$lat[min(which(allD$DT >= (WindDat$DT[b] - as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]))]),
-        cbind(allD$lon[max(which(allD$DT <= (WindDat$DT[b] + as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]))],
-        allD$lat[max(which(allD$DT <= (WindDat$DT[b] + as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]))]))
-        /
-    sum(distHaversine(cbind(allD$lon[allD$DT >= (WindDat$DT[b] - as.difftime(10/2,units="mins")) & allD$DT <= (WindDat$DT[b] + as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]],
-        allD$lat[allD$DT >= (WindDat$DT[b] - as.difftime(10/2,units="mins")) & allD$DT <= (WindDat$DT[b] + as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]])))
+colnames(WindDat)
+unique(WindDat$bin10)[3]
+x <- na.omit(WindDat$rwh[WindDat$bin10 == unique(WindDat$bin10)[3]])
+y <- na.omit(WindDat$rwh[WindDat$bin10 == unique(WindDat$bin10)[1]])
+
+cbind(sort(x %% (2*pi)),rep(1,length(x)))
+2.4 %% (2*pi)
