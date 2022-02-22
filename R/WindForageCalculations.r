@@ -166,6 +166,23 @@ for(b in 1:nrow(WindDat)){
     }
 }
 
+# add straightness values for each WindDat row (5 mins either side)
+straightness <- function(wdt,wID,window,tType="mins") {
+    return(distHaversine(cbind(allD$lon[min(which(allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$yrID == wID))],
+        allD$lat[min(which(allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$yrID == wID))]),
+        cbind(allD$lon[max(which(allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID))],
+        allD$lat[max(which(allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID))]))/
+    sum(distHaversine(cbind(allD$lon[allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID],
+        allD$lat[allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID]))))
+}
+
+# NO IDEA WHY THIS ISN'T WORKING WITH MAPPLY OR APPLY. NEEDS WORK AS SLOW AS HELL
+tst <- NA
+for(b in 11757:nrow(WindDat)){
+    tst[b] <- straightness(WindDat$DT[b],WindDat$yrID[b],10)
+}
+WindDat$straightness <- c(tst,rep(NA,nrow(WindDat)-length(tst)))
+
 if(Sys.info()['sysname'] == "Darwin"){
     save(WindDat,file='/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalculations1819.RData')
 } else {

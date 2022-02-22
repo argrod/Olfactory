@@ -808,7 +808,23 @@ straightness <- function(wdt,wID,window,tType="mins") {
 
 # NO IDEA WHY THIS ISN'T WORKING WITH MAPPLY OR APPLY. NEEDS WORK AS SLOW AS HELL
 tst <- NA
-for(b in 1:nrow(WindDat)){
+for(b in 11757:nrow(WindDat)){
     tst[b] <- straightness(WindDat$DT[b],WindDat$yrID[b],10)
 }
 
+WindDat$straightness <- c(tst,rep(NA,nrow(WindDat)-length(tst)))
+
+
+allD[allD$DT == WindDat$DT[b],]
+cbind(WindDat$lon[b],WindDat$lat[b])
+
+
+
+allD$DT[allD$yrID=="2019_5"][63000]
+distHaversine(cbind(allD$lon[min(which(allD$DT >= (WindDat$DT[b] - as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]))],
+        allD$lat[min(which(allD$DT >= (WindDat$DT[b] - as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]))]),
+        cbind(allD$lon[max(which(allD$DT <= (WindDat$DT[b] + as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]))],
+        allD$lat[max(which(allD$DT <= (WindDat$DT[b] + as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]))]))
+        /
+    sum(distHaversine(cbind(allD$lon[allD$DT >= (WindDat$DT[b] - as.difftime(10/2,units="mins")) & allD$DT <= (WindDat$DT[b] + as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]],
+        allD$lat[allD$DT >= (WindDat$DT[b] - as.difftime(10/2,units="mins")) & allD$DT <= (WindDat$DT[b] + as.difftime(10/2,units="mins")) & allD$yrID == WindDat$yrID[b]])))
