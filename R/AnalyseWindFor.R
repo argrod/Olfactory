@@ -742,28 +742,8 @@ fit.Motor <- bpnr(pred.I = Phaserad ~ 1 + Cond, data = Motor, its = 10000, burn 
 traceplot(fit.Motor,parameter="beta1")
 
 #####################################################################################################
-####################################### STRAIGHTNESS OF TRACK #######################################
+########################################### EXTRA FIGURES ###########################################
 #####################################################################################################
-
-library(geosphere)
-HdistTrav <- lapply(unique(allD$yrID), function(x) c(NA,distHaversine(cbind(allD$lon[allD$yrID==x][1:(length(allD$lon[allD$yrID==x])-1)],allD$lat[allD$yrID==x][1:(length(allD$lat[allD$yrID==x])-1)]),
-    cbind(allD$lon[allD$yrID==x][2:(length(allD$lon[allD$yrID==x]))],allD$lat[allD$yrID==x][2:(length(allD$lat[allD$yrID==x]))]))))
-
-length(HdistTrav[[1]])
-
-nrow(allD)
-
-distHaversine(cbind(allD$lon[allD$yrID==x][1:(length(allD$lon[allD$yrID==x])-1)],allD$lat[allD$yrID==x][1:(length(allD$lat[allD$yrID==x])-1)]),
-    cbind(allD$lon[allD$yrID==x][2:(length(allD$lon[allD$yrID==x]))],allD$lat[allD$yrID==x][2:(length(allD$lat[allD$yrID==x]))]))
-
- SpatialPoints(cbind(WindSel$lon[(splits[b]+1):splits[b+1]], WindSel$lat[(splits[b]+1):splits[b+1]]),
-            proj4string=CRS("+proj=longlat"))
-
-sapply(unique(allD$Day[allD$yrID=="2018_9"]), function(x) sum(allD$distTrav[allD$yrID=="2018_9" & allD$Day == x],na.rm=T))
-
-Dat[[11]]$tagID[1]
-sapply(unique(Dat[[11]]$Day), function(x) sum(Dat[[11]]$distTrav[Dat[[1]]$Day == x],na.rm=T))
-
 
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     geom_path(data=ListD[[6]][ListD[[6]]$DT > as.POSIXct("2018/09/08 10:20:00") & ListD[[6]]$DT > as.POSIXct("2018/09/08 10:30:00"),], aes(x = Lon, y = Lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1 & 
@@ -782,19 +762,53 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     scale_x_continuous(labels = c("140", "141", "142", "143", "144"), name = paste("Longitude (","\u00b0E",")", sep = ""))
 
 
-adding + 
-  geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, angle = WHead), colour = "black", arrow = arrow(length = unit(0.02,"inches")),
-  radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"])),size=1.3) +
-  geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.02,"inches")),
-  radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"]))) +
-  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "GnBu") + 
-  theme_bw() + theme(panel.grid = element_blank()) +
-    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
-    annotation_scale(location = 'br') +
-    scale_y_continuous(breaks = c(39:44), labels = c("39","40","41","42","43","44"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
-    scale_x_continuous(labels = c("140", "141", "142", "143", "144","145","146"), name = paste("Longitude (","\u00b0E",")", sep = ""))
+# adding + 
+#   geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, angle = WHead), colour = "black", arrow = arrow(length = unit(0.02,"inches")),
+#   radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"])),size=1.3) +
+#   geom_spoke(data=WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.02,"inches")),
+#   radius = .3*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"]))) +
+#   scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "GnBu") + 
+#   theme_bw() + theme(panel.grid = element_blank()) +
+#     theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
+#     annotation_scale(location = 'br') +
+#     scale_y_continuous(breaks = c(39:44), labels = c("39","40","41","42","43","44"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
+#     scale_x_continuous(labels = c("140", "141", "142", "143", "144","145","146"), name = paste("Longitude (","\u00b0E",")", sep = ""))
 
-ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/Finished.png", device = "png", dpi = 300, height = 5,
-    width = 5, units = "in")
-dev.off()
-colnames(WindDat)
+# ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/Finished.png", device = "png", dpi = 300, height = 5,
+#     width = 5, units = "in")
+# dev.off()
+# colnames(WindDat)
+
+#####################################################################################################
+####################################### STRAIGHTNESS OF TRACK #######################################
+#####################################################################################################
+
+library(geosphere)
+# create distances between positions using haversine method
+HdistTrav <- lapply(unique(allD$yrID), function(x) c(NA,distHaversine(cbind(allD$lon[allD$yrID==x][1:(length(allD$lon[allD$yrID==x])-1)],allD$lat[allD$yrID==x][1:(length(allD$lat[allD$yrID==x])-1)]),
+    cbind(allD$lon[allD$yrID==x][2:(length(allD$lon[allD$yrID==x]))],allD$lat[allD$yrID==x][2:(length(allD$lat[allD$yrID==x]))]))))
+# finding minimum time (with try catch exception)
+minT <- function(dt, x, window, units="mins") {
+    if(!any(dt <= x - as.difftime(window,units=units))){
+        out = 1
+    } else {
+        out = 
+    }
+}
+
+# find "window" minute period and calculate straightness of track (central point window)
+straightness <- function(wdt,wID,window,tType="mins") {
+    return(distHaversine(cbind(allD$lon[min(which(allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$yrID == wID))],
+        allD$lat[min(which(allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$yrID == wID))]),
+        cbind(allD$lon[max(which(allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID))],
+        allD$lat[max(which(allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID))]))/
+    sum(distHaversine(cbind(allD$lon[allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID],
+        allD$lat[allD$DT >= (wdt - as.difftime(window/2,units=tType)) & allD$DT <= (wdt + as.difftime(window/2,units=tType)) & allD$yrID == wID]))))
+}
+
+# NO IDEA WHY THIS ISN'T WORKING WITH MAPPLY OR APPLY. NEEDS WORK AS SLOW AS HELL
+tst <- NA
+for(b in 1:nrow(WindDat)){
+    tst[b] <- straightness(WindDat$DT[b],WindDat$yrID[b],10)
+}
+
