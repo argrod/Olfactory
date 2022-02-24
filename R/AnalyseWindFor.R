@@ -120,7 +120,6 @@ for(b in 1:length(distGaps)){
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
 
-
 # repeat for both long and short trips
 wLong <- wDat[wDat$tripL > 2,]
 wShort <- wDat$wDat$tripL <= 2,]
@@ -133,6 +132,7 @@ for(b in 1:length(distGaps)){
     pvalsLS[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),SRlP = RaylTS$p.value,SRlR = RaylTS$r.bar,SHRp = tstS[2],
         LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar,LHRp = tstL[2])
 }
+save(pvalsLS,file='E:/My Drive/PhD/Data/pvalsLS.RData')
 
 #################################################################################################################
 ############################  FINDING FORAGING WITH WIND CALCULATED BEFORE (30 MINS) ############################
