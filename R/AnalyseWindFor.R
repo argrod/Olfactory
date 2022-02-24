@@ -120,9 +120,10 @@ for(b in 1:length(distGaps)){
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
 
+
 # repeat for both long and short trips
 wLong <- wDat[wDat$tripL > 2,]
-wShort <- wDat[wDat$tripL <= 2,]
+wShort <- wDat$wDat$tripL <= 2,]
 pvalsLS<-vector(mode="list",length=length(distGaps))
 for(b in 1:length(distGaps)){
     RaylTS <- r.test(wShort$rwh[wShort$distTo >= distGaps[b] & wShort$distTo < distGapsL[b]])
