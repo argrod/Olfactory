@@ -84,6 +84,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
 allD$yrID <- paste(format(allD$DT,"%Y"),sub('\\_S.*','',allD$tagID),sep="_")
+
 ###############################################################################
 ######################## BRING IN THE WIND ESTIMATIONS ########################
 ###############################################################################
@@ -100,13 +101,38 @@ if(Sys.info()['sysname'] == "Darwin"){
 ################################  HR AND RALEIGH TEST P VALUES AND AVE HEADINGS ################################
 ################################################################################################################
 
+distGaps <- seq(0,90,10)
+distGapsL <- distGaps+10
+one2Ten <- vector(mode="list", length = length(distGaps))
+signif.ceiling <- function(x, n){
+  pow <- floor( log10( abs(x) ) ) + 1 - n
+  y <- ceiling(x / 10 ^ pow) * 10^pow
+  # handle the x = 0 case
+  y[x==0] <- 0
+  y
+}
 avRelHd <- NA
 pvals<-vector(mode="list",length=length(distGaps))
 wDat <- na.omit(WindDat)
 for(b in 1:length(distGaps)){
     RaylT <- r.test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
     tst<-HR_test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
-    pvals[[b]] <- cbind(RaylT$p.value,)
+    pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
+}
+
+
+# repeat for both long and short trips
+wLong <- wDat[wDat$tripL > 2,]
+wShort <- wDat$wDat$tripL <= 2,]
+pvalsLS<-vector(mode="list",length=length(distGaps))
+for(b in 1:length(distGaps)){
+    RaylTS <- r.test(wShort$rwh[wShort$distTo >= distGaps[b] & wShort$distTo < distGapsL[b]])
+    tstS<-HR_test(wShort$rwh[wShort$distTo >= distGaps[b] & wShort$distTo < distGapsL[b]])
+    RaylTL <- r.test(wLong$rwh[wLong$distTo >= distGaps[b] & wLong$distTo < distGapsL[b]])
+    tstL<-HR_test(wLong$rwh[wLong$distTo >= distGaps[b] & wLong$distTo < distGapsL[b]])
+    pvalsLS[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),SRlP = RaylTS$p.value,SRlR = RaylTS$r.bar,SHRp = tstS[2],
+        LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar,LHRp = tstL[2])
+}
 
 #################################################################################################################
 ############################  FINDING FORAGING WITH WIND CALCULATED BEFORE (30 MINS) ############################
