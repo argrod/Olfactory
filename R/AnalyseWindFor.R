@@ -42,6 +42,7 @@ library(MASS)
 library(diagram)
 library(ggthemes)
 library(extrafont)
+library(CircMLE)
 library(rgeos)
 library(bpnreg)
 library(circular)
@@ -94,33 +95,18 @@ if(Sys.info()['sysname'] == "Darwin"){
     # windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
     load('E:/My Drive/PhD/Data/WindCalculations1819.RData')
 }
-# windFiles <- dir(windLoc)
 
-# for(b in 1:length(windFiles)){
-#     if(b == 1){
-#         WindDat <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
-#         WindDat$ID <- sub("*.csv", "", windFiles[b])
-#     } else {
-#         toAdd <- read.delim(paste(windLoc, windFiles[b], sep = ''), sep = ",", header = F)
-#         toAdd$ID <- sub("*.csv", "", windFiles[b])
-#         WindDat <- rbind(WindDat, toAdd)
-#     }
-# }
-# colnames(WindDat) <- c("DT","lat","lon","head","X","Y","ID")
-# WindDat$DT <- as.POSIXct(WindDat$DT, format = "%Y-%m-%d %H:%M:%OS", tz = "")
+################################################################################################################
+################################  HR AND RALEIGH TEST P VALUES AND AVE HEADINGS ################################
+################################################################################################################
 
-# WindDat$WHead <- atan2(WindDat$Y, WindDat$X)
-# WindDat$WSpeed <- sqrt(WindDat$X^2 + WindDat$Y^2)
-
-# ggplot(WindDat[WindDat$ID == "1_S2",], aes(x = lon, y = lat)) +
-#     geom_point() +
-#     geom_spoke(data = WindDat[WindDat$ID == "1_S2",], arrow = arrow(length = unit(WindDat$WSpeed[WindDat$ID == "1_S2"]/max(
-#         WindDat$WSpeed[WindDat$ID == "1_S2"])*0.15, 'inches')),
-#         aes(x = lon, y = lat, angle = WindDat$WHead[WindDat$ID == "1_S2"], col = WindDat$WSpeed[WindDat$ID == "1_S2"], radius = scales::rescale(WindDat$WSpeed[WindDat$ID == "1_S2"], c(.1, .5)))) +
-#     scale_colour_gradient("Wind speed", low = "yellow", high = "red")
-
-# ggplot(WindDat[WindDat$ID == "1_S2",], aes(x = DT, y = head-WHead)) +
-#     geom_point()
+avRelHd <- NA
+pvals<-vector(mode="list",length=length(distGaps))
+wDat <- na.omit(WindDat)
+for(b in 1:length(distGaps)){
+    RaylT <- r.test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
+    tst<-HR_test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
+    pvals[[b]] <- cbind(RaylT$p.value,)
 
 #################################################################################################################
 ############################  FINDING FORAGING WITH WIND CALCULATED BEFORE (30 MINS) ############################
