@@ -119,20 +119,43 @@ for(b in 1:length(distGaps)){
     tst<-HR_test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
-
-# repeat for both long and short trips
-wLong <- wDat[wDat$tripL > 2,]
-wShort <- wDat$wDat$tripL <= 2,]
-pvalsLS<-vector(mode="list",length=length(distGaps))
-for(b in 1:length(distGaps)){
-    RaylTS <- r.test(wShort$rwh[wShort$distTo >= distGaps[b] & wShort$distTo < distGapsL[b]])
-    tstS<-HR_test(wShort$rwh[wShort$distTo >= distGaps[b] & wShort$distTo < distGapsL[b]])
-    RaylTL <- r.test(wLong$rwh[wLong$distTo >= distGaps[b] & wLong$distTo < distGapsL[b]])
-    tstL<-HR_test(wLong$rwh[wLong$distTo >= distGaps[b] & wLong$distTo < distGapsL[b]])
-    pvalsLS[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),SRlP = RaylTS$p.value,SRlR = RaylTS$r.bar,SHRp = tstS[2],
-        LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar,LHRp = tstL[2])
-}
 save(pvalsLS,file='E:/My Drive/PhD/Data/pvalsLS.RData')
+
+# # repeat for both long and short trips
+# wLong <- wDat[wDat$tripL > 2,]
+# wShort <- wDat$wDat$tripL <= 2,]
+# pvalsLS<-vector(mode="list",length=length(distGaps))
+# for(b in 1:length(distGaps)){
+#     RaylTS <- r.test(wShort$rwh[wShort$distTo >= distGaps[b] & wShort$distTo < distGapsL[b]])
+#     tstS<-HR_test(wShort$rwh[wShort$distTo >= distGaps[b] & wShort$distTo < distGapsL[b]])
+#     RaylTL <- r.test(wLong$rwh[wLong$distTo >= distGaps[b] & wLong$distTo < distGapsL[b]])
+#     tstL<-HR_test(wLong$rwh[wLong$distTo >= distGaps[b] & wLong$distTo < distGapsL[b]])
+#     pvalsLS[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),SRlP = RaylTS$p.value,SRlR = RaylTS$r.bar,SHRp = tstS[2],
+#         LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar,LHRp = tstL[2])
+# }
+if(Sys.info()['sysname'] == "Darwin"){
+    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvalsLS.RData")
+} else {
+    load('E:/My Drive/PhD/Data/pvalsLS.RData')
+}
+pvalsLS <- bind_rows(pvalsLS)
+
+tstL <- data.frame(mean=sapply(1:10, function(x) mean.circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL > 2])), dev = sapply(1:10, function(x) angular.deviation(wDat$rwh[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL > 2])))
+
+tstS <- data.frame(mean=sapply(1:10, function(x) mean.circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL <= 2])),dev=sapply(1:10, function(x) angular.deviation(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL <= 2])))
+
+tstL$length<-"Long"
+tstL$RlR <- pvalsLS$LRlR
+tstL$Dist <- distGapsL
+tstS$length<-"Short"
+tstS$RlR <- pvalsLS$SRlR
+tstS$Dist <- distGapsL
+tstAll <- rbind(tstL,tstS)
+
+ggplot() + geom_point(data=tstAll,aes(x = mean, y = Dist, fill = RlR, pch = length),size=3) +
+    coord_polar(start=pi) + scale_shape_manual(name = "Trip type", values=c(21,24)) +
+    scale_fill_distiller(name=expression(bar(italic(r))),palette="YlOrRd") + theme_bw() +
+    scale_x_continuous(name = "Relative wind ")
 
 #################################################################################################################
 ############################  FINDING FORAGING WITH WIND CALCULATED BEFORE (30 MINS) ############################

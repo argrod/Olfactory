@@ -183,6 +183,20 @@ for(b in 11757:nrow(WindDat)){
 }
 WindDat$straightness <- c(tst,rep(NA,nrow(WindDat)-length(tst)))
 
+#################################################################################################################
+#######################################  ADD DISTANCES FROM FKOSHI ISLAND #######################################
+#################################################################################################################
+
+distFk <- function(utmn,utme){
+    FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
+    FkOshi.dec <- SpatialPoints(cbind(FkOshi$Long,FkOshi$Lat),proj4string=CRS('+proj=longlat'))
+    FkOshi.UTM <- spTransform(FkOshi.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
+    FkUTME <- FkOshi.UTM$coords.x1
+    FkUTMN <- FkOshi.UTM$coords.x2
+    return((sqrt((utmn-FkUTMN)^2 + (utme-FkUTME)^2)/1000))
+}
+WindDat$distFk <- distFk(WindDat$UTMN,WindDat$UTME)
+
 if(Sys.info()['sysname'] == "Darwin"){
     save(WindDat,file='/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalculations1819.RData')
 } else {
