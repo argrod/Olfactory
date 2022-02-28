@@ -828,14 +828,16 @@ ggplot() + geom_polygon(aes(x=long,y=lat),colour="grey",data = nc2[[2]]) +
   scale_y_continuous(position='right') + coord_equal()
 colnames(japan)
 
+yrid <- unique(WindDat$yrID)
 sbst = allD[allD$yrID == yrid[5] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),]
 inset <- ggplot() + geom_path(data = sbst,aes(x=lon,y=lat)) +
+  # annotation_scale(location = 'br') +
   geom_spoke(data = WindDat[WindDat$yrID == yrid[5] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
     aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.03,"inches")), alpha = .6,
     radius = .3*(WindDat$WSpd[WindDat$yrID == yrid[5] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpd[WindDat$yrID == yrid[5]]))) +  
-  geom_point(data = allD[allD$yrID == yrid[5] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=3) +
   geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,50)],xend=sbst$lon[seq(2,nrow(sbst),50)],
     y=sbst$lat[seq(1,nrow(sbst)-1,50)],yend=sbst$lat[seq(2,nrow(sbst),50)]),arrow = arrow(length = unit(0.08,"inches"))) +
+  geom_point(data = allD[allD$yrID == yrid[5] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=3) +
     scale_y_continuous(name="",breaks=c(39.5,39.6,39.7), position = "right",
       labels=as.character(c(39.5,39.6,39.7))) +
     scale_x_continuous(name="") +
@@ -850,15 +852,15 @@ inset <- ggplot() + geom_path(data = sbst,aes(x=lon,y=lat)) +
         axis.title = element_blank(),
         axis.text = element_blank(),
         axis.ticks = element_blank()) +
-  theme(legend.position = "none") +
-  annotation_scale(location = 'br') + 
+  theme(legend.position = "none") + 
   theme(plot.margin = margin(0, 0, 0, 0, "pt"),
-  panel.background = element_rect(fill = "transparent",colour = NA))
+  panel.background = element_rect(fill = "transparent",colour = NA)) +
+  ggsn::scalebar(dist = 10, model = 'WGS84',transform=T,dist_unit="km", height = .05,
+      st.dist = .1,x.min = min(sbst$lon), x.max = 142.65, y.min = min(sbst$lat), y.max = max(sbst$lat), location = 'topleft',box.fill=c("black","white"))
 # example wind with inset
-yrid <- unique(WindDat$yrID)
-full <- ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-  geom_path(data = allD[allD$yrID == yrid[5],], aes(x = lon, y = lat)) +
-  geom_point(data = allD[allD$yrID == yrid[5] & allD$forage == 1,], aes(x = lon, y = lat),pch = 21, fill = "deepskyblue") + 
+full <- ggplot() + geom_path(data = allD[allD$yrID == yrid[5],], aes(x = lon, y = lat)) +
+  geom_sf(data = japan, fill = '#969696', colour = '#969696') +
+  geom_point(data = allD[allD$yrID == yrid[5] & allD$forage == 1,], aes(x = lon, y = lat, fill = "deepskyblue"),pch = 21) + 
   geom_spoke(data = WindDat[WindDat$yrID == yrid[5],], aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.03,"inches")),
   radius = .3*(WindDat$WSpd[WindDat$yrID == yrid[5]]/max(WindDat$WSpd[WindDat$yrID == yrid[5]]))) + 
   coord_sf(xlim = c(139, 144), ylim = c(39, 42.5)) +
@@ -868,38 +870,12 @@ full <- ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
   scale_fill_manual(name = "Foraging points", values = "deepskyblue", labels="") +
   theme_bw() + theme(panel.grid = element_blank()) +
     theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 10)) + 
-    annotation_scale(location = 'br')
-vptst <- viewport(x = 140,y=42,width=.25,height=.25,just=c("left","top"))
-
+    ggsn::scalebar(dist = 50, model = 'WGS84',transform=T,dist_unit="km", st.bottom = F,
+      st.dist = .045,x.min = 139, x.max = 143.8, y.min = 39, y.max = 42.5, location = 'bottomright')
+library(patchwork)
 full + 
-  inset_element(inset,0,0,.4,.4)
-
-  annotation_custom(grob = ggplotGrob(inset),
-    xmin = 139, ymin = 41.5, xmax = 140, ymax = 43)
-
-
-print(full,vp=vptst)
-
-inset <- inset + theme(legend.position = "none")
-print(pltwithInset <- ggdraw() + draw_plot(full) +
-  draw_plot(inset, x = .2,y =.5,width=.3,height=.3))
-
-ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-    geom_path(data=ListD[[6]][ListD[[6]]$DT > as.POSIXct("2018/09/08 10:20:00") & ListD[[6]]$DT > as.POSIXct("2018/09/08 10:30:00"),], aes(x = Lon, y = Lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1 & 
-      allD$DT > as.POSIXct("2018/09/08 10:20:00") & allD$DT > as.POSIXct("2018/09/08 10:30:00"),],
-    aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
-  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[6],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")),
-  radius = .5*(WindDat$WSpd[WindDat$yrID == indivWinds[6]]/max(WindDat$WSpd[WindDat$yrID == indivWinds[6]]))) +
-  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
-  geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,200)],xend=sbst$lon[seq(2,nrow(sbst),200)],
-    y=sbst$lat[seq(1,nrow(sbst)-1,200)],yend=sbst$lat[seq(2,nrow(sbst),200)]),arrow = arrow(length = unit(0.1,"inches"))) +
-  theme_bw() + theme(panel.grid = element_blank()) +
-    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 8,
-        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
-    annotation_scale(location = 'br') +
-    scale_y_continuous(breaks = c(39,40,41,42), labels = c("39","40","41","42"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
-    scale_x_continuous(labels = c("140", "141", "142", "143", "144"), name = paste("Longitude (","\u00b0E",")", sep = ""))
-ggsave(paste(figLoc,"ExampleWind.svg",sep=""), device="svg", dpi = 300, height = 6,
+  inset_element(inset,0,0.1,0.5,.6)
+ggsave(paste(figLoc,"ExampleWindInset.svg",sep=""), device="svg", dpi = 300, height = 6,
       width = 6, units = "in")    
 
 
