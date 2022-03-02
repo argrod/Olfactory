@@ -920,6 +920,14 @@ inset <- ggplot() + geom_path(data = sbst,aes(x=lon,y=lat)) +
     scale_y_continuous(name="",breaks=c(39.5,39.6,39.7), position = "right",
       labels=as.character(c(39.5,39.6,39.7))) +
     scale_x_continuous(name="") +
+  geom_text(data = data.frame(x=c(142.3,142.5,142.7),labs=as.character(c(142.3,142.5,142.7))),
+            aes(x=x,label=labs, 
+            y = 39.44), 
+            hjust="middle", vjust="bottom",size=3.528*1.5) +
+  geom_text(data = data.frame(y=c(39.5,39.6,39.7),labs=as.character(c(39.5,39.6,39.7))),
+            aes(y=y,label=labs, 
+            x = 142.695), 
+            hjust="middle", vjust="middle",size=3.528*1.5) +
     scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
     theme(legend.position = "none",
       axis.ticks.length=unit(-0.25, "cm")) +
@@ -929,13 +937,14 @@ inset <- ggplot() + geom_path(data = sbst,aes(x=lon,y=lat)) +
   theme(panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(),
         axis.title = element_blank(),
-        axis.text = element_blank(),
-        axis.ticks = element_blank()) +
+        axis.ticks.length=unit(-0.25, "cm"),
+        axis.text = element_blank()) +
   theme(legend.position = "none") + 
   theme(plot.margin = margin(0, 0, 0, 0, "pt"),
   panel.background = element_rect(fill = "transparent",colour = NA)) +
   ggsn::scalebar(dist = 10, model = 'WGS84',transform=T,dist_unit="km", height = .05,
       st.dist = .1,x.min = min(sbst$lon), x.max = 142.65, y.min = min(sbst$lat), y.max = max(sbst$lat), location = 'topleft',box.fill=c("black","white"))
+inset
 # example wind with inset
 full <- ggplot() + geom_path(data = allD[allD$yrID == yrid[5],], aes(x = lon, y = lat)) +
   geom_sf(data = japan, fill = '#969696', colour = '#969696') +
@@ -953,7 +962,7 @@ full <- ggplot() + geom_path(data = allD[allD$yrID == yrid[5],], aes(x = lon, y 
       st.dist = .045,x.min = 139, x.max = 143.8, y.min = 39, y.max = 42.5, location = 'bottomright')
 library(patchwork)
 full + 
-  inset_element(inset,0,0.1,0.5,.6)
+  inset_element(inset,0,0,0.5,.5,)
 ggsave(paste(figLoc,"ExampleWindInset.svg",sep=""), device="svg", dpi = 300, height = 6,
       width = 6, units = "in")    
 
