@@ -717,46 +717,125 @@ ggsave(paste(figLoc,"CombDistRelDensity.svg",sep=""), device="svg", dpi = 300, h
       width = 8.7, units = "cm")
 
 # split into long and short foraging trips
-LwDat <- WindDat[WindDat$tripL >= 2,]
+LwDat <- WindDat[WindDat$tripL > 2,]
 breaks<-seq(from=0,to=round_any(max(LwDat$distTo,na.rm=T),10,f=ceiling),by=10)
 LwDat$bin10 <- cut(LwDat$distTo, breaks = breaks, include.lowest=T,right=F)
 mnW <- ddply(LwDat, "bin10", summarise, grp.mean=mean(rAligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 bin10ns <- LwDat[LwDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
 lDists <- ggplot(LwDat[LwDat$distTo > 0 &LwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(LwDat$distTo),], aes(x = rAligned, colour = bin10)) +
-  # geom_histogram(alpha=.2,fill=NA,position="dodge")
-  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
+  stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
-  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"Blues")),
-    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(LwDat$bin10[LwDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
+  scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(LwDat$bin10[LwDat$distTo < 90])))),sep="")) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
-  scale_y_continuous(name="", breaks=seq(0,0.7,.1),labels=seq(0,70,10),limits = c(0,.75))
+  scale_y_continuous(name="", breaks=seq(0,0.8,.1),labels=seq(0,80,10),limits = c(0,.85))
 
 # split into long and short foraging trips
-SwDat <- WindDat[WindDat$tripL < 2,]
+SwDat <- WindDat[WindDat$tripL <= 2,]
 breaks<-seq(from=0,to=round_any(max(SwDat$distTo,na.rm=T),10,f=ceiling),by=10)
 SwDat$bin10 <- cut(SwDat$distTo, breaks = breaks, include.lowest=T,right=F)
 mnW <- ddply(SwDat, "bin10", summarise, grp.mean=mean(rAligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 bin10ns <- SwDat[SwDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
-sDists <- ggplot(SwDat[SwDat$distTo > 0 &SwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(SwDat$distTo),], aes(x = rAligned, colour = bin10)) +
-  # geom_histogram(alpha=.2,fill=NA,position="dodge")
-  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+sDists <- ggplot(SwDat[SwDat$distTo > 0 &SwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(SwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
+  stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
-  scale_colour_manual(name="Distance to next \nforaging spot (km)", values = rev(brewer.pal(9,"Blues")),
-    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(SwDat$bin10[SwDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
+  scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(SwDat$bin10[SwDat$distTo < 90])))),sep="")) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
-  scale_y_continuous(name="", breaks=seq(0,0.7,.1),labels=seq(0,70,10),limits=c(0,.75))
+  scale_y_continuous(name="", breaks=seq(0,0.8,.1),labels=seq(0,80,10),limits=c(0,.85))
 
-fig <- ggarrange(lDists,sDists,nrow=2,common.legend = T,legend='right',labels=c("L","S"),hjust=-4,vjust=2)
+fig <- ggarrange(lDists,sDists,nrow=2,labels=c("L","S"))
 annotate_figure(fig,left=text_grob("Proportion of relative wind headings (%)",rot=90,size=10,vjust=1.5))
 ggsave(paste(figLoc,"LSDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 8,
       width = 9, units = "cm")
 
+wDat <- na.omit(WindDat)
+LoutwDat <- wDat[wDat$OutHm < 0 & wDat$tripL > 2,]
+LhmwDat <- wDat[wDat$OutHm > 0 & wDat$tripL > 2,]
+SoutwDat <- wDat[wDat$OutHm < 0 & wDat$tripL <= 2,]
+ShmwDat <- wDat[wDat$OutHm > 0 & wDat$tripL <= 2,]
+LoutDists <- ggplot(LoutwDat[LoutwDat$distTo > 0 &LoutwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(LoutwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
+  stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(LoutwDat$bin10[LoutwDat$distTo < 90])))),sep="")) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+  scale_y_continuous(name="", breaks=seq(0,1,.1),labels=seq(0,100,10),limits=c(0,1.1))
+
+SoutDists <- ggplot(SoutwDat[SoutwDat$distTo > 0 &SoutwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(SoutwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
+  stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(SoutwDat$bin10[SoutwDat$distTo < 90])))),sep="")) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+  scale_y_continuous(name="", breaks=seq(0,1,.1),labels=seq(0,100,10),limits=c(0,1.1))
+
+# split into long and short foraging trips
+LhmDists <- ggplot(LhmwDat[LhmwDat$distTo > 0 &LhmwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(LhmwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
+  stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(LhmwDat$bin10[LhmwDat$distTo < 90])))),sep="")) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+  scale_y_continuous(name="", breaks=seq(0,1,.1),labels=seq(0,100,10),limits=c(0,1.1))
+
+ShmDists <- ggplot(ShmwDat[ShmwDat$distTo > 0 &ShmwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(ShmwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+  # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
+  stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
+    labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(ShmwDat$bin10[ShmwDat$distTo < 90])))),sep="")) +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
+        family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
+  scale_y_continuous(name="", breaks=seq(0,1,.1),labels=seq(0,100,10),limits=c(0,1.1))
+
+figAll <- ggpubr::ggarrange(LoutDists,SoutDists,LhmDists,ShmDists,nrow=2,ncol=2,labels=c("L Out","S Out","L Home","S Home"), common.legend = T, legend = "right")
+annotate_figure(figAll,left=text_grob("Proportion of relative wind headings (%)",rot=90,size=10,vjust=1.5))
+
 bin10s <- bin10ns[,2]
 typeof(WindDat$bin10)
+
+
+tst <- sapply(unique(allD$yrID), function(x) c(NA,distHaversine(cbind(allD$lon[which(allD$yrID==x)[1:(length(which(allD$yrID==x))-1)]],
+  allD$lat[which(allD$yrID==x)[1:(length(which(allD$yrID==x))-1)]]),
+  cbind(allD$lon[which(allD$yrID==x)[2:(length(which(allD$yrID==x)))]],
+  allD$lat[which(allD$yrID==x)[2:(length(which(allD$yrID==x)))]]))))
+tster <- NA
+for(b in 1:length(tst)){
+  if(b == 1){
+    tster <- array(tst[[b]])
+  } else {
+    tster <- c(tster,array(tst[[b]]))
+  }
+}
+allD$havDist <- tster
+
+
+
+SLtripDists <- allD %>% dplyr::group_by(yrID,tripL>2,tripN) %>% dplyr::summarise(n = sum(havDist,na.rm=T))
+colnames(SLtripDists) <- c("yrID","SL","tripN","n")
+# mean short or long trip length
+SLtripDists %>% dplyr::group_by(SL) %>% dplyr::summarise(mean(n))
+# mean daily distance travelled
+dailyDist <- allD %>% dplyr::group_by(yrID,Day) %>% dplyr::summarise(dist=sum(havDist,na.rm=T))
+mean(dailyDist$dist/1000)
+
+
+ggplot(allD[allD$tripL == 1,]) +
+  geom_path(aes(x=lon,y=lat,colour=yrID)) +
+  ggsn::scalebar(dist=100,model="WGS84",transform=T,dist_unit="km",x.min=min(allD$lon[allD$tripL == 1]),x.max=max(allD$lat[allD$tripL==1]),y.min=min(allD$lat[allD$tripL==1]),y.max=max(allD$lat[allD$tripL==1]))
 
 
 sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],]
@@ -877,7 +956,6 @@ full +
   inset_element(inset,0,0.1,0.5,.6)
 ggsave(paste(figLoc,"ExampleWindInset.svg",sep=""), device="svg", dpi = 300, height = 6,
       width = 6, units = "in")    
-
 
 a <- 5
 WindDat[WindDat$yrID == indivWinds[a] & WindDat$distTo < 10 & (WindDat$RelHead < -2.6 | WindDat$RelHead > 2.6),c(1:3,26)]
@@ -1009,11 +1087,11 @@ lapply(inters, function(x) watson.test(relHCirc[WindDat$distTo > (x - 5) & WindD
 allOut = vector(mode="list",length=length(unique(WindDat$yrID)))
 for(yrid in 1:length(unique(WindDat$yrID))){
   sel <- WindDat[WindDat$yrID == unique(WindDat$yrID)[yrid],]
-  LcirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2])))
+  LcirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[which(sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2)])))
   # add the 90th and 10th %ile of est wind speed
-  LcirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(sel$WSpd[sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2], probs = c(.1,.9))))
-  LcirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(sel$WSpd[sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel  $tripL > 2])))
-  LaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2])))  
+  LcirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(sel$WSpd[which(sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2)], probs = c(.1,.9))))
+  LcirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(sel$WSpd[which(sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel  $tripL > 2)])))
+  LaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[which(sel$distTo > (x - 2.5) & sel$distTo <= (x + 2.5) & sel$tripL > 2)])))  
   allOut[[yrid]] <- c(data.frame("dis"=inters,"yrID"=unique(WindDat$yrID)[yrid]),LcirDistEst)
 }
 allRbar = bind_rows(allOut)
@@ -1022,18 +1100,18 @@ ggplot() + geom_line(data=allRbar,aes(x = dis, y = rbar,colour=yrID)) +
   # geom_line(data = data.frame(inters,aveHDistEst), aes(x = inters, y = rbar, linetype = "dotted")) +
   scale_x_reverse(name = "") + scale_y_continuous(name = expression(bar(italic(r))))
 
-LcirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1])))
+LcirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1)])))
 # add the 90th and 10th %ile of est wind speed
-LcirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1], probs = c(.1,.9))))
-LcirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1])))
+LcirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(WindDat$WSpd[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1)], probs = c(.1,.9))))
+LcirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1)])))
 LaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1])))
 Lnums <- sapply(inters, function(x) sum(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1))
 
 ScirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1])))
 # add the 90th and 10th %ile of est wind speed
-ScirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1], probs = c(.1,.9))))
-ScirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1])))
-SaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1])))
+ScirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(WindDat$WSpd[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1)], probs = c(.1,.9))))
+ScirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1)])))
+SaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1)])))
 Snums <- sapply(inters, function(x) sum(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1))
 
 plot()
@@ -1250,7 +1328,7 @@ tstr <- lm(spTrav ~ WSpd, data = WindDat)
 summary(tstr)
 
 ggplot(WindDat[WindDat$distTo < 50,], aes(x = RelHead, y = distTo, colour = yrID)) +
-  geom_point() + scale_x_continuous(name = "Relative wind heading", breaks =c(180,-90,0,90)) + 
+  geom_point() + scale_x_continuous(name = "Relative wind heading", breaks =c(180,-90,0,90)) + coord_polar() + 
   theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
       family = "Arial"), axis.text = element_text(size = 8, family = "Arial"))  + scale_y_continuous(name = expression(paste("Ground speed (",ms^{-1},")"))) +
   scale_colour_gradient(name = expression(paste("Wind speed (",ms^{-1},")")),low="blue",high="red")
