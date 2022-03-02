@@ -202,7 +202,7 @@ WindDat$straightness <- c(tst,rep(NA,nrow(WindDat)-length(tst)))
 
 distFk <- function(lon,lat){
     FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
-    return(distHaversine(cbind(lon,lat),cbind(FkOshi$Long,FkOshi$Lat)))
+    return(distHaversine(cbind(lon,lat),cbind(FkOshi$Long,FkOshi$Lat))/(10^3))
 }
 WindDat$distFk <- distFk(WindDat$lon,WindDat$lat)
 

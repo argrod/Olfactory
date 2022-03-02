@@ -55,7 +55,17 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("E:/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
+for(d in Dat){
+    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+}
 D18 <- bind_rows(Dat)
+for(d in Dat19){
+    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+}
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=c(D18$DT, D19$DT),
     lat = c(D18$Lat, D19$Lat),
@@ -659,9 +669,9 @@ WindDat$bin10 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
 mnW <- ddply(WindDat, "bin10", summarise, grp.mean=mean(rAligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 bin10ns <- WindDat[WindDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
-toFor <- ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = rAligned, colour = bin10)) +
+toFor <- ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")
-  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$bin10[WindDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
@@ -691,7 +701,7 @@ unique(WindDat$Fkbin10)
 mnW <- ddply(WindDat, "Fkbin10", summarise, grp.mean=mean(rAligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 Fkbin10ns <- WindDat[WindDat$distFk < 500 & WindDat$distTo > 50,] %>% group_by(Fkbin10) %>% dplyr::summarise(length(unique(yrID)))
-fromFk <- ggplot(WindDat[WindDat$distFk < 500 & WindDat$distTo > 50,]) + stat_density(aes(x = rAligned, colour = Fkbin10),size=1.1,geom="line",position="identity") +  
+fromFk <- ggplot(WindDat[WindDat$distFk < 500 & WindDat$distTo > 50,]) + stat_density(aes(x = aligned, colour = Fkbin10),size=1.1,geom="line",position="identity") +  
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_viridis(name = "Distance from \ncolony (km)", discrete=T,
   labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$Fkbin10[WindDat$distFk < 500])))),", (", as.character(unlist(Fkbin10ns[,2])),")",sep="")) +
@@ -760,7 +770,7 @@ LoutwDat <- wDat[wDat$OutHm < 0 & wDat$tripL > 2,]
 LhmwDat <- wDat[wDat$OutHm > 0 & wDat$tripL > 2,]
 SoutwDat <- wDat[wDat$OutHm < 0 & wDat$tripL <= 2,]
 ShmwDat <- wDat[wDat$OutHm > 0 & wDat$tripL <= 2,]
-LoutDists <- ggplot(LoutwDat[LoutwDat$distTo > 0 &LoutwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(LoutwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+LoutDists <- ggplot(LoutwDat[LoutwDat$distTo > 0 &LoutwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(LoutwDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
   stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
@@ -770,7 +780,7 @@ LoutDists <- ggplot(LoutwDat[LoutwDat$distTo > 0 &LoutwDat$distTo < 90,], aes(x 
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
   scale_y_continuous(name="", breaks=seq(0,1,.1),labels=seq(0,100,10),limits=c(0,1.1))
 
-SoutDists <- ggplot(SoutwDat[SoutwDat$distTo > 0 &SoutwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(SoutwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+SoutDists <- ggplot(SoutwDat[SoutwDat$distTo > 0 &SoutwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(SoutwDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
   stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
@@ -783,7 +793,7 @@ SoutDists <- ggplot(SoutwDat[SoutwDat$distTo > 0 &SoutwDat$distTo < 90,], aes(x 
 # split into long and short foraging trips
 LhmDists <- ggplot(LhmwDat[LhmwDat$distTo > 0 &LhmwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(LhmwDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
-  stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(LhmwDat$bin10[LhmwDat$distTo < 90])))),sep="")) +
@@ -793,7 +803,7 @@ LhmDists <- ggplot(LhmwDat[LhmwDat$distTo > 0 &LhmwDat$distTo < 90,], aes(x = al
 
 ShmDists <- ggplot(ShmwDat[ShmwDat$distTo > 0 &ShmwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(ShmwDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
-  stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(ShmwDat$bin10[ShmwDat$distTo < 90])))),sep="")) +
@@ -803,10 +813,6 @@ ShmDists <- ggplot(ShmwDat[ShmwDat$distTo > 0 &ShmwDat$distTo < 90,], aes(x = al
 
 figAll <- ggpubr::ggarrange(LoutDists,SoutDists,LhmDists,ShmDists,nrow=2,ncol=2,labels=c("L Out","S Out","L Home","S Home"), common.legend = T, legend = "right")
 annotate_figure(figAll,left=text_grob("Proportion of relative wind headings (%)",rot=90,size=10,vjust=1.5))
-
-bin10s <- bin10ns[,2]
-typeof(WindDat$bin10)
-
 
 tst <- sapply(unique(allD$yrID), function(x) c(NA,distHaversine(cbind(allD$lon[which(allD$yrID==x)[1:(length(which(allD$yrID==x))-1)]],
   allD$lat[which(allD$yrID==x)[1:(length(which(allD$yrID==x))-1)]]),
