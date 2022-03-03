@@ -46,6 +46,7 @@ library(CircMLE)
 library(rgeos)
 library(bpnreg)
 library(circular)
+library(geosphere)
 
 #################################################################################
 ######################## BRING IN THE FORAGING ESTIMATES ########################
@@ -62,7 +63,17 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("E:/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
+for(d in Dat){
+    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+}
 D18 <- bind_rows(Dat)
+for(d in Dat19){
+    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+}
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=c(D18$DT, D19$DT),
     lat = c(D18$Lat, D19$Lat),
@@ -114,12 +125,12 @@ signif.ceiling <- function(x, n){
 avRelHd <- NA
 pvals<-vector(mode="list",length=length(distGaps))
 wDat <- na.omit(WindDat)
-for(b in 1:length(distGaps)){
-    RaylT <- r.test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
-    tst<-HR_test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
-    pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
-}
-save(pvalsLS,file='E:/My Drive/PhD/Data/pvalsLS.RData')
+# for(b in 1:length(distGaps)){
+#     RaylT <- r.test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
+#     tst<-HR_test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
+#     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
+# }
+# save(pvalsLS,file='E:/My Drive/PhD/Data/pvalsLS.RData')
 
 # # repeat for both long and short trips
 # wLong <- wDat[wDat$tripL > 2,]
@@ -138,11 +149,14 @@ if(Sys.info()['sysname'] == "Darwin"){
 } else {
     load('E:/My Drive/PhD/Data/pvalsLS.RData')
 }
+for(df in pvalsLS){
+    rownames(df) <- NULL
+}
 pvalsLS <- bind_rows(pvalsLS)
 
-tstL <- data.frame(mean=sapply(1:10, function(x) mean.circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL > 2])), dev = sapply(1:10, function(x) angular.deviation(wDat$rwh[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL > 2])))
+tstL <- data.frame(mean=sapply(1:10, function(x) mean.circular(circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL > 2]))), dev = sapply(1:10, function(x) angular.deviation(circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL > 2]))))
 
-tstS <- data.frame(mean=sapply(1:10, function(x) mean.circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL <= 2])),dev=sapply(1:10, function(x) angular.deviation(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL <= 2])))
+tstS <- data.frame(mean=sapply(1:10, function(x) mean.circular(circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL <= 2]))),dev=sapply(1:10, function(x) angular.deviation(circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL <= 2]))))
 
 tstL$length<-"Long"
 tstL$RlR <- pvalsLS$LRlR
@@ -155,8 +169,6 @@ tstS$Dist <- distGapsL
 tstS$rP <- pvalsLS$SRlP
 tstS$hP <- pvalsLS$SHRp
 tstAll <- rbind(tstL,tstS)
-
-tstAll
 
 plot(as.circular(0, zero = 0))
 

@@ -691,7 +691,7 @@ ggplot(WindDat %>% group_by(Fkbin10) %>% summarise(n=n())) +
 
 plot(WindDat$distFk)
 
-
+library(ggpubr)
 breaks<-seq(from=0,to=round_any(max(WindDat$distFk,na.rm=T),10,f=ceiling),by=50)
 WindDat$Fkbin10 <- cut(WindDat$distFk, breaks = breaks, include.lowest=T,right=F)
 WindDat$Fkbin10 <- sub("\\[","",as.character(WindDat$Fkbin10))
@@ -730,10 +730,10 @@ ggsave(paste(figLoc,"CombDistRelDensity.svg",sep=""), device="svg", dpi = 300, h
 LwDat <- WindDat[WindDat$tripL > 2,]
 breaks<-seq(from=0,to=round_any(max(LwDat$distTo,na.rm=T),10,f=ceiling),by=10)
 LwDat$bin10 <- cut(LwDat$distTo, breaks = breaks, include.lowest=T,right=F)
-mnW <- ddply(LwDat, "bin10", summarise, grp.mean=mean(rAligned))
+mnW <- ddply(LwDat, "bin10", summarise, grp.mean=mean(aligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 bin10ns <- LwDat[LwDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
-lDists <- ggplot(LwDat[LwDat$distTo > 0 &LwDat$distTo < 90,], aes(x = rAligned, colour = bin10)) +#max(LwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+lDists <- ggplot(LwDat[LwDat$distTo > 0 &LwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(LwDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
   stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
@@ -747,12 +747,12 @@ lDists <- ggplot(LwDat[LwDat$distTo > 0 &LwDat$distTo < 90,], aes(x = rAligned, 
 SwDat <- WindDat[WindDat$tripL <= 2,]
 breaks<-seq(from=0,to=round_any(max(SwDat$distTo,na.rm=T),10,f=ceiling),by=10)
 SwDat$bin10 <- cut(SwDat$distTo, breaks = breaks, include.lowest=T,right=F)
-mnW <- ddply(SwDat, "bin10", summarise, grp.mean=mean(rAligned))
+mnW <- ddply(SwDat, "bin10", summarise, grp.mean=mean(aligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 bin10ns <- SwDat[SwDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
-sDists <- ggplot(SwDat[SwDat$distTo > 0 &SwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(SwDat$distTo),], aes(x = rAligned, colour = bin10)) +
+sDists <- ggplot(SwDat[SwDat$distTo > 0 &SwDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(SwDat$distTo),], aes(x = aligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")geom_density(alpha=.5,show.legend=FALSE)+
-  stat_density(aes(x=rAligned, colour=bin10), size=1.1, geom="line",position="identity") +
+  stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(SwDat$bin10[SwDat$distTo < 90])))),sep="")) +
