@@ -147,10 +147,26 @@ tstS <- data.frame(mean=sapply(1:10, function(x) mean.circular(wDat$RelHead[wDat
 tstL$length<-"Long"
 tstL$RlR <- pvalsLS$LRlR
 tstL$Dist <- distGapsL
+tstL$rP <- pvalsLS$LRlP
+tstL$hP <- pvalsLS$LHRp
 tstS$length<-"Short"
 tstS$RlR <- pvalsLS$SRlR
 tstS$Dist <- distGapsL
+tstS$rP <- pvalsLS$SRlP
+tstS$hP <- pvalsLS$SHRp
 tstAll <- rbind(tstL,tstS)
+
+tstAll
+
+plot(as.circular(0, zero = 0))
+
+x <- as.circular(pi, control.circular=list(units="radians", zero=pi))
+y <- conversion.circular(circular(pi), zero=pi)
+res <- plot(x)
+points(y, col=2, plot.info=res)
+
+HR_test(as.circular(wDat$RelHead[wDat$distTo > 10 & wDat$distTo <= 20 & wDat$tripL > 2],units="radians"))
+
 
 ggplot() + geom_point(data=tstAll,aes(x = mean, y = Dist, fill = RlR, pch = length),size=3) +
     coord_polar(start=pi) + scale_shape_manual(name = "Trip type", values=c(21,24)) +

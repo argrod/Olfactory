@@ -33,6 +33,7 @@ library(CircStats)
 library(Cairo)
 # install.packages("bpnreg")
 library(bpnreg)
+library(geosphere)
 options(timeout = 800)
 
 ##############################################################################
@@ -50,7 +51,17 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("E:/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
+for(d in Dat){
+    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+}
 D18 <- bind_rows(Dat)
+for(d in Dat19){
+    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+}
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=c(D18$DT, D19$DT),
     lat = c(D18$Lat, D19$Lat),
@@ -71,6 +82,8 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
 japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
+# recalculate distance and speed
+
 
 ###############################################################################
 ######################## BRING IN THE WIND ESTIMATIONS ########################
@@ -133,7 +146,7 @@ for(b in 1:nrow(WindDat)){ # for each row in WindDat
     # WindDat$timeTo[b] <- as.numeric(difftime(allD$DT[point+forInd],WindDat$DT[b], units="secs"))
     # WindDat$distTo[b] <- sqrt((allD$UTMN[forInd] - allD$UTMN[point])^2 + (allD$UTME[forInd] - allD$UTME[point])^2)*10^-3
     WindDat$timeTo[b] <- as.numeric(difftime(allD$DT[point],WindDat$DT[b], units="secs"))
-    WindDat$distTo[b] <- sqrt((allD$UTMN[point] - WindDat$UTMN[b])^2 + (allD$UTME[point] - WindDat$UTME[b])^2)*10^-3
+    WindDat$distTo[b] <- distHaversine(cbind(allD$lon[point],allD$lat[point]),cbind(WindDat$lon[b],WindDat$lat[b]))
   }
 }
 WindDat$spTrav <- NA
@@ -187,15 +200,20 @@ WindDat$straightness <- c(tst,rep(NA,nrow(WindDat)-length(tst)))
 #######################################  ADD DISTANCES FROM FKOSHI ISLAND #######################################
 #################################################################################################################
 
-distFk <- function(utmn,utme){
+distFk <- function(lon,lat){
     FkOshi <- data.frame('Lat'=39.402289,'Long'=141.998165)
-    FkOshi.dec <- SpatialPoints(cbind(FkOshi$Long,FkOshi$Lat),proj4string=CRS('+proj=longlat'))
-    FkOshi.UTM <- spTransform(FkOshi.dec, CRS("+proj=utm +zone=54 +datum=WGS84"))
-    FkUTME <- FkOshi.UTM$coords.x1
-    FkUTMN <- FkOshi.UTM$coords.x2
-    return((sqrt((utmn-FkUTMN)^2 + (utme-FkUTME)^2)/1000))
+    return(distHaversine(cbind(lon,lat),cbind(FkOshi$Long,FkOshi$Lat))/(10^3))
 }
-WindDat$distFk <- distFk(WindDat$UTMN,WindDat$UTME)
+WindDat$distFk <- distFk(WindDat$lon,WindDat$lat)
+
+# calculate outward/homeward for each estimation using Shiomi method
+WindDat$OutHm <- NA
+for(b in 1:nrow(WindDat)){
+    if(any(allD$DT > WindDat$DT[b] & allD$yrID == WindDat$yrID[b])){
+        WindDat$OutHm[b] <- mean(diff(allD$distFk[allD$DT >= WindDat$DT[b] & allD$DT <= WindDat$DT[b] + 3600 & allD$yrID == WindDat$yrID[b]])/
+            as.numeric(diff(allD$DT[allD$DT >= WindDat$DT[b] & allD$DT <= WindDat$DT[b] + 3600 & allD$yrID == WindDat$yrID[b]])))
+    }
+}
 
 if(Sys.info()['sysname'] == "Darwin"){
     save(WindDat,file='/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalculations1819.RData')
