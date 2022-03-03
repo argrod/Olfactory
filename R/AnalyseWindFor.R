@@ -158,6 +158,39 @@ ggplot() + geom_point(data=tstAll,aes(x = mean, y = Dist, fill = RlR, pch = leng
     scale_x_continuous(name = "Relative wind ")
 
 #################################################################################################################
+##########################  WATSON-WHEELER TEST FOR 10KM BINS FOR LONG AND SHORT TRIPS###########################
+#################################################################################################################
+
+distGaps <- seq(0,90,10)
+distGapsL <- distGaps+10
+b <- 1
+watson.wheeler.test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]],
+    group = WindDat$tripL[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]] <= 2)
+
+WindDat$DofY <- strftime(WindDat$DT, format= "%j")
+WindDat$year <- year(WindDat$DT)
+totst <- unique(WindDat[,c("DofY","year")])
+
+wwTests <- lapply(distGaps, function(x) watson.wheeler.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= x + 10],
+    group = WindDat$tripL[WindDat$distTo > x & WindDat$distTo <= x + 10] <= 2))
+
+WWs <- data.frame(dGaps = distGaps, pvals = array(unlist(sapply(wwTests, '[',4))))
+
+plot(WWs$dGaps,WWs$pvals > 0.01)
+
+b<-6
+ggplot(na.omit(WindDat[which(WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]),])) + 
+        geom_point(aes(x = RelHead, y = distTo, fill = tripL <= 2), pch = 21) + coord_polar(start=pi) + 
+        scale_x_continuous(name = "Relative wind headings (rad)", limits = c(-pi,pi)) +
+        scale_fill_manual(name = "Trip length", breaks = c(FALSE,TRUE), labels = c("Long","Short"), values=c("red","deepskyblue"))
+for(b in 1:length(distGaps)){
+    ggplot(na.omit(WindDat[which(WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]),])) + 
+        geom_density(aes(x = RelHead, fill = tripL <= 2), alpha = .3) + coord_polar(start=pi) + 
+        scale_x_continuous(name = "Relative wind headings (rad)", limits = c(-pi,pi)) +
+        scale_fill_manual(name = "Trip length", breaks = c(FALSE,TRUE), labels = c("Long","Short"), values=c("red","deepskyblue"))
+}
+
+#################################################################################################################
 ############################  FINDING FORAGING WITH WIND CALCULATED BEFORE (30 MINS) ############################
 #################################################################################################################
 
