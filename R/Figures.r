@@ -38,6 +38,7 @@ library(CircMLE)
 library(png)
 library(ggspatial)
 library(egg)
+library(geosphere)
 options(timeout = 800)
 
 ###################################################################################################################################
@@ -55,17 +56,17 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("E:/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
-for(d in Dat){
-    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
-        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
-    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
-}
+# for(d in Dat){
+#     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+#         cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+#     d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+# }
 D18 <- bind_rows(Dat)
-for(d in Dat19){
-    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
-        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
-    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
-}
+# for(d in Dat19){
+#     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+#         cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+#     d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+# }
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=c(D18$DT, D19$DT),
     lat = c(D18$Lat, D19$Lat),
@@ -436,7 +437,7 @@ ggplot(ListD[[6]]) +
   geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     coord_sf(xlim = c(140, 144), ylim = c(39, 42.5))
 
-lengths<-seq(from=0,to=max(WindDat$distTo)-1, by = 1)
+lengths<-seq(from=0,to=max(WindDat$distTo,na.rm=T)-1, by = 1)
 lengthsL <- lengths+1
 WindDat$trip <- NA
 WindDat$trip[WindDat$tripL == 1] <- "Short"
@@ -533,6 +534,30 @@ fit.Maps <- bpnme(pred.I = Error.rad ~ Maze + Trial.type + L.c + (1|Subject), da
 
 traceplot(testr)
 summary(WindDat)
+
+#####################################################################################
+`################## DENSITY PLOTS FOR LONG AND SHORT ###`############################
+#####################################################################################
+
+geomplots <- vector(mode="list",length=10)
+for(b in 1:length(distGaps)){
+    geomplots[[b]] <- ggplot() + 
+        stat_density(data = WindDat[WindDat$distTo > distGaps[b] & WindDat$distTo < (distGaps[b] + 10) & WindDat$tripL > 2,],
+            aes(x = aligned, colour = "deepskyblue"),size=1.1, geom="line") +
+        stat_density(data = WindDat[WindDat$distTo > distGaps[b] & WindDat$distTo < (distGaps[b] + 10) & WindDat$tripL <= 2,],
+            aes(x = aligned, colour = "red"),size=1.1, geom="line") +
+        scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) +
+        ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+        scale_colour_manual(name = "Length", values = c("deepskyblue","red"),
+          labels = c("Long","Short"))
+}
+geomplots[[3]]
+ggarrange(geomplots[[1]],geomplots[[2]],geomplots[[3]],geomplots[[4]],
+  geomplots[[5]],geomplots[[6]],geomplots[[7]],geomplots[[8]],geomplots[[9]],
+  geomplots[[10]], nrow = 5, ncol = 2, labels = as.character(1:10))
+####################################################################################
+###################### ATTEMPT AT BUILDING A GAM ###################################
+####################################################################################
 
 # try building GAM
 library(tidyverse)
@@ -1122,14 +1147,12 @@ LcirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[which(
 LaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1])))
 Lnums <- sapply(inters, function(x) sum(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL > 1))
 
-ScirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1])))
+ScirDistEst <- bind_rows(lapply(inters, function(x) circ.disp(relHCirc[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1)])))
 # add the 90th and 10th %ile of est wind speed
 ScirDistEst[,c("ten","ninety")] <- bind_rows(lapply(inters, function(x) quantile(WindDat$WSpd[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1)], probs = c(.1,.9))))
 ScirDistEst$meanSpd <- unlist(lapply(inters,function(x) mean(WindDat$WSpd[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1)])))
 SaveHDistEst <- bind_rows(lapply(inters, function(x) circ.disp(aveHCirc[which(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1)])))
 Snums <- sapply(inters, function(x) sum(WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5) & WindDat$tripL <= 1))
-
-plot()
 
 sapply(inters, function(x) length(unique(WindDat$yrID[WindDat$distTo > (x - 2.5) & WindDat$distTo <= (x + 2.5)])))
 

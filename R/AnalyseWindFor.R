@@ -153,6 +153,12 @@ for(df in pvalsLS){
     rownames(df) <- NULL
 }
 pvalsLS <- bind_rows(pvalsLS)
+pvalsLS$LRlP
+ggplot(pvalsLS) + 
+    geom_line(aes(x = dist, y = LRlR, colour = "deepskyblue")) +
+    geom_point(aes(x = dist, y = LRlR, fill = "deepskyblue"), pch=21, alpha = pvalsLS$LRlP < 0.01) + 
+    geom_line(aes(x = dist, y = SRlR, colour = "red")) +
+    geom_point(aes(x = dist, y = SRlR, fill = "red"),pch = 21, alpha = pvalsLS$SRlP < 0.01)
 
 tstL <- data.frame(mean=sapply(1:10, function(x) mean.circular(circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL > 2]))), dev = sapply(1:10, function(x) angular.deviation(circular(wDat$RelHead[wDat$distTo > distGaps[x] & wDat$distTo <= distGapsL[x] & wDat$tripL > 2]))))
 
