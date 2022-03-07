@@ -63,17 +63,17 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("E:/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
-for(d in Dat){
-    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
-        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
-    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
-}
+# for(d in Dat){
+#     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+#         cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+#     d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+# }
 D18 <- bind_rows(Dat)
-for(d in Dat19){
-    d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
-        cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
-    d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
-}
+# for(d in Dat19){
+#     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
+#         cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
+#     d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+# }
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=c(D18$DT, D19$DT),
     lat = c(D18$Lat, D19$Lat),
@@ -911,3 +911,34 @@ y <- na.omit(WindDat$rwh[WindDat$bin10 == unique(WindDat$bin10)[1]])
 
 cbind(sort(x %% (2*pi)),rep(1,length(x)))
 2.4 %% (2*pi)
+
+###############################################################################################
+#################### CHECK THE GENERAL WIND DIRECTION FOR THE WHOLE PERIOD ####################
+###############################################################################################
+
+plot(WindDat$DT[year(WindDat$DT) == 2018],WindDat$WHead[year(WindDat$DT) == 2018])
+
+ggplot(WindDat) + 
+    stat_density(aes(x = WHead,fill=as.factor(year(DT))),alpha=.4)
+
+ggplot(WindDat) +  
+    geom_point(aes(x = lat, y = WHead))
+
+###############################################################################################
+################ COLLECT DATA FOR EACH FORAGING NUMBER, FIND AVERAGE WITH RBAR ################
+###############################################################################################
+
+uniqTr <- WindDat %>% dplyr::group_by(forNo,yrID,bin10) %>% 
+    dplyr::summarise(rbar = r.test(RelHead)$r.bar, pval = r.test(RelHead)$p.value,
+    mnHead = circ.mean(RelHead))
+uniqTr$dist <- as.numeric(uniqTr$bin10)
+uniqTr <- as.data.frame(uniqTr)
+ggplot(uniqTr[uniqTr$dist < 100 & uniqTr$pval < 0.5,]) + geom_point(aes(x = mnHead, y = dist, fill = rbar),
+    pch = 21 , size = 2) + coord_polar()
+
+
+ggplot(WindDat[WindDat$distTo < 100,]) + geom_point(aes(x=RelHead,y=distTo)) +
+    coord_polar()
+
+ggplot(WindDat) + geom_point(aes(x = RelHead, y = spTrav)) + coord_polar()
+
