@@ -928,14 +928,45 @@ ggplot(WindDat) +
 ################ COLLECT DATA FOR EACH FORAGING NUMBER, FIND AVERAGE WITH RBAR ################
 ###############################################################################################
 
-uniqTr <- WindDat %>% dplyr::group_by(forNo,yrID,bin10) %>% 
+breaks<-seq(from=0,to=round_any(max(WindDat$distTo,na.rm=T),5,f=ceiling),by=5)
+WindDat$bin5 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
+
+uniqTr <- WindDat %>% dplyr::group_by(forNo,yrID,bin5,tripL > 2) %>% 
     dplyr::summarise(rbar = r.test(RelHead)$r.bar, pval = r.test(RelHead)$p.value,
     mnHead = circ.mean(RelHead))
-uniqTr$dist <- as.numeric(uniqTr$bin10)
+uniqTr$dist <- as.numeric(sub(",.*","",sub("[][]","",as.character(uniqTr$bin5)))) + 5
 uniqTr <- as.data.frame(uniqTr)
-ggplot(uniqTr[uniqTr$dist < 100 & uniqTr$pval < 0.5,]) + geom_point(aes(x = mnHead, y = dist, fill = rbar),
+colnames(uniqTr) <- c("forNo","yrID","bin5","tripL","rbar","pval","mnHead","dist")
+ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05,]) + geom_point(aes(x = mnHead, y = dist, fill = rbar),
     pch = 21 , size = 2) + coord_polar()
 
+uniqTr$aligned <- uniqTr$mnHead + pi
+uniqTr$aligned[uniqTr$aligned > pi] <- uniqTr$aligned[uniqTr$aligned > pi] - 2*pi
+long <- ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == T,]) +
+    stat_density(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete = T)
+
+
+ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == T,]) +
+    geom_point(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete = T)
+
+short <- ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == F,]) +
+    stat_density(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete = T)
+
+ggplot() +
+    stat_density(aes(x = uniqTr$mnHead))
+
+long <- ggplot(WindDat[WindDat$distTo < 50 & WindDat$tripL > 2,]) + stat_density(aes(x = aligned, colour = bin5),
+    position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete=T)
+
+short <- ggplot(WindDat[WindDat$distTo < 50 & WindDat$tripL <= 2,]) + stat_density(aes(x = aligned, colour = bin5),
+    position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete=T)
+
+ggarrange(long,short,nrow=1,common.legend = T)
 
 ggplot(WindDat[WindDat$distTo < 100,]) + geom_point(aes(x=RelHead,y=distTo)) +
     coord_polar()
