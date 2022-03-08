@@ -66,15 +66,18 @@ if(Sys.info()['sysname'] == "Darwin"){
 # for(d in Dat){
 #     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
 #         cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
-#     d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+#     d$spTrav <- c(NA,(d$distTrav[2:nrow(d)]/1000)/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="mins")))
 # }
 D18 <- bind_rows(Dat)
+# remove values with unrealistic speeds
+D18 <- D18[D18$spTrav < 100,]
 # for(d in Dat19){
 #     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
 #         cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
-#     d$spTrav <- c(NA,d$distTrav[2:nrow(d)]/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="secs")))
+#     d$spTrav <- c(NA,(d$distTrav[2:nrow(d)]/1000)/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="mins")))
 # }
 D19 <- bind_rows(Dat19)
+D19 <- D19[D18$spTrav < 100,]
 allD <- data.frame(DT=c(D18$DT, D19$DT),
     lat = c(D18$Lat, D19$Lat),
     lon = c(D18$Lon, D19$Lon),
@@ -205,12 +208,62 @@ WindDat$DofY <- strftime(WindDat$DT, format= "%j")
 WindDat$year <- year(WindDat$DT)
 totst <- unique(WindDat[,c("DofY","year")])
 
-wwTests <- lapply(distGaps, function(x) watson.wheeler.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= x + 10],
-    group = WindDat$tripL[WindDat$distTo > x & WindDat$distTo <= x + 10] <= 2))
+wwTests <- lapply(distGaps, function(x) watson.two.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= (x + 10) & WindDat$tripL > 2],
+    WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= (x + 10) & WindDat$tripL > 2],alpha=.01))
 
+
+sapply(wwTests, function(x) print(x$statistic))
 WWs <- data.frame(dGaps = distGaps, pvals = array(unlist(sapply(wwTests, '[',4))))
 
-plot(WWs$dGaps,WWs$pvals > 0.01)
+# run watson-wheeler tests for 10km bins for outgoing birds as they approach foraging spots
+distGaps <- seq(0,90,10)
+WindDat$OutHm <- WindDat$OutHm > 0      # OutHm false for outward legs
+wwTestsL <- lapply(distGaps, function(x) watson.two.test(WindDat$RelHead[WindDat$distTo > x & WindDat$OutHm == F & WindDat$distTo <= (x + 10) & WindDat$tripL > 2],
+    WindDat$RelHead[WindDat$distTo > (x+10) & WindDat$distTo <= (x + 20) & WindDat$OutHm == F & WindDat$tripL > 2]))
+wwTestsS <- lapply(distGaps, function(x) watson.two.test(WindDat$RelHead[WindDat$distTo > x & WindDat$OutHm == F & WindDat$distTo <= (x + 10) & WindDat$tripL <= 2],
+    WindDat$RelHead[WindDat$distTo > (x+10) & WindDat$distTo <= (x + 20) & WindDat$OutHm == F & WindDat$tripL <= 2]))
+# warnings produced are simply about coercing RelHead to circular
+WWs <- data.frame(dGaps = distGaps, pvals = array(unlist(sapply(wwTests, '[',1))))
+
+wwTestsAll <- lapply(distGaps, function(x) watson.two.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= (x + 10)],
+    WindDat$RelHead[WindDat$distTo > (x+10) & WindDat$distTo <= (x + 20)]))
+
+wwTestsall <- lapply(distGaps, function(x) watson.wheeler.test(list(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= (x + 10)],
+    WindDat$RelHead[WindDat$distTo > (x+10) & WindDat$distTo <= (x + 20)])))
+
+
+testdata = circular::rvonmises(20, mu = circular::circular(pi), kappa = 3)
+testdata = na.omit(circular::circular(WindDat$RelHead[WindDat$distTo < 20 & WindDat$distTo >= 10]))
+HR_test(testdata, iter = 999)
+
+wwTests[[1]]
+
+tripLengths <- allD %>% dplyr::group_by(yrID,tripL > 2) %>% dplyr::summarise(n = max(distFk))
+dailyLengths <- as.data.frame(allD %>% dplyr::group_by(yrID,Day) %>% dplyr::summarise(lengths = sum(distTrav/1000)))
+
+mean(tripLengths$n[tripLengths[,2] == F],na.rm=T)
+mean(tripLengths$n[tripLengths[,2] == T],na.rm=T)
+
+
+mean(dailyLengths$lengths,na.rm=T)
+hist(allD$distTrav)
+
+tester <- allD[allD$yrID == unique(allD$yrID)[3] & allD$tripL == 1,]
+tester$long <- tester$lon
+tester$sumLength <- cumsum(tester$distTrav/1000)
+ggplot(tester) +
+    geom_point(aes(x = lon, y= lat, colour = sumLength))
+
+
+ggplot() +
+    geom_path(data = tester[tester$sumLength <= 400,], aes(x = lon, y = lat),colour="red")+
+    geom_path(data = tester[tester$sumLength <= 300,], aes(x = lon, y = lat),colour="blue")+
+    geom_path(data = tester[tester$sumLength <= 200,], aes(x = lon, y = lat),colour="purple")+
+    ggsn::scalebar(data = tester[tester$sumLength <= 300,], dist = 50, model = 'WGS84',transform=T,dist_unit="km", height = .05,location="topleft")
+    #   st.dist = .1,x.min = 142, x.max = 142.5, y.min = 39.15, y.max = 39.2, location = 'bottomleft',box.fill=c("black","white"))
+
+
+sum(allD$distTrav[allD$yrID == unique(allD$yrID)[2] & allD$tripL == 1])/1000
 
 b<-6
 ggplot(na.omit(WindDat[which(WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]),])) + 
@@ -937,39 +990,23 @@ uniqTr <- WindDat %>% dplyr::group_by(forNo,yrID,bin5,tripL > 2) %>%
 uniqTr$dist <- as.numeric(sub(",.*","",sub("[][]","",as.character(uniqTr$bin5)))) + 5
 uniqTr <- as.data.frame(uniqTr)
 colnames(uniqTr) <- c("forNo","yrID","bin5","tripL","rbar","pval","mnHead","dist")
-ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05,]) + geom_point(aes(x = mnHead, y = dist, fill = rbar),
-    pch = 21 , size = 2) + coord_polar()
-
 uniqTr$aligned <- uniqTr$mnHead + pi
 uniqTr$aligned[uniqTr$aligned > pi] <- uniqTr$aligned[uniqTr$aligned > pi] - 2*pi
-long <- ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == T,]) +
-    stat_density(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
-    scale_colour_viridis(discrete = T)
 
-
-ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == T,]) +
-    geom_point(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
-    scale_colour_viridis(discrete = T)
-
-short <- ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == F,]) +
-    stat_density(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
-    scale_colour_viridis(discrete = T)
-
-ggplot() +
-    stat_density(aes(x = uniqTr$mnHead))
-
-long <- ggplot(WindDat[WindDat$distTo < 50 & WindDat$tripL > 2,]) + stat_density(aes(x = aligned, colour = bin5),
-    position = "identity", fill = NA, size = 1.1) +
-    scale_colour_viridis(discrete=T)
-
-short <- ggplot(WindDat[WindDat$distTo < 50 & WindDat$tripL <= 2,]) + stat_density(aes(x = aligned, colour = bin5),
-    position = "identity", fill = NA, size = 1.1) +
-    scale_colour_viridis(discrete=T)
-
-ggarrange(long,short,nrow=1,common.legend = T)
-
-ggplot(WindDat[WindDat$distTo < 100,]) + geom_point(aes(x=RelHead,y=distTo)) +
-    coord_polar()
-
-ggplot(WindDat) + geom_point(aes(x = RelHead, y = spTrav)) + coord_polar()
-
+# remove non significant data
+uniqTrSig <- uniqTr[uniqTr$pval < 0.05,]
+distGaps <- seq(0,90,10)
+pvalsUniq<-vector(mode="list",length=length(distGaps))
+for(b in 1:length(distGaps)){
+    RaylTS <- r.test(uniqTrSig$mnHead[uniqTrSig$tripL == F & uniqTrSig$dist > distGaps[b] & uniqTrSig$dist < (distGaps[b] + 10)])
+    # tstS<-HR_test(wShort$rwh[wShort$distTo >= distGaps[b] & wShort$distTo < distGapsL[b]])
+    RaylTL <- r.test(uniqTrSig$mnHead[uniqTrSig$tripL == T & uniqTrSig$dist > distGaps[b] & uniqTrSig$dist < (distGaps[b] + 10)])
+    # tstL<-HR_test(wLong$rwh[wLong$distTo >= distGaps[b] & wLong$distTo < distGapsL[b]])
+    pvalsUniq[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGaps[b]+10)),SRlP = RaylTS$p.value,SRlR = RaylTS$r.bar,
+        LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar)
+}
+# if(Sys.info()['sysname'] == "Darwin"){
+#     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvalsUniq.RData")
+# } else {
+#     load('E:/My Drive/PhD/Data/pvalsUniq.RData')
+# }
