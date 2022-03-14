@@ -205,12 +205,22 @@ WindDat$DofY <- strftime(WindDat$DT, format= "%j")
 WindDat$year <- year(WindDat$DT)
 totst <- unique(WindDat[,c("DofY","year")])
 
-wwTests <- lapply(distGaps, function(x) watson.wheeler.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= x + 10],
-    group = WindDat$tripL[WindDat$distTo > x & WindDat$distTo <= x + 10] <= 2))
+wwTests <- lapply(distGaps, function(x) watson.two.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= x + 10],
+    WindDat$RelHead[WindDat$distTo > (x+10) & WindDat$distTo <= (x + 20) & WindDat$tripL <= 2]))
 
 WWs <- data.frame(dGaps = distGaps, pvals = array(unlist(sapply(wwTests, '[',4))))
 
+lapply(wwTests, function(x) print(x))
+
 plot(WWs$dGaps,WWs$pvals > 0.01)
+
+watson.wheeler.test(WindDat$RelHead[WindDat$distTo > 40 & WindDat$distTo <= 60],
+    group = WindDat$distTo[WindDat$distTo > 40 & WindDat$distTo <= 60] > 50)
+
+watson.two.test(WindDat$RelHead[WindDat$distTo > 40 & WindDat$distTo <= 50],WindDat$RelHead[WindDat$distTo > 50 & WindDat$distTo <= 60])
+
+plot(WindDat$RelHead[WindDat$distTo > 40 & WindDat$distTo <= 50],col="red")
+points(WindDat$RelHead[WindDat$distTo > 50 & WindDat$distTo <= 60],col="blue")
 
 b<-6
 ggplot(na.omit(WindDat[which(WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]),])) + 
@@ -968,8 +978,41 @@ short <- ggplot(WindDat[WindDat$distTo < 50 & WindDat$tripL <= 2,]) + stat_densi
 
 ggarrange(long,short,nrow=1,common.legend = T)
 
-ggplot(WindDat[WindDat$distTo < 100,]) + geom_point(aes(x=RelHead,y=distTo)) +
-    coord_polar()
+###############################################################################################
+############################ ATTEMPT AT CIRCULAR LINEAR REGRESSION ############################
+###############################################################################################
 
-ggplot(WindDat) + geom_point(aes(x = RelHead, y = spTrav)) + coord_polar()
+lm.circular()
 
+library(circglmbayes)
+# Simulate data
+x3 <- cbind(x = c(2001:2014, 2001:2014),
+            g = c(rep(0, 14), rep(1, 14)))
+
+y3 <- (1 + 2*atan(c(scale(x3) %*% c(.4, .1))) +
+         rvonmises(28, mu = circular(0), kappa = 50)) %% (2*pi)
+
+# Add interaction
+y3 <- (y3 + c(14:1 / 6, rep(0, 14))) %% (2*pi)
+
+# Collect and plot data
+df <- data.frame(cbind(x3, y = y3))
+plot(y ~ x, col = ifelse(df$g, "red", "blue"), df)
+
+ggplot(df) + geom_point(aes(x = x, y = y, colour = g)) + coord_polar()
+
+# Run model without interaction
+cgm_noint <- circGLM(y ~ x + g, data = df)
+
+# Run model without interaction
+cgm_int <- circGLM(y ~ x * g, data = df)
+
+cgm_noint
+cgm_int
+
+WindDat$rhd <- WindDat$RelHead + pi
+cgm_s <- circGLM(rhd ~ distTo + WSp eed, data = WindDat[!is.na(WindDat$distTo),])
+df$y
+WindDat$RelHead[1:20]
+# basis of the model 
+# relWindHead ~ distTo + wSpd + 
