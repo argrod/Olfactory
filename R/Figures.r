@@ -701,13 +701,8 @@ toFor <- ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90 & !is.na(WindDat
   scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$bin10[WindDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
-<<<<<<< HEAD
   scale_y_continuous(name="Proportion across all birds (%)", limits=c(0,.65),breaks=seq(0,0.6,.1),labels=seq(0,60,10))+
   annotate("text",x = -2.8, y = .6, label = "a)")
-=======
-  scale_y_continuous(name="", breaks=seq(0,0.6,.1),labels=seq(0,60,10),limits=c(0,.65))+
-  annotate("text",x = -2.8, y = .55, label = "a)")
->>>>>>> 6a9f5ef784b0da0b0c4b80eb4b2d0fe9da1b63d1
 ggsave(paste(figLoc,"DistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 8,
       width = 9, units = "cm")
 
