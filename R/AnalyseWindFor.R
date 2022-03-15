@@ -115,6 +115,12 @@ if(Sys.info()['sysname'] == "Darwin"){
 ################################  HR AND RALEIGH TEST P VALUES AND AVE HEADINGS ################################
 ################################################################################################################
 
+testdata = circular::rvonmises(20, mu = circular::circular(pi), kappa = 3)
+tst <- HR_test(testdata, iter = 999)
+
+HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo < 20 & WindDat$distTo > 10 & WindDat$tripL > 2]),
+    units="radians",zero=0), iter = 999)
+
 distGaps <- seq(0,90,10)
 distGapsL <- distGaps+10
 one2Ten <- vector(mode="list", length = length(distGaps))
@@ -128,12 +134,47 @@ signif.ceiling <- function(x, n){
 avRelHd <- NA
 pvals<-vector(mode="list",length=length(distGaps))
 wDat <- na.omit(WindDat)
-# for(b in 1:length(distGaps)){
-#     RaylT <- r.test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
-#     tst<-HR_test(wDat$rwh[wDat$distTo >= distGaps[b] & wDat$distTo < distGapsL[b]])
-#     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
-# }
-# save(pvalsLS,file='E:/My Drive/PhD/Data/pvalsLS.RData')
+for(b in 1:length(distGaps)){
+    RaylT <- r.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])))
+    tst<-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),iter=999)
+    pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
+}
+save(pvals,file='E:/My Drive/PhD/Data/pvals.RData')
+
+# repeat for 1 km bins from 10 downwards
+distGaps <- seq(0,9,1)
+distGapsL <- distGaps+1
+pvals1km<-vector(mode="list",length=length(distGaps))
+for(b in 1:length(distGaps)){
+    RaylT <- r.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])))
+    tst<-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),iter=999)
+    pvals1km[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
+}
+save(pvals1km,file='E:/My Drive/PhD/Data/pvals1km.RData')
+
+distGaps <- seq(0,100,10)
+distGapsL <- distGaps+10
+wws <- vector(mode="list",length=length(distGaps)-1)
+for(b in 1:length(wws)){
+    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b+1] & WindDat$distTo < distGapsL[b+1]])))
+}
+
+distGaps <- seq(0,100,10)
+distGapsL <- distGaps+10
+wws <- vector(mode="list",length=length(distGaps)-1)
+for(b in 1:length(wws)){
+    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL > 2])),circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL <= 2])))
+}
+
+ggplot(WindDat[WindDat$distTo > 10 & WindDat$distTo <= 40,]) +
+    geom_point(aes(x = RelHead, y= distTo, colour = tripL > 2)) + coord_polar()
+
+distGaps <- seq(0,10,1)
+distGapsL <- distGaps+1
+wws <- vector(mode="list",length=length(distGaps)-1)
+for(b in 1:length(wws)){
+    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b+1] & WindDat$distTo < distGapsL[b+1]])))
+}
 
 # # repeat for both long and short trips
 # wLong <- wDat[wDat$tripL > 2,]
