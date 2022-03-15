@@ -249,8 +249,8 @@ WindDat$DofY <- strftime(WindDat$DT, format= "%j")
 WindDat$year <- year(WindDat$DT)
 totst <- unique(WindDat[,c("DofY","year")])
 
-wwTests <- lapply(distGaps, function(x) watson.two.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= (x + 10) & WindDat$tripL > 2],
-    WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= (x + 10) & WindDat$tripL > 2],alpha=.01))
+wwTests <- lapply(distGaps, function(x) watson.two.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo <= x + 10],
+    WindDat$RelHead[WindDat$distTo > (x+10) & WindDat$distTo <= (x + 20) & WindDat$tripL <= 2]))
 
 
 sapply(wwTests, function(x) print(x$statistic))
@@ -305,6 +305,14 @@ ggplot() +
 
 
 sum(allD$distTrav[allD$yrID == unique(allD$yrID)[2] & allD$tripL == 1])/1000
+
+watson.wheeler.test(WindDat$RelHead[WindDat$distTo > 40 & WindDat$distTo <= 60],
+    group = WindDat$distTo[WindDat$distTo > 40 & WindDat$distTo <= 60] > 50)
+
+watson.two.test(WindDat$RelHead[WindDat$distTo > 40 & WindDat$distTo <= 50],WindDat$RelHead[WindDat$distTo > 50 & WindDat$distTo <= 60])
+
+plot(WindDat$RelHead[WindDat$distTo > 40 & WindDat$distTo <= 50],col="red")
+points(WindDat$RelHead[WindDat$distTo > 50 & WindDat$distTo <= 60],col="blue")
 
 b<-6
 ggplot(na.omit(WindDat[which(WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]),])) + 
@@ -1033,6 +1041,70 @@ uniqTr <- as.data.frame(uniqTr)
 colnames(uniqTr) <- c("forNo","yrID","bin5","tripL","rbar","pval","mnHead","dist")
 uniqTr$aligned <- uniqTr$mnHead + pi
 uniqTr$aligned[uniqTr$aligned > pi] <- uniqTr$aligned[uniqTr$aligned > pi] - 2*pi
+long <- ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == T,]) +
+    stat_density(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete = T)
+
+
+ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == T,]) +
+    geom_point(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete = T)
+
+short <- ggplot(uniqTr[uniqTr$dist < 50 & uniqTr$pval < 0.05 & uniqTr$tripL == F,]) +
+    stat_density(aes(x = aligned,colour = bin5),position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete = T)
+
+ggplot() +
+    stat_density(aes(x = uniqTr$mnHead))
+
+long <- ggplot(WindDat[WindDat$distTo < 50 & WindDat$tripL > 2,]) + stat_density(aes(x = aligned, colour = bin5),
+    position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete=T)
+
+short <- ggplot(WindDat[WindDat$distTo < 50 & WindDat$tripL <= 2,]) + stat_density(aes(x = aligned, colour = bin5),
+    position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete=T)
+
+ggarrange(long,short,nrow=1,common.legend = T)
+
+###############################################################################################
+############################ ATTEMPT AT CIRCULAR LINEAR REGRESSION ############################
+###############################################################################################
+
+lm.circular()
+
+library(circglmbayes)
+# Simulate data
+x3 <- cbind(x = c(2001:2014, 2001:2014),
+            g = c(rep(0, 14), rep(1, 14)))
+
+y3 <- (1 + 2*atan(c(scale(x3) %*% c(.4, .1))) +
+         rvonmises(28, mu = circular(0), kappa = 50)) %% (2*pi)
+
+# Add interaction
+y3 <- (y3 + c(14:1 / 6, rep(0, 14))) %% (2*pi)
+
+# Collect and plot data
+df <- data.frame(cbind(x3, y = y3))
+plot(y ~ x, col = ifelse(df$g, "red", "blue"), df)
+
+ggplot(df) + geom_point(aes(x = x, y = y, colour = g)) + coord_polar()
+
+# Run model without interaction
+cgm_noint <- circGLM(y ~ x + g, data = df)
+
+# Run model without interaction
+cgm_int <- circGLM(y ~ x * g, data = df)
+
+cgm_noint
+cgm_int
+
+WindDat$rhd <- WindDat$RelHead + pi
+cgm_s <- circGLM(rhd ~ distTo + WSp eed, data = WindDat[!is.na(WindDat$distTo),])
+df$y
+WindDat$RelHead[1:20]
+# basis of the model 
+# relWindHead ~ distTo + wSpd + 
 
 # remove non significant data
 uniqTrSig <- uniqTr[uniqTr$pval < 0.05,]

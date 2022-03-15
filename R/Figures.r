@@ -694,15 +694,20 @@ WindDat$bin10 <- cut(WindDat$distTo, breaks = breaks, include.lowest=T,right=F)
 mnW <- ddply(WindDat, "bin10", summarise, grp.mean=mean(rAligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 bin10ns <- WindDat[WindDat$distTo < 90,] %>% group_by(bin10) %>% dplyr::summarise(length(unique(yrID)))
-toFor <- ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90,], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = rAligned, colour = bin10)) +
+toFor <- ggplot(WindDat[WindDat$distTo > 0 &WindDat$distTo < 90 & !is.na(WindDat$distTo),], aes(x = aligned, colour = bin10)) +#max(WindDat$distTo),], aes(x = rAligned, colour = bin10)) +
   # geom_histogram(alpha=.2,fill=NA,position="dodge")
   geom_density(alpha=.5,show.legend=FALSE)+stat_density(aes(x=aligned, colour=bin10), size=1.1, geom="line",position="identity") +
-  scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_viridis(name="Distance to next \nforaging spot (km)", discrete = T,
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$bin10[WindDat$distTo < 90])))),", (", as.character(unlist(bin10ns[,2])),")",sep="")) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
+<<<<<<< HEAD
   scale_y_continuous(name="Proportion across all birds (%)", limits=c(0,.65),breaks=seq(0,0.6,.1),labels=seq(0,60,10))+
   annotate("text",x = -2.8, y = .6, label = "a)")
+=======
+  scale_y_continuous(name="", breaks=seq(0,0.6,.1),labels=seq(0,60,10),limits=c(0,.65))+
+  annotate("text",x = -2.8, y = .55, label = "a)")
+>>>>>>> 6a9f5ef784b0da0b0c4b80eb4b2d0fe9da1b63d1
 ggsave(paste(figLoc,"DistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 8,
       width = 9, units = "cm")
 
@@ -717,15 +722,15 @@ ggplot(WindDat %>% group_by(Fkbin10) %>% summarise(n=n())) +
 plot(WindDat$distFk)
 
 library(ggpubr)
-breaks<-seq(from=0,to=round_any(max(WindDat$distFk,na.rm=T),10,f=ceiling),by=50)
+breaks<-seq(from=0,to=200,by=50)
 WindDat$Fkbin10 <- cut(WindDat$distFk, breaks = breaks, include.lowest=T,right=F)
 WindDat$Fkbin10 <- sub("\\[","",as.character(WindDat$Fkbin10))
 WindDat$Fkbin10 <- sub("\\]","",as.character(WindDat$Fkbin10))
 WindDat$Fkbin10 <- sub(")","",as.character(WindDat$Fkbin10))
 WindDat$Fkbin10 <- sub(",",":",as.character(WindDat$Fkbin10))
 unique(WindDat$Fkbin10)
-mnW <- ddply(WindDat, "Fkbin10", summarise, grp.mean=mean(rAligned))
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
+<<<<<<< HEAD
 Fkbin10ns <- WindDat[WindDat$distFk < 200 & WindDat$distTo > 50,] %>% group_by(Fkbin10) %>% dplyr::summarise(length(unique(yrID)))
 fromFk <- ggplot(WindDat[WindDat$distFk < 200 & WindDat$distTo > 50,]) + stat_density(aes(x = aligned, colour = Fkbin10),size=1.1,geom="line",position="identity") +  
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
@@ -734,6 +739,18 @@ fromFk <- ggplot(WindDat[WindDat$distFk < 200 & WindDat$distTo > 50,]) + stat_de
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
   scale_y_continuous(name="Proportion across all birds (%)", limits=c(0,.65), breaks=seq(0,0.6,.1),labels=seq(0,60,10))+
   annotate("text",x = -2.8, y = .6, label = "b)")
+=======
+Fkbin10ns <- WindDat[WindDat$distFk < 500 & WindDat$distTo > 50,] %>% group_by(Fkbin10) %>% dplyr::summarise(length(unique(yrID)))
+fromFk <- ggplot(WindDat[WindDat$distFk < 500 & WindDat$distTo > 50 & !is.na(WindDat$Fkbin10),]) + stat_density(aes(x = aligned, colour = Fkbin10),size=1.1,geom="line",position="identity") +  
+  scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
+  scale_colour_viridis(name = "Distance from \ncolony (km)", discrete=T,
+  labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$Fkbin10[WindDat$distFk < 500 & !is.na(WindDat$distTo)])))),", (", as.character(unlist(Fkbin10ns[,2])),")",sep="")) +
+  theme_minimal() +
+  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8),
+    panel.grid.major = element_blank(),panel.grid.minor = element_blank()) +
+  scale_y_continuous(name="", breaks=seq(0,0.6,.1),labels=seq(0,60,10),limits=c(0,.65))+
+  annotate("text",x = -2.8, y = .55, label = "b)")
+>>>>>>> 6a9f5ef784b0da0b0c4b80eb4b2d0fe9da1b63d1
 ggsave(paste(figLoc,"FromFkDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 8,
       width = 9, units = "cm")
 
