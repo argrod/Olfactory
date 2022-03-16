@@ -77,7 +77,7 @@ D18 <- D18[D18$spTrav < 100,]
 #     d$spTrav <- c(NA,(d$distTrav[2:nrow(d)]/1000)/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="mins")))
 # }
 D19 <- bind_rows(Dat19)
-D19 <- D19[D18$spTrav < 100,]
+D19 <- D19[D19$spTrav < 100,]
 allD <- data.frame(DT=c(D18$DT, D19$DT),
     lat = c(D18$Lat, D19$Lat),
     lon = c(D18$Lon, D19$Lon),
@@ -115,9 +115,6 @@ if(Sys.info()['sysname'] == "Darwin"){
 ################################  HR AND RALEIGH TEST P VALUES AND AVE HEADINGS ################################
 ################################################################################################################
 
-testdata = circular::rvonmises(20, mu = circular::circular(pi), kappa = 3)
-tst <- HR_test(testdata, iter = 999)
-
 HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo < 20 & WindDat$distTo > 10 & WindDat$tripL > 2]),
     units="radians",zero=0), iter = 999)
 
@@ -140,7 +137,7 @@ for(b in 1:length(distGaps)){
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
 save(pvals,file='E:/My Drive/PhD/Data/pvals.RData')
-
+load('/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvals1km.RData')
 # repeat for 1 km bins from 10 downwards
 distGaps <- seq(0,9,1)
 distGapsL <- distGaps+1
@@ -154,16 +151,40 @@ save(pvals1km,file='E:/My Drive/PhD/Data/pvals1km.RData')
 
 distGaps <- seq(0,100,10)
 distGapsL <- distGaps+10
-wws <- vector(mode="list",length=length(distGaps)-1)
+wwLs <- vector(mode="list",length=length(distGaps)-1)
 for(b in 1:length(wws)){
-    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b+1] & WindDat$distTo < distGapsL[b+1]])))
+    wwLs[[b]] <- watson.wheeler.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 10) & WindDat$tripL > 2])),
+        na.omit(WindDat$distTo[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 10) & WindDat$tripL > 2]) > distGapsL[b])
+}
+
+wwt <- vector(mode="list",length=length(distGaps)-1)
+for(b in 1:length(wws)){
+    wwt[[b]] <- watson.wheeler.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 10)])),
+        na.omit(WindDat$distTo[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 10)]) > distGapsL[b])
+}
+
+WindDat$OutHome <- WindDat$OutHm > 0
+WindDat$OutHome[WindDat$OutHome == TRUE] <- "Home"
+WindDat$OutHome[WindDat$OutHome == FALSE] <- "Out"
+wwOut <- vector(mode="list",length=length(distGaps)-1)
+for(b in 1:length(wws)){
+    wwOut[[b]] <- watson.wheeler.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 10) & WindDat$OutHome == "Out"])),
+        na.omit(WindDat$distTo[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 10) & WindDat$OutHome == "Out"]) > distGapsL[b])
+}
+
+
+wwSs <- vector(mode="list",length=length(distGaps)-1)
+for(b in 1:length(wws)){
+    wwSs[[b]] <- watson.wheeler.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 10) & WindDat$tripL <= 2])),
+        na.omit(WindDat$distTo[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 10) & WindDat$tripL <= 2]) > distGapsL[b])
 }
 
 distGaps <- seq(0,100,10)
 distGapsL <- distGaps+10
 wws <- vector(mode="list",length=length(distGaps)-1)
 for(b in 1:length(wws)){
-    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL > 2])),circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL <= 2])))
+    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL > 2])),
+        circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL <= 2])))
 }
 
 ggplot(WindDat[WindDat$distTo > 10 & WindDat$distTo <= 40,]) +
@@ -173,7 +194,8 @@ distGaps <- seq(0,10,1)
 distGapsL <- distGaps+1
 wws <- vector(mode="list",length=length(distGaps)-1)
 for(b in 1:length(wws)){
-    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b+1] & WindDat$distTo < distGapsL[b+1]])))
+    wws[[b]] <- watson.wheeler.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 1)])),
+        na.omit(WindDat$distTo[WindDat$distTo >= distGaps[b] & WindDat$distTo < (distGapsL[b] + 1)]) > distGapsL[b])
 }
 
 # # repeat for both long and short trips
@@ -280,14 +302,20 @@ HR_test(testdata, iter = 999)
 wwTests[[1]]
 
 tripLengths <- allD %>% dplyr::group_by(yrID,tripL > 2) %>% dplyr::summarise(n = max(distFk))
-dailyLengths <- as.data.frame(allD %>% dplyr::group_by(yrID,Day) %>% dplyr::summarise(lengths = sum(distTrav/1000)))
+dailyLengths <- as.data.frame(allD %>% dplyr::group_by(yrID,Day) %>% dplyr::summarise(lengths = sum(distTrav),
+    speeds = mean(spTrav)))
 
 mean(tripLengths$n[tripLengths[,2] == F],na.rm=T)
 mean(tripLengths$n[tripLengths[,2] == T],na.rm=T)
 
+unique(allD$yrID)
+sum(allD$distTrav[allD$yrID == "2019_2018-05" & allD$Day == 4])/1000
 
 mean(dailyLengths$lengths,na.rm=T)
 hist(allD$distTrav)
+
+mean(dailyLengths$speeds,na.rm=T)*24
+
 
 tester <- allD[allD$yrID == unique(allD$yrID)[3] & allD$tripL == 1,]
 tester$long <- tester$lon
@@ -945,6 +973,8 @@ fit.Motor <- bpnr(pred.I = Phaserad ~ 1 + Cond, data = Motor, its = 10000, burn 
 
 
 traceplot(fit.Motor,parameter="beta1")
+
+fit.Wind <- bpnr(pred.I = RelHead ~ )
 
 #####################################################################################################
 ########################################### EXTRA FIGURES ###########################################
