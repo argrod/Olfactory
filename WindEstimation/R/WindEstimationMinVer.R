@@ -75,7 +75,7 @@ Von_Mises_sd<-function(kappa){
 # read in
 if(Sys.info()['sysname'] == "Darwin"){
 	outfile<-paste("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/", sep=",")
-	fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/AxyTrek/"
+	fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/AxyTrek/"
 } else {
 	outfile<-paste("G:/UTokyoDrive/PhD/Data/2018Shearwater/WindEst/MinDat/", sep=",")
 	fileloc <- "G:/UTokyoDrive/PhD/Data/2018Shearwater/AxyTrek/"
