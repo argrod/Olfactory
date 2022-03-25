@@ -725,8 +725,7 @@ WindDat$Fkbin10 <- sub(")","",as.character(WindDat$Fkbin10))
 WindDat$Fkbin10 <- sub(",",":",as.character(WindDat$Fkbin10))
 unique(WindDat$Fkbin10)
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
-<<<<<<< HEAD
-Fkbin10ns <- WindDat[WindDat$distFk < 200 & WindDat$distTo > 50,] %>% group_by(Fkbin10) %>% dplyr::summarise(length(unique(yrID)))
+Fkbin10ns <- WindDat[WindDat$distFk < 200 & WindDat$distTo > 50 & WindDat$tripL,] %>% group_by(Fkbin10) %>% dplyr::summarise(length(unique(yrID)))
 fromFk <- ggplot(WindDat[WindDat$distFk < 200 & WindDat$distTo > 50,]) + stat_density(aes(x = aligned, colour = Fkbin10),size=1.1,geom="line",position="identity") +  
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_viridis(name = "Distance from \ncolony (km)", discrete=T,
@@ -734,18 +733,6 @@ fromFk <- ggplot(WindDat[WindDat$distFk < 200 & WindDat$distTo > 50,]) + stat_de
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
   scale_y_continuous(name="Proportion across all birds (%)", limits=c(0,.65), breaks=seq(0,0.6,.1),labels=seq(0,60,10))+
   annotate("text",x = -2.8, y = .6, label = "b)")
-=======
-Fkbin10ns <- WindDat[WindDat$distFk < 500 & WindDat$distTo > 50,] %>% group_by(Fkbin10) %>% dplyr::summarise(length(unique(yrID)))
-fromFk <- ggplot(WindDat[WindDat$distFk < 500 & WindDat$distTo > 50 & !is.na(WindDat$Fkbin10),]) + stat_density(aes(x = aligned, colour = Fkbin10),size=1.1,geom="line",position="identity") +  
-  scale_x_continuous(name = "", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
-  scale_colour_viridis(name = "Distance from \ncolony (km)", discrete=T,
-  labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$Fkbin10[WindDat$distFk < 500 & !is.na(WindDat$distTo)])))),", (", as.character(unlist(Fkbin10ns[,2])),")",sep="")) +
-  theme_minimal() +
-  theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8),
-    panel.grid.major = element_blank(),panel.grid.minor = element_blank()) +
-  scale_y_continuous(name="", breaks=seq(0,0.6,.1),labels=seq(0,60,10),limits=c(0,.65))+
-  annotate("text",x = -2.8, y = .55, label = "b)")
->>>>>>> 6a9f5ef784b0da0b0c4b80eb4b2d0fe9da1b63d1
 ggsave(paste(figLoc,"FromFkDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 8,
       width = 9, units = "cm")
 
@@ -760,7 +747,7 @@ annotate_figure(combfig,left=textGrob("Proportion across all birds (%)", rot = 9
   bottom = textGrob("Relative wind heading",hjust=.8,
     gp = gpar(fontsize = 10)),
   )
-ggsave(paste(figLoc,"CombDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 15,
+ggsave(paste(figLoc,"CombDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 10,
       width = 8.7, units = "cm")
 
 # split into long and short foraging trips
@@ -778,7 +765,7 @@ lDists <- ggplot(LwDat[LwDat$distTo > 0 &LwDat$distTo < 50,], aes(x = aligned, c
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(LwDat$bin5[LwDat$distTo < 50])))),sep="")) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
-  scale_y_continuous(name="", breaks=seq(0,0.9,.1),labels=seq(0,90,10),limits = c(0,.95)) +
+  scale_y_continuous(name="", breaks=seq(0,0.9,.2),labels=seq(0,90,20),limits = c(0,.95)) +
   annotate("text",label="Long", x = -pi, y = .85, hjust = 0)
 
 # split into long and short foraging trips
@@ -796,14 +783,13 @@ sDists <- ggplot(SwDat[SwDat$distTo > 0 &SwDat$distTo < 50,], aes(x = aligned, c
     labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(SwDat$bin5[SwDat$distTo < 50])))),sep="")) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
-  scale_y_continuous(name="", breaks=seq(0,0.9,.1),labels=seq(0,90,10),limits=c(0,.95)) +
+  scale_y_continuous(name="", breaks=seq(0,0.9,.2),labels=seq(0,90,20),limits=c(0,.95)) +
   annotate("text", label = "Short", x = -pi, y = .85, hjust = 0)
 
-fig <- ggarrange(lDists,sDists,nrow=2)
+fig <- ggarrange(lDists,sDists,nrow=2,common.legend=T,legend = "right")
 annotate_figure(fig,left=text_grob("Proportion of relative wind headings (%)",rot=90,size=10,vjust=1.5))
-ggsave(paste(figLoc,"LSDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 8,
-      width = 9, units = "cm")
-
+ggsave(paste(figLoc,"LSDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 10,
+      width = 8.7, units = "cm")
 
 ggplot(WindDat[WindDat$distTo < 50,]) + 
   geom_point(aes(x = RelHead, y = distTo,colour = tripL > 2)) + coord_polar()

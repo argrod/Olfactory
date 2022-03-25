@@ -115,9 +115,6 @@ if(Sys.info()['sysname'] == "Darwin"){
 ################################  HR AND RALEIGH TEST P VALUES AND AVE HEADINGS ################################
 ################################################################################################################
 
-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo < 20 & WindDat$distTo > 10 & WindDat$tripL > 2]),
-    units="radians",zero=0), iter = 999)
-
 distGaps <- seq(0,90,10)
 distGapsL <- distGaps+10
 one2Ten <- vector(mode="list", length = length(distGaps))
@@ -137,7 +134,7 @@ for(b in 1:length(distGaps)){
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
 save(pvals,file='E:/My Drive/PhD/Data/pvals.RData')
-load('/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvals1km.RData')
+
 # repeat for 1 km bins from 10 downwards
 distGaps <- seq(0,9,1)
 distGapsL <- distGaps+1
@@ -183,8 +180,8 @@ distGaps <- seq(0,100,10)
 distGapsL <- distGaps+10
 wws <- vector(mode="list",length=length(distGaps)-1)
 for(b in 1:length(wws)){
-    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL > 2])),
-        circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL <= 2])))
+    wws[[b]] <- watson.wheeler.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),
+        na.omit(WindDat$tripL[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]] > 2))
 }
 
 ggplot(WindDat[WindDat$distTo > 10 & WindDat$distTo <= 40,]) +
