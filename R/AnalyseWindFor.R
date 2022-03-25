@@ -1120,14 +1120,14 @@ ggplot(df) + geom_point(aes(x = x, y = y, colour = g)) + coord_polar()
 # Run model without interaction
 cgm_noint <- circGLM(y ~ x + g, data = df)
 
-# Run model without interaction
+# Run model with interaction
 cgm_int <- circGLM(y ~ x * g, data = df)
 
 cgm_noint
 cgm_int
 
 WindDat$rhd <- WindDat$RelHead + pi
-cgm_s <- circGLM(rhd ~ distTo + WSp eed, data = WindDat[!is.na(WindDat$distTo),])
+cgm_s <- circGLM(rhd ~ distTo + WSpeed, data = WindDat[!is.na(WindDat$distTo),])
 df$y
 WindDat$RelHead[1:20]
 # basis of the model 
@@ -1150,3 +1150,14 @@ for(b in 1:length(distGaps)){
 # } else {
 #     load('E:/My Drive/PhD/Data/pvalsUniq.RData')
 # }
+
+
+# linearise angle by modelling offset from direct headwind
+WindDat$offset <- abs(WindDat$RelHead)
+
+ggplot(WindDat) + geom_point(aes(x = distTo, y = offset))
+
+library(lme4)
+
+gam1 <- lmer(offset ~ distTo + WSpeed + (1 | yrID), data = WindDat)
+summary(gam1)
