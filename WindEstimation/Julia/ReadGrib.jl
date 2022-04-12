@@ -1,30 +1,16 @@
-using Pkg
-Pkg.add("GRIB")
-Pkg.add("DataFrames")
-Pkg.add("Query")
-Pkg.add("CSV")
-Pkg.add("Geodesy")
-Pkg.add("Plots")
-Pkg.add("StructArrays")
-Pkg.add("RecursiveArrayTools")
-Pkg.add("Statistics")
-Pkg.add("RCall")
-Pkg.add("NetCDF")
-using GRIB
-using DataFrames
-using Query
-using Dates
-using CSV
-using Geodesy
-using Plots
-using StructArrays
-using RecursiveArrayTools
-using Statistics
-using RCall
-using NetCDF
-using DelimitedFiles
-using TimeZones
-using JLD
+# using Pkg
+# Pkg.add("GRIB")
+# Pkg.add("DataFrames")
+# Pkg.add("Query")
+# Pkg.add("CSV")
+# Pkg.add("Geodesy")
+# Pkg.add("Plots")
+# Pkg.add("StructArrays")
+# Pkg.add("RecursiveArrayTools")
+# Pkg.add("Statistics")
+# Pkg.add("RCall")
+# Pkg.add("NetCDF")
+using GRIB, DataFrames, Query, Dates, CSV, Geodesy, Plots, StructArrays, RecursiveArrayTools, Statistics, RCall, NetCDF, DelimitedFiles, TimeZones, JLD
 
 ## FUNCTIONS
 ## FUNCTION TO FIND THE INDECES OF SUITABLE WIND ESTIMATIONS

@@ -1154,13 +1154,24 @@ for(b in 1:length(distGaps)){
 #     load('E:/My Drive/PhD/Data/pvalsUniq.RData')
 # }
 
+# bayesian circular regression model based on projected normal distribution
 
-# linearise angle by modelling offset from direct headwind
-WindDat$offset <- abs(WindDat$RelHead)
+# using a mixed-effects model. 
+# first convert required columns to numeric
+WindDat$RelHead <- as.numeric(WindDat$RelHead)
+WindDat$distTo <- as.numeric(WindDat$distTo)
+WindDat$WSpeed <- as.numeric(WindDat$WSpeed)
+WindDat$tripL <- as.numeric(WindDat$tripL)
+WindDat$OutHm <- as.numeric(WindDat$OutHm)
+bcr <- bpnme(pred.I = RelHead ~ distTo + WSpeed + tripL + OutHm + (1|yrID),
+    data = na.omit(WindDat), its = 1000, burn = 100, n.lag = 3, seed = 101)
 
-ggplot(WindDat) + geom_point(aes(x = distTo, y = offset))
+WindDat$OutHm <- as.factor(WindDat$OutHm)
 
-library(lme4)
+lmer(RelHead ~ distTo*timeTo + WSpeed + tripL > 2 + OutHm + (1|yrID), data=WindDat, REML=T)
 
-gam1 <- lmer(offset ~ distTo + WSpeed + (1 | yrID), data = WindDat)
-summary(gam1)
+
+# build it from circular package
+test1 <- lm.circular(WindDat$RelHead ~ WindDat$distTo + WindDat$WSpeed + WindDat$tripL + WindDat$OutHm, type = "c-l")
+# bs = cs
+library(mgcv)
