@@ -70,14 +70,14 @@ if(Sys.info()['sysname'] == "Darwin"){
 # }
 D18 <- bind_rows(Dat)
 # remove values with unrealistic speeds
-D18 <- D18[D18$spTrav < 100,]
+D18 <- D18[-which(D18$spTrav > 100),]
 # for(d in Dat19){
 #     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
 #         cbind(d$Lon[2:nrow(d)],d$Lat[2:nrow(d)])))
 #     d$spTrav <- c(NA,(d$distTrav[2:nrow(d)]/1000)/as.numeric(difftime(d$DT[2:nrow(d)],d$DT[1:(nrow(d)-1)],units="mins")))
 # }
 D19 <- bind_rows(Dat19)
-D19 <- D19[D19$spTrav < 100,]
+D19 <- D19[-which(D19$spTrav > 100),]
 allD <- data.frame(DT=c(D18$DT, D19$DT),
     lat = c(D18$Lat, D19$Lat),
     lon = c(D18$Lon, D19$Lon),
@@ -115,9 +115,6 @@ if(Sys.info()['sysname'] == "Darwin"){
 ################################  HR AND RALEIGH TEST P VALUES AND AVE HEADINGS ################################
 ################################################################################################################
 
-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo < 20 & WindDat$distTo > 10 & WindDat$tripL > 2]),
-    units="radians",zero=0), iter = 999)
-
 distGaps <- seq(0,90,10)
 distGapsL <- distGaps+10
 one2Ten <- vector(mode="list", length = length(distGaps))
@@ -137,7 +134,7 @@ for(b in 1:length(distGaps)){
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
 save(pvals,file='E:/My Drive/PhD/Data/pvals.RData')
-load('/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvals1km.RData')
+
 # repeat for 1 km bins from 10 downwards
 distGaps <- seq(0,9,1)
 distGapsL <- distGaps+1
@@ -183,8 +180,8 @@ distGaps <- seq(0,100,10)
 distGapsL <- distGaps+10
 wws <- vector(mode="list",length=length(distGaps)-1)
 for(b in 1:length(wws)){
-    wws[[b]] <- watson.two.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL > 2])),
-        circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b] & WindDat$tripL <= 2])))
+    wws[[b]] <- watson.wheeler.test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),
+        na.omit(WindDat$tripL[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]] > 2))
 }
 
 ggplot(WindDat[WindDat$distTo > 10 & WindDat$distTo <= 40,]) +
@@ -1170,8 +1167,91 @@ WindDat$OutHm <- as.factor(WindDat$OutHm)
 
 lmer(RelHead ~ distTo*timeTo + WSpeed + tripL > 2 + OutHm + (1|yrID), data=WindDat, REML=T)
 
+gam1 <- lmer(offset ~ distTo + WSpeed + (1 | yrID), data = WindDat)
+summary(gam1)
 
-# build it from circular package
-test1 <- lm.circular(WindDat$RelHead ~ WindDat$distTo + WindDat$WSpeed + WindDat$tripL + WindDat$OutHm, type = "c-l")
-# bs = cs
-library(mgcv)
+# max distances for each foraging point
+# first, add foraging numbers to allD
+allD$forNo <- NA
+allD$forage[is.na(allD$forage)] <- 0
+for(id in unique(allD$yrID)){
+    forChg <- diff(allD$forage[allD$yrID == id])
+    forSt <- which(forChg == 1) + 1
+    forEd <- which(forChg == -1)
+    if(forSt[1] > forEd[1]){
+        forSt <- c(1,forSt)
+    }
+    if(forSt[length(forSt)] > forEd[length(forEd)]){
+        forEd <- c(forEd,sum(allD$yrID == id))
+    }
+    for(ind in 1:length(forSt)){
+        allD$forNo[allD$yrID == id][forSt[ind]:forEd[ind]] <- ind
+    }
+}
+# now add foraging numbers for lead up as well
+allD$forNoLead <- NA
+for(id in unique(allD$yrID)){
+    forChg <- diff(allD$forage[allD$yrID == id])
+    forSt <- which(forChg == 1) + 1
+    forEd <- which(forChg == -1)
+    if(forSt[1] > forEd[1]){
+        forSt <- c(1,forSt)
+    }
+    if(forSt[length(forSt)] > forEd[length(forEd)]){
+        forEd <- c(forEd,sum(allD$yrID == id))
+    }
+    for(ind in 1:length(forSt)){
+        if(ind == 1){
+            allD$forNoLead[allD$yrID == id][1:forEd[ind]] <- ind
+        } else {
+            allD$forNoLead[allD$yrID == id][(forEd[ind-1] + 1):forEd[ind]] <- ind
+        }
+    }
+}
+# go through and calculate distances to foraging spot
+for(id in unique(allD$yrID)){
+    # go through each foraging number
+    for(b in na.omit(unique(allD$forNo[allD$yrID == id]))){
+        # find first foraging point
+        nxtFor <- min(which(allD$forNo[allD$yrID == id] == b))
+        if(nxtFor == 1){ # skip if first value is foraging
+            next
+        }
+        if(b == 1){ 
+            allD$distToNextFP[allD$yrID == id][1:(nxtFor-1)] <- distHaversine(cbind(allD$lon[allD$yrID == id][1:(nxtFor-1)],
+                allD$lat[allD$yrID == id][1:(nxtFor-1)]),cbind(allD$lon[allD$yrID == id][nxtFor],allD$lat[allD$yrID == id][nxtFor]))/1000
+        } else {
+            allD$distToNextFP[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == (b-1))) + 1):(nxtFor - 1)] <- distHaversine(cbind(allD$lon[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == b-1))+1):(nxtFor-1)],
+                allD$lat[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == b-1))+1):(nxtFor-1)]),
+                cbind(allD$lon[allD$yrID == id][nxtFor],allD$lat[allD$yrID == id][nxtFor]))
+        }
+    }
+}
+allD$distToNextFP <- allD$distToNextFP/1000
+
+distsToNextFP <- data.frame(allD %>% dplyr::group_by(yrID, forNoLead) %>% dplyr::summarise(maxDist = max(distToNextFP,na.rm=T)))
+
+ggplot(distsToNextFP, aes(x = maxDist)) + geom_histogram(aes(bins=1000))
+
+# add time from start (to normalise across individuals)
+allD$timeD <- NA
+for(id in unique(allD$yrID)){
+    allD$timeD[allD$yrID == id] = difftime(allD$DT[allD$yrID == id],allD$DT[allD$yrID == id][1],units="mins")
+}
+
+spHd <- lm(spTrav ~ offset + WSpeed, data = WindDat)
+summary(spHd)
+
+spFun <- function(x) x - 
+ggplot(WindDat, aes(x = offset, y = spTrav)) + geom_point() +
+
+ggplot() +    geom_line(colour = "red", data = spHdf, aes(x = predOut, y = spdPred))
+
+ggplot() + 
+    geom_point(data = WindDat, aes(x = offset, y= spTrav))
+    
+     +
+     geom_line(data=spHdf, aes(x = predOut, y = spdPred), colour = "red")
+
+WindDat$offset <- abs(WindDat$RelHead)
+
