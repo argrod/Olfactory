@@ -58,10 +58,10 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("E:/My Drive/PhD/Data/DatEth2018.RData")
-    load("E:/My Drive/PhD/Data/DatEth2019.RData")
-    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("F:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("F:/My Drive/PhD/Data/DatEth2018.RData")
+    load("F:/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "F:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 # for(d in Dat){
 #     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
@@ -107,8 +107,8 @@ if(Sys.info()['sysname'] == "Darwin"){
     # windLoc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalculations1819.RData")
 } else {
-    # windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
-    load('E:/My Drive/PhD/Data/WindCalculations1819.RData')
+    # windLoc <- 'F:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
+    load('F:/My Drive/PhD/Data/WindCalculations1819.RData')
 }
 
 ################################################################################################################
@@ -133,7 +133,7 @@ for(b in 1:length(distGaps)){
     tst<-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),iter=999)
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
-save(pvals,file='E:/My Drive/PhD/Data/pvals.RData')
+save(pvals,file='F:/My Drive/PhD/Data/pvals.RData')
 
 # repeat for 1 km bins from 10 downwards
 distGaps <- seq(0,9,1)
@@ -144,7 +144,7 @@ for(b in 1:length(distGaps)){
     tst<-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),iter=999)
     pvals1km[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
-save(pvals1km,file='E:/My Drive/PhD/Data/pvals1km.RData')
+save(pvals1km,file='F:/My Drive/PhD/Data/pvals1km.RData')
 
 distGaps <- seq(0,100,10)
 distGapsL <- distGaps+10
@@ -210,7 +210,7 @@ for(b in 1:length(wws)){
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvalsLS.RData")
 } else {
-    load('E:/My Drive/PhD/Data/pvalsLS.RData')
+    load('F:/My Drive/PhD/Data/pvalsLS.RData')
 }
 for(df in pvalsLS){
     rownames(df) <- NULL
@@ -779,8 +779,8 @@ plot
 if(Sys.info()['sysname'] == "Darwin"){
     fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
-    fileloc <- "E:/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
-    forLoc <- "E:/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
+    fileloc <- "F:/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    forLoc <- "F:/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
 }
 
 files <- dir(fileloc)
@@ -884,9 +884,9 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/20182019AnalysisDat.RData")
     outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("F:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("F:/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "F:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=D19$DT,
@@ -1148,7 +1148,7 @@ for(b in 1:length(distGaps)){
 # if(Sys.info()['sysname'] == "Darwin"){
 #     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvalsUniq.RData")
 # } else {
-#     load('E:/My Drive/PhD/Data/pvalsUniq.RData')
+#     load('F:/My Drive/PhD/Data/pvalsUniq.RData')
 # }
 
 # bayesian circular regression model based on projected normal distribution
@@ -1167,8 +1167,36 @@ WindDat$OutHm <- as.factor(WindDat$OutHm)
 
 lmer(RelHead ~ distTo*timeTo + WSpeed + tripL > 2 + OutHm + (1|yrID), data=WindDat, REML=T)
 
-gam1 <- lmer(offset ~ distTo + WSpeed + (1 | yrID), data = WindDat)
-summary(gam1)
+library(mgcv)
+library(lme4)
+library(car)
+library(circular)
+
+WindDat$offset <- abs(WindDat$RelHead) # estimate a non-linear relative wind direction variable
+WindDat$tripSL <- as.factor(WindDat$tripL > 2) # add a short/long trip factor
+WindDat$timeTo <- WindDat$timeTo/3600 # convert timeTo to hours
+WindDat$year <- year(WindDat$DT)
+
+ggplot(WindDat[WindDat$distTo < 100,], aes(x = distTo, y = offset)) + 
+    geom_point()
+
+distOff <- lmer(offset ~ distTo*timeTo + WSpeed + tripSL + (1 | yrID) + (1 | year), data = WindDat)
+plot(distOff)
+summary(distOff)
+qqPlot(residuals(distOff))
+scatter.smooth(residuals(distOff) ~ fitted(distOff)) # residual plot
+
+
+
+
+plot(WindDat$RelHead, WindDat$spTrav)
+
+wSpTrav <- lm.circular(y = circular(WindDat$RelHead+pi,units="radians"),
+    x = )
+
+lines(seq(min(residuals(distOff)),max(residuals(distOff)),length.out=nrow(WindDat)))
+
+
 
 # max distances for each foraging point
 # first, add foraging numbers to allD
@@ -1227,6 +1255,12 @@ for(id in unique(allD$yrID)){
         }
     }
 }
+
+ggplot(allD[allD$yrID == "2019_5",],aes(x = lon, y = lat)) + geom_path()
+  
+distHaversine(cbind(allD$lon[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == b-1))+1):(nxtFor-1)],
+    allD$lat[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == b-1))+1):(nxtFor-1)]), cbind(allD$lon[allD$yrID == id][nxtFor],allD$lat[allD$yrID == id][nxtFor]))
+
 allD$distToNextFP <- allD$distToNextFP/1000
 
 distsToNextFP <- data.frame(allD %>% dplyr::group_by(yrID, forNoLead) %>% dplyr::summarise(maxDist = max(distToNextFP,na.rm=T)))
@@ -1245,7 +1279,7 @@ summary(spHd)
 spFun <- function(x) x - 
 ggplot(WindDat, aes(x = offset, y = spTrav)) + geom_point() +
 
-ggplot() +    geom_line(colour = "red", data = spHdf, aes(x = predOut, y = spdPred))
+ggplot() + geom_line(colour = "red", data = spHdf, aes(x = predOut, y = spdPred))
 
 ggplot() + 
     geom_point(data = WindDat, aes(x = offset, y= spTrav))
@@ -1255,3 +1289,4 @@ ggplot() +
 
 WindDat$offset <- abs(WindDat$RelHead)
 
+ggplot(allD, aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()
