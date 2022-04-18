@@ -1127,6 +1127,18 @@ cgm_noint
 cgm_int
 
 WindDat$rhd <- WindDat$RelHead + pi
+
+bpnTest <- data.frame(rhd = as.numeric(WindDat$rhd),
+    distTo = as.numeric(WindDat$distTo),
+    timeTo = as.numeric(WindDat$timeTo),
+    WSpeed = as.numeric(WindDat$WSpeed),
+    yrID = as.factor(WindDat$yrID),
+    year = as.factor(WindDat$year))
+
+fit.wind <- bpnme(rhd ~ distTo*timeTo + WSpeed + (1|yrID) + (1|year),data=na.omit(bpnTest))
+traceplot(fit.wind)
+
+
 cgm_s <- circGLM(rhd ~ distTo + WSpeed, data = WindDat[!is.na(WindDat$distTo),])
 df$y
 WindDat$RelHead[1:20]
@@ -1173,21 +1185,44 @@ library(car)
 library(circular)
 
 WindDat$offset <- abs(WindDat$RelHead) # estimate a non-linear relative wind direction variable
-WindDat$tripSL <- as.factor(WindDat$tripL > 2) # add a short/long trip factor
-WindDat$timeTo <- WindDat$timeTo/3600 # convert timeTo to hours
+WindDat$tripSL <- NA
+WindDat$tripSL[WindDat$tripL > 2] = "L" # add a short/long trip factor
+WindDat$tripSL[WindDat$tripL <= 2] = "S" # add a short/long trip factor
+WindDat$yrID <- as.factor(WindDat$yrID)
+WindDat$timeTo <- WindDat$timeTo/60 # convert timeTo to minutes
 WindDat$year <- year(WindDat$DT)
 
-ggplot(WindDat[WindDat$distTo < 100,], aes(x = distTo, y = offset)) + 
+ggplot(WindDat[WindDat$distTo < 100,], aes(x = distTo, y = RelHead)) + 
     geom_point()
 
+# fitting a mixed model to the "offset" version of RelHead
 distOff <- lmer(offset ~ distTo*timeTo + WSpeed + tripSL + (1 | yrID) + (1 | year), data = WindDat)
+# residuals and qqplot show a lot of broken assumptions
 plot(distOff)
 summary(distOff)
 qqPlot(residuals(distOff))
 scatter.smooth(residuals(distOff) ~ fitted(distOff)) # residual plot
 
+# add a random effect for yrID and foraging number
+WindDat$yrIDForNo <- as.factor(paste(WindDat$yrID,as.character(WindDat$forNo),sep="_"))
+# switch instead to using GAM with circular spline. In this case, RelHead becomes explanatory variable
+distGam <- gam(distTo ~ s(RelHead, bs = "cc") + s(yrID, bs = "re") + s(year, bs = "re") + tripSL + s(WSpeed),
+    data = WindDat, method = "REML")
+gam.check(distGam)
+summary(distGam)
+par(mfrow=c(3,2))
+plot(distGam,shade=T)
 
 
+
+
+
+# attempt with lm.circular
+comboPreds <- c()
+
+
+ggplot(WindDat) + geom_point(aes(x = RelHead, y = distTo)) +
+    geom_smooth(aes(x = RelHead, y = distTo))
 
 plot(WindDat$RelHead, WindDat$spTrav)
 
@@ -1216,7 +1251,7 @@ for(id in unique(allD$yrID)){
         allD$forNo[allD$yrID == id][forSt[ind]:forEd[ind]] <- ind
     }
 }
-# now add foraging numbers for lead up as well
+# now add foraging numbers for lead up as well 
 allD$forNoLead <- NA
 for(id in unique(allD$yrID)){
     forChg <- diff(allD$forage[allD$yrID == id])
@@ -1236,6 +1271,34 @@ for(id in unique(allD$yrID)){
         }
     }
 }
+straightness <- function(dat, times, window){
+    for(time in times){
+        distHaversine(cbind(dat$lon[dat$DT == (time - as.difftime(window/2,units="mins"))],
+                dat$lat[dat$DT == (time - as.difftime(window/2,units="mins"))]),
+            cbind(dat$lon[dat$DT == (time + as.difftime(window/2,units="mins"))],
+                dat$lat[dat$DT == (time + as.difftime(window/2,units="mins"))]))
+        }
+}
+straightness(allD,allD$DT[which(allD$yrID == id & allD$forNoLead == b & allD$DT < 
+            allD$DT[min(which(allD$yrID == id & allD$forNoLead == b & allD$forage == 1))-1])],
+            5)
+
+# add straightness index over a 5 minute period
+# ratio of straight distance by distance travelled
+allD$straightness <- NA
+for(id in unique(allD$yrID)){
+    for(b in unique(allD$forNoLead[allD$yrID == id])){
+        # create 5 min sequence of time sequence for each value
+        timeZ <- allD$DT[which(allD$yrID == id & allD$forNoLead == b & allD$DT < 
+            allD$DT[min(which(allD$yrID == id & allD$forNoLead == b & allD$forage == 1))-1])]
+        
+
+
+        
+        allD$forage[which(allD$yrID == id & allD$forNoLead == b)]
+    }
+}
+allD[which(allD$yrID == id & allD$forNoLead == 2),]
 # go through and calculate distances to foraging spot
 for(id in unique(allD$yrID)){
     # go through each foraging number
@@ -1256,8 +1319,9 @@ for(id in unique(allD$yrID)){
     }
 }
 
-ggplot(allD[allD$yrID == "2019_5",],aes(x = lon, y = lat)) + geom_path()
-  
+ggplot(allD,aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()  
+
+
 distHaversine(cbind(allD$lon[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == b-1))+1):(nxtFor-1)],
     allD$lat[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == b-1))+1):(nxtFor-1)]), cbind(allD$lon[allD$yrID == id][nxtFor],allD$lat[allD$yrID == id][nxtFor]))
 
