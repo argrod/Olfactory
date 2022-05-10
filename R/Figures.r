@@ -726,12 +726,14 @@ WindDat$Fkbin10 <- sub(",",":",as.character(WindDat$Fkbin10))
 unique(WindDat$Fkbin10)
 # Cairo(width=15, height = 15, file = paste(figLoc,"DistRelDensity.svg",sep=""),type="svg", bg = "transparent", dpi = 300, units="in")
 Fkbin10ns <- WindDat[WindDat$distFk < 200 & WindDat$distTo > 50 & WindDat$tripL,] %>% group_by(Fkbin10) %>% dplyr::summarise(length(unique(yrID)))
-fromFk <- ggplot(WindDat[WindDat$distFk < 200 & WindDat$distTo > 50,]) + stat_density(aes(x = aligned, colour = Fkbin10),size=1.1,geom="line",position="identity") +  
+# FIX ORDER OF DISTANCES AND ONLY INCLUDE DATA PRIOR TO 50KM FROM FIRST VARIABLE
+fromFk <- ggplot(WindDat[WindDat$distFk < 200 & WindDat$distTo > 50 & !is.na(WindDat$Fkbin10),]) + stat_density(aes(x = aligned, colour = Fkbin10),size=1.1,geom="line",position="identity") +  
   scale_x_continuous(name = "Relative wind heading", breaks=c(-pi, -pi/2, 0, pi/2, pi), labels=c("Tail","Side","Head","Side","Tail")) + ylab("") + theme_bw() + theme(panel.grid = element_blank()) +
   scale_colour_viridis(name = "Distance from \ncolony (km)", discrete=T,
-  labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(WindDat$Fkbin10[WindDat$distFk < 500])))),", (", as.character(unlist(Fkbin10ns[,2])),")",sep="")) +
+  breaks=c("0:50","50:100","100:150","150:200"),
+  labels=paste(gsub(",",":",gsub('[[)]',"",sort(unique(na.omit(WindDat$Fkbin10[WindDat$distFk < 500]))))),", (", as.character(unlist(na.omit(Fkbin10ns)[,2])),")",sep="")) +
   theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10), axis.text = element_text(size = 8)) + 
-  scale_y_continuous(name="Proportion across all birds (%)", limits=c(0,.65), breaks=seq(0,0.6,.1),labels=seq(0,60,10))+
+  scale_y_continuous(name="Proportion across all birds (%)", limits=c(0,.65), breaks=seq(0,0.6,.1),labels=seq(0,60,10)) +
   annotate("text",x = -2.8, y = .6, label = "b)")
 ggsave(paste(figLoc,"FromFkDistRelDensity.svg",sep=""), device="svg", dpi = 300, height = 8,
       width = 9, units = "cm")
