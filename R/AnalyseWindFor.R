@@ -1354,3 +1354,25 @@ ggplot() +
 WindDat$offset <- abs(WindDat$RelHead)
 
 ggplot(allD, aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()
+
+# HMM for movement modes in different winds
+library(momentuHMM)
+# Tutorial
+### Load raw data
+rawHaggis <- read.csv("~/Downloads/rawHaggises.csv")
+### Process data
+processedHaggis<-prepData(data=rawHaggis,covNames=c("slope","temp"))
+### Fit HMM
+# initial step distribution natural scale parameters
+stepPar0 <- c(1,5,0.5,3) # (mu_1,mu_2,sd_1,sd_2)
+# initial angle distribution natural scale parameters
+anglePar0 <- c(0,0,1,8) # (mean_1,mean_2,concentration_1,concentration_2)
+fitHaggis <- fitHMM(data = processedHaggis, nbStates = 2,
+dist = list(step = "gamma", angle = "vm"),
+Par0 = list(step = stepPar0, angle = anglePar0),
+formula = ~ slope + I(slope^2),
+estAngleMean = list(angle=TRUE))
+range(WindDat$RelHead)
+
+
+processWind <- prepData(data=WindDat, covNames=c())
