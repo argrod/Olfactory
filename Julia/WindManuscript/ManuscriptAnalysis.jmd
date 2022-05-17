@@ -1,0 +1,119 @@
+# PNAS paper submission analysis
+
+Analysing the wind characteristics of streaked shearwaters as they approach foraging points allows us to examine what conditions the birds travel in throughout foraging trips. 
+
+## Previous study
+
+In the most similar previous study ([Nevitt et al., 2008](https://www.pnas.org/content/105/12/4576)) investigating similar phenomena, the tracks of albatross approaching foraging points were examined and classified by their characteristics (in 4 groups: Direct, Turn, Zigzag, and Circle):
+
+<p align="center">
+   <img src=https://www.pnas.org/cms/10.1073/pnas.0709047105/asset/eb810a4f-38f4-4a23-beee-eb585774c043/assets/graphic/zpq0080896790001.jpeg alt="Albatross tracks approaching foraging" width="400">
+</p>
+
+And the histograms of relative wind bearings were examined for those categories:
+
+ <p align="center">
+    <img src=https://www.pnas.org/cms/10.1073/pnas.0709047105/asset/7d4e5b13-0f76-4fc1-b230-f77569c6a300/assets/graphic/zpq0080896790002.jpeg alt="Relative wind histograms" width="400">
+ </p>
+<!-- 
+<p align="center>
+   <img src= alt="Relative wind histograms">
+</p> -->
+
+This study used recordings of wandering albatross with GPS and stomach temperature transmitters. Foraging points were estimates as periods with rapid drops in stomach temperature, and surface landings taken from times when birds moved at under 2.8 m/s. Wind directions and speeds from all touchdown points were estimated using QuikSCAT daily level 3 gridded ocean wind vectors. This data comes from the SeaWinds scatterometer and records wind vector fields twice daily. Wind values cannot be produced for locations within 30km of land/ice. Backscatter recorded by the satellite is then processed through a Ku-band geophysical model function which derives surface wind speeds and direction. Rain contamination can be an issue due to difficulty in separating the backscatter effect of wind vs rain. The level value refers to the processing level of the data, starting at 0 (raw) through to 3 or 4.
+
+```julia;echo=false
+using DataFrames, CSV, RCall, Geodesy, Dates, Distances, Statistics, Glob
+using Plots
+# FUNCTION FOR READING IN FORAGING AND WIND DATASETS
+function readDat(dataLocation, pattern, IDpattern, colnames, header, years, DateFormats)
+    files = glob(pattern, dataLocation)
+    yrIDs = unique(getindex.(match.(r"(\d+)Shearwater.*",files),1) .* "_" .* getindex.(match.(IDpattern,files),1))
+    ret = [DataFrame() for _ in 1:length(yrIDs)]
+    for tg in 1:length(ret)
+        tgFiles = files[occursin.(yrIDs[tg][1:4],files) .& occursin.("/"*yrIDs[tg][6:end],files)]
+        for file in tgFiles
+            append!(ret[tg], hcat(CSV.read(file, DataFrame, header = header), repeat([yrIDs[tg]], nrow(CSV.read(file, DataFrame, header = header)))), cols = :union)
+        end
+        rename!(ret[tg], colnames)
+        # assign datetime
+        ret[tg].DT = DateTime.(ret[tg].DT, DateFormats[occursin.(yrIDs[tg][1:4],years)])
+    end
+    return ret
+end
+# file locations for foraging and wind estimates
+if Sys.iswindows()
+    dataloc = "E:/My Drive/PhD/Data/"
+else
+    dataloc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/"
+end
+# bring in FORAGING AND GPS DATA
+fDat = readDat(dataloc,"*/*/*/*/PredictedForage/*ForageGPS.txt",r".*PredictedForage/(.*)-20.*",[:DT,:lat,:lon,:forage,:yrID],1,["2018","2019"],[dateformat"d/m/y H:M:S.s",dateformat"d-u-y H:M:S.s"])
+
+# bring in WIND ESTIMATES
+wDat = readDat(dataloc, "*/*/MinDat/*.csv", r".*MinDat/(.*).csv", [:DT,:lat,:lon,:head,:X,:Y,:yrID], 0, ["2018","2019"],[dateformat"y-m-d H:M:S",dateformat"y-m-d H:M:S"]);
+```
+
+## AxyTrek data analysis
+
+Once the data is read in, the distances travelled and speeds between consecutive GPS points are calculated. I also calculate the linearity over a 51 minute sliding window (the same duration as the wind estimation method). This calculation is as follows:
+
+$l = \frac{\sum_{t-\frac{t_{win}}{2}}^{t+\frac{t_{win}}{2}}{d_T}}{d_{direct}}$
+
+where $d_T$ is the distance travelled by the bird, $t_{win}$ is the time window (51 minutes), and $d_{direct}$ is the direct distance between the bird's positions at $t-\frac{t_{win}}{2}$ and $t+\frac{t_{win}}{2}$.
+
+```julia;echo=false
+# add distance (m) and speed (kph) values
+function dist(lat1,lon1,lat2,lon2)
+    Ll1 = LLA(lat1,lon1)
+    Ll2 = LLA(lat2,lon2)
+    utmz = UTMZfromLLA(wgs84)
+    dx = diff(DataFrame(map(utmz,[Ll1,Ll2])).x)[1]
+    dy = diff(DataFrame(map(utmz,[Ll1,Ll2])).y)[1]
+    return sqrt(dx^2 + dy^2)
+end
+function speed(dt,lat,lon)
+    tdiff = Dates.value.(Second.(diff(dt)))
+    spTrav = (dist.(lat[1:(end-1)],lon[1:(end-1)],lat[2:end],lon[2:end])./tdiff).*3.6
+    return spTrav
+end
+
+# find the nearest time (index)
+function findNearest(dt, time)
+    argmin(abs.(dt .- time))
+end
+# calculate linearity
+function linearity(dt,lat,lon,distance,twindow)
+    out = repeat([NaN], length(dt))
+    for b = 1:findNearest(dt,(dt[end] - Second((twindow*60)/2)))
+        nextPoint = findNearest(dt, dt[b] + (Second((60*twindow)/2)))
+        prevPoint = findNearest(dt, dt[b] - (Second((twindow*60)/2)))
+        if abs(dt[nextPoint] - (dt[b] + Second(twindow*60/2))) < Minute(1)
+            out[b] = dist(lat[prevPoint],lon[prevPoint],lat[nextPoint],lon[nextPoint])/sum(distance[prevPoint:nextPoint])
+        else
+            out[b] = NaN
+        end
+    end
+    return out
+end
+
+for x in fDat
+    x.distTrav = [dist.(x.lat[1:(end-1)],x.lon[1:(end-1)],x.lat[2:end],x.lon[2:end]);NaN]
+    x.spTrav = [speed(x.DT, x.lat, x.lon);NaN]
+    x.linearity = linearity(x.DT,x.lat,x.lon,x.distTrav,51)
+end
+```
+
+## Example linearity plot of one track
+
+```julia;echo=false
+plot(fDat[1].lon,
+    fDat[1].lat,
+    color=:blues,
+    label="",
+    line_z=fDat[1].linearity,
+    colorbar_title="Linearity",
+    xlabel="Lon",
+    ylabel="Lat")
+```
+
