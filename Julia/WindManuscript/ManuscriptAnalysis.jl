@@ -49,13 +49,13 @@ function readDat(dataLocation::String, IDpattern::String, AndWind::Bool, colname
     end
     # read in data
     for tg in 1:length(ForRet)
-        fFiles = forFiles[occursin.(yrIDs[tg][1:4] * "Shearwater",forFiles) .& occursin.(Regex("[\\\\|/]" * "(?=" * yrIDs[tg][6:end] * ")"),forFiles)]
+        fFiles = forFiles[occursin.(yrIDs[tg][1:4] * "Shearwater",forFiles) .& occursin.(Regex("[\\\\|/]" * "(?=" * yrIDs[tg][6:end] * "_)"),forFiles)]
         for file in fFiles
             append!(ForRet[tg], hcat(CSV.read(file, DataFrame, header = header[1]), repeat([yrIDs[tg]], nrow(CSV.read(file, DataFrame, header = header[1])))), cols = :union)
         end
         rename!(ForRet[tg], colnames)
         if AndWind == true
-            windFiles = wFiles[occursin.(yrIDs[tg][1:4] * "Shearwater",wFiles) .& occursin.(Regex("[\\\\|/]" * "(?=" * yrIDs[tg][6:end] * ")"),wFiles)]
+            windFiles = wFiles[occursin.(yrIDs[tg][1:4] * "Shearwater",wFiles) .& occursin.(Regex("[\\\\|/]" * "(?=" * yrIDs[tg][6:end] * "_)"),wFiles)]
             for file in windFiles
                 append!(WindRet[tg], hcat(CSV.read(file, DataFrame, header = header[2]), repeat([yrIDs[tg]], nrow(CSV.read(file, DataFrame, header = header[2])))), cols = :union)
             end
@@ -89,20 +89,32 @@ end
 
 # calculate linearity
 function linearity(dt,lat,lon,distance,twindow)
-    out = Array{Float64}(undef,length(dt))
-    for b = 1:findNearest(dt,(dt[end] - Second(twindow*60/2)))
-        nextPoint = findNearest(dt, dt[b] + (Second(60*twindow/2)))
-        prevPoint = findNearest(dt, dt[b] - (Second((twindow*60)/2)))
-        if abs(dt[nextPoint] - (dt[b] + Second(twindow*60/2))) < Minute(1)
-            out[b] = dist([lat[prevPoint],lat[nextPoint]],[lon[prevPoint],lon[nextPoint]])[1]/sum(distance[prevPoint:nextPoint])
-        else
-            out[b] = NaN
-            
-        end
-    end
+    out = fill(NaN, length(dt))
+    trange = dt[dt .<= (dt[end] - Second(twindow*60/2))]
+    pos = [findNearest(dt,x - (Second(60*twindow/2))):findNearest(dt,x+(Second(60*twindow/2))) for x in trange]
+    dists = [dist([lat[pos[b][1]],lat[pos[b][end]]],[lon[pos[b][1]],lon[pos[b][end]]]) for b in 1:length(pos)]
+    sumDists = [sum(distance[p]) for p in pos]
+    out[1:length(dists)] = reduce(vcat,dists./sumDists)
     return out
 end
 
+#2018_1 (fDat[3]) and 2019_2 (fDat[17])
+# fDat[17].yrID[1]
+trange=fDat[3].DT[fDat[3].DT .<= (fDat[3].DT[end] - Second(51*60/2))]
+pos=[findNearest(fDat[3].DT,x-(Second(60*51/2))):findNearest(fDat[3].DT,x+(Second(60*51/2))) for x in trange]
+
+findNearest.(Ref(fDat[3].DT),trange-Second(60*51/2))
+
+range.(findNearest.(Ref(fDat[3].DT),trange-Second(60*51/2)),findNearest.(Ref(fDat[3].DT),trange+Second(60*51/2)))
+
+trange[1]
+(abs.(fDat[3].DT - (trange[1] - Second(60*51/2))))
+
+(trange[1] - Second(60*51/2))
+fDat[3].DT[1]
+
+fDat[3].DT[54055]
+fDat[3].DT[54056]
 # add foraging number to foraging data
 function forNo(df)
     forageNo = repeat([NaN],nrow(df))
@@ -149,14 +161,6 @@ function importForNo(df,wf)
     return forNo
 end
 
-# file locations for foraging and wind estimates
-if Sys.iswindows()
-    dataloc = "E:/My Drive/PhD/Data/"
-else
-    dataloc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/"
-end
-
-
 # calculate relative wind heading
 function rwh(head,x,y)
     rwh = head - atan(y,x)
@@ -190,6 +194,13 @@ function tripNL(df::DataFrame,trLengths::Dict)
         tripL[tagDates[tripStarts[x]] .<= Dates.Date.(df.DT) .<= tagDates[tripEnds[x]]] .= Int(trips[x])
     end
     return tripN,tripL
+end
+
+# file locations for foraging and wind estimates
+if Sys.iswindows()
+    dataloc = "E:/My Drive/PhD/Data/"
+else
+    dataloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/"
 end
 
 # # bring in FORAGING AND GPS DATA and WIND DATA (remove wind data by setting true to false)
@@ -283,12 +294,12 @@ for wf in 1:length(wDat)
 end
 
 allwf = vcat(wDat...)
-@df allwf[allwf.distFP .< 100*1000 .& allwf.tripL .> 2,:] density(:aligned, group = (:distBin))
-
-# allwf[allwf.distFP .< 100*1000 .& allwf.tripL .> 2,:]
+@df allwf[(allwf.distFP .< 100*1000) .& (allwf.tripL .> 2),:] density(:aligned, group = (:distBin))
 
 unique(allwf.tripL)
 
 
 
 @rput wDat
+nbStates <- 3 
+
