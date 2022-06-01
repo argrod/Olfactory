@@ -298,7 +298,20 @@ allwf = vcat(wDat...)
 
 unique(allwf.tripL)
 
-
+function consec(dt,gap)
+    
+    sep <- which(abs(diff(WindDat$DT)) > 70)
+WindDat$seq <- 0
+for(b in 1:length(sep)){
+    if(b == 1){
+        WindDat$seq[1:sep[b]] <- b
+    } else if(b == length(sep)){
+        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
+        WindDat$seq[(sep[b]+1):nrow(WindDat)] <- b + 1
+    } else {
+        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
+    }
+}
 
 @rput wDat
 nbStates <- 3 

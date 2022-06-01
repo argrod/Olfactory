@@ -53,10 +53,10 @@ library(geosphere)
 #################################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2018.RData")
-    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2019.RData")
-    outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2018.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("F:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
     load("F:/My Drive/PhD/Data/DatEth2018.RData")
@@ -104,8 +104,8 @@ allD$yrID <- paste(format(allD$DT,"%Y"),sub('\\_S.*','',allD$tagID),sep="_")
 ###############################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # windLoc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
-    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalculations1819.RData")
+    # windLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalculations1819.RData")
 } else {
     # windLoc <- 'F:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
     load('F:/My Drive/PhD/Data/WindCalculations1819.RData')
@@ -208,7 +208,7 @@ for(b in 1:length(wws)){
 #         LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar,LHRp = tstL[2])
 # }
 if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvalsLS.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/pvalsLS.RData")
 } else {
     load('F:/My Drive/PhD/Data/pvalsLS.RData')
 }
@@ -608,7 +608,7 @@ ggplot(WindDat, aes(x = WHead, y = BSpd)) +
 # geom_point(aes(x = Lon, y = Lat, col = tFromFor)) +
 # geom_point(data = DatSel[DatSel$Forage == 1,], aes(x = Lon, y = Lat), col = 'red')
 
-sel <- read.delim("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",", header = T)
+sel <- read.delim("/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",", header = T)
 sel$EHead <- atan2(sel$X,sel$Y)
 sel$WHead <- atan2(sel$U,sel$V)
 ggplot() +
@@ -619,7 +619,7 @@ ggplot() +
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated headings") +
     scale_x_continuous("JMA headings")
-ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021SeabirdSymposium/WindCorr.png", , dpi = 300, height = 6,
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/WindCorr.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 library(circular)
@@ -633,7 +633,7 @@ ggplot() +
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)") +
     scale_x_continuous("JMA wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021SeabirdSymposium/SpeedCorr.png", , dpi = 300, height = 6,
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/SpeedCorr.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -646,7 +646,7 @@ ggplot() +
     theme(panel.border = element_blank(), text = element_text(size = 14,
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindCol.png", , dpi = 300, height = 6,
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindCol.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -658,7 +658,7 @@ ggplot() +
     theme(panel.border = element_blank(), text = element_text(size = 14,
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindBW.png", , dpi = 300, height = 6,
+ggsave("/Volumes/GoogleDrive/My Drive/PhD/Conferences/2021SeabirdSymposium/RelWindBW.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -777,7 +777,7 @@ plot
 
 # bring in wind and foraging data
 if(Sys.info()['sysname'] == "Darwin"){
-    fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
     fileloc <- "F:/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
     forLoc <- "F:/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
@@ -870,7 +870,7 @@ ggplot(windAll[windAll$distTo < 30,]) +
     geom_point(aes(x = rwh*(pi/180), y = distTo, fill = ID),pch=21, alpha=.3) + coord_polar(start=pi)
 
 
-dloadLoc  = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/gribs/"
+dloadLoc  = "/Volumes/GoogleDrive/My Drive/PhD/Data/gribs/"
 gribFls = list.files(dloadLoc,pattern="*grib2.bin")
 if(any(gribFls == "Z__C_RJTD_20190824150000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"))
 
@@ -880,9 +880,9 @@ if(any(gribFls == "Z__C_RJTD_20190824150000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"
 
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("F:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
     load("F:/My Drive/PhD/Data/20182019AnalysisDat.RData")
@@ -914,7 +914,7 @@ japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 
 # CALCULATE RELATIVE WIND CONDITIONS FROM ESTIMATES WITH TIME/DISTANCE TO FORAGING
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    windLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
     windLoc = "G:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 }
@@ -1006,7 +1006,7 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
 #     scale_y_continuous(breaks = c(39:44), labels = c("39","40","41","42","43","44"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
 #     scale_x_continuous(labels = c("140", "141", "142", "143", "144","145","146"), name = paste("Longitude (","\u00b0E",")", sep = ""))
 
-# ggsave("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/Finished.png", device = "png", dpi = 300, height = 5,
+# ggsave("/Volumes/GoogleDrive/My Drive/PhD/Admin/AORIPresentation/Animation/Finished.png", device = "png", dpi = 300, height = 5,
 #     width = 5, units = "in")
 # dev.off()
 # colnames(WindDat)
@@ -1158,7 +1158,7 @@ for(b in 1:length(distGaps)){
         LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar)
 }
 # if(Sys.info()['sysname'] == "Darwin"){
-#     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvalsUniq.RData")
+#     load("/Volumes/GoogleDrive/My Drive/PhD/Data/pvalsUniq.RData")
 # } else {
 #     load('F:/My Drive/PhD/Data/pvalsUniq.RData')
 # }
@@ -1357,6 +1357,24 @@ ggplot(allD, aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()
 
 # HMM for movement modes in different winds
 library(momentuHMM)
+
+# separate into segments with consecutive data
+sep <- which(abs(diff(WindDat$DT)) > 70)
+WindDat$seq <- 0
+for(b in 1:length(sep)){
+    if(b == 1){
+        WindDat$seq[1:sep[b]] <- b
+    } else if(b == length(sep)){
+        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
+        WindDat$seq[(sep[b]+1):nrow(WindDat)] <- b + 1
+    } else {
+        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
+    }
+}
+
+# we have n series of consecutive data which can be used for momentuHMM data
+
+
 # Tutorial
 ### Load raw data
 rawHaggis <- read.csv("~/Downloads/rawHaggises.csv")
