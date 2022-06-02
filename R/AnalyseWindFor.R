@@ -58,10 +58,10 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("F:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("F:/My Drive/PhD/Data/DatEth2018.RData")
-    load("F:/My Drive/PhD/Data/DatEth2019.RData")
-    outloc <- "F:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("E:/My Drive/PhD/Data/DatEth2018.RData")
+    load("E:/My Drive/PhD/Data/DatEth2019.RData")
+    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 # for(d in Dat){
 #     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
@@ -107,8 +107,8 @@ if(Sys.info()['sysname'] == "Darwin"){
     # windLoc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/WindCalculations1819.RData")
 } else {
-    # windLoc <- 'F:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
-    load('F:/My Drive/PhD/Data/WindCalculations1819.RData')
+    # windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
+    load('E:/My Drive/PhD/Data/WindCalculations1819.RData')
 }
 
 ################################################################################################################
@@ -133,7 +133,7 @@ for(b in 1:length(distGaps)){
     tst<-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),iter=999)
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
-save(pvals,file='F:/My Drive/PhD/Data/pvals.RData')
+save(pvals,file='E:/My Drive/PhD/Data/pvals.RData')
 
 # repeat for 1 km bins from 10 downwards
 distGaps <- seq(0,9,1)
@@ -144,7 +144,7 @@ for(b in 1:length(distGaps)){
     tst<-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),iter=999)
     pvals1km[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
-save(pvals1km,file='F:/My Drive/PhD/Data/pvals1km.RData')
+save(pvals1km,file='E:/My Drive/PhD/Data/pvals1km.RData')
 
 distGaps <- seq(0,100,10)
 distGapsL <- distGaps+10
@@ -210,7 +210,7 @@ for(b in 1:length(wws)){
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/pvalsLS.RData")
 } else {
-    load('F:/My Drive/PhD/Data/pvalsLS.RData')
+    load('E:/My Drive/PhD/Data/pvalsLS.RData')
 }
 for(df in pvalsLS){
     rownames(df) <- NULL
@@ -779,8 +779,8 @@ plot
 if(Sys.info()['sysname'] == "Darwin"){
     fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
-    fileloc <- "F:/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
-    forLoc <- "F:/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
+    fileloc <- "E:/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    forLoc <- "E:/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
 }
 
 files <- dir(fileloc)
@@ -884,9 +884,9 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive/My Drive/PhD/Data/20182019AnalysisDat.RData")
     outloc <- "/Volumes/GoogleDrive/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("F:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("F:/My Drive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "F:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
+    load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
+    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=D19$DT,
@@ -916,7 +916,7 @@ japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 if(Sys.info()['sysname'] == "Darwin"){
     windLoc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
-    windLoc = "G:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
+    windLoc = "E:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 }
 windFiles <- dir(windLoc)
 for(b in 1:length(windFiles)){
@@ -1160,7 +1160,7 @@ for(b in 1:length(distGaps)){
 # if(Sys.info()['sysname'] == "Darwin"){
 #     load("/Volumes/GoogleDrive/My Drive/PhD/Data/pvalsUniq.RData")
 # } else {
-#     load('F:/My Drive/PhD/Data/pvalsUniq.RData')
+#     load('E:/My Drive/PhD/Data/pvalsUniq.RData')
 # }
 
 # bayesian circular regression model based on projected normal distribution
@@ -1356,7 +1356,8 @@ WindDat$offset <- abs(WindDat$RelHead)
 ggplot(allD, aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()
 
 # HMM for movement modes in different winds
-library(momentuHMM)
+library(remotes)
+install_github("bmcclintock/momentuHMM")
 
 # separate into segments with consecutive data
 sep <- which(abs(diff(WindDat$DT)) > 70)
@@ -1371,13 +1372,61 @@ for(b in 1:length(sep)){
         WindDat$seq[(sep[b-1]+1):sep[b]] <- b
     }
 }
+# format for momentuHMMData
+colnames(WindDat)
+# add distance travelled column
+WindDat$distTrav <- NA
+for(b in 1:nrow(WindDat)){
+  inds <- which(allD$yrID == WindDat$yrID[b] & allD$DT > (WindDat$DT[b] - lubridate::seconds(5)) & allD$DT < (WindDat$DT[b] + lubridate::seconds(5)))
+  WindDat$distTrav[b] <- mean(allD$distTrav[inds])
+}
+# add angle change
+WindDat$angle <- NA
+for(b in unique(WindDat$seq)){
+    WindDat$angle[WindDat$seq == b] = c(atan2(diff(WindDat$UTME[WindDat$seq == b]),diff(WindDat$UTMN[WindDat$seq == b])),NA)
+}
+mformWD <- WindDat[c("lat","lon","RelHead","WSpeed","distTo","OutHm","seq")]
+colnames(mformWD) <- c("x","y","RelHead","WSpeed","distFP","OutHm","ID")
+# remove data where birds not approaching FPs
+mformWD <- na.omit(mformWD)
+# remove data with < 3 observations
+mformWD <- as.data.frame(mformWD %>%
+    group_by(ID) %>%
+    filter(n() > 3)    )
 
+lWD <- lapply(unique(mformWD$ID), function(x) prepData(mformWD[mformWD$ID == x,],
+    type="LL", coordNames=c("y","x"), covNames=c("RelHead","WSpeed","distFP","OutHm")))
+
+# create a list of distributions
+dists = <- list(step = "gamma",
+    angle = "vm",
+    RelHead = "vm", # relative wind heading
+    WSpeed = "weibull", # wind speed
+    distFP = "Poisson",
+    OutHm = "Categorical")
+nbStates = 3 # number of behaviour states
+Par0 = list(step = )
+
+MIfitHMM(lWD,nbStates=3,dist=list())
+lWD[1]
+prepData(mformWD[mformWD$ID == 1,],
+    type="LL", coordNames=c("y","x"), covNames=c("RelHead","WSpeed","distFP","OutHm"))
+
+install.packages("mitools")
+library(mitools)
+momentuHMM::MIfitHMM(mmntDat )
+
+testdata <- as.data.frame(listWD[1],col.names=names(listWD[1]))
+
+
+colnames(testdata) <- c("ID","x","y")
+test <- prepData(listWD[1][c("ID","x","y")],type="LL")
 # we have n series of consecutive data which can be used for momentuHMM data
-
+momentuHMMData()
 
 # Tutorial
 ### Load raw data
-rawHaggis <- read.csv("~/Downloads/rawHaggises.csv")
+rawHaggis <- read.csv("C:/Users/arang/Downloads/rawHaggises.csv")
 ### Process data
 processedHaggis<-prepData(data=rawHaggis,covNames=c("slope","temp"))
 ### Fit HMM
@@ -1394,3 +1443,79 @@ range(WindDat$RelHead)
 
 
 processWind <- prepData(data=WindDat, covNames=c())
+
+
+library(moveHMM)
+set.seed(1122334455)
+
+## Simulate covariate values 
+# (slopes in degrees
+# around 10 degrees - the latter won't affect the state switching in the model below).
+# The model will be such that the haggises are most likely to be in the exploratory 
+# state (state 2) when at slopes of around 20 degrees (the slope that perfectly matches 
+# the difference in their leg lengths). For slopes close to 0 and slopes close to 40
+# the animals become essentially immobile (due to the differences in their leg lengths) 
+# and hence need to slowly crawl back (state 1) to slope levels better suited for them.
+# We are using a quadratic predictor to achieve this setup.
+
+slopes <- NULL
+for (haggis in 1:15) {
+  # for each of the 15 haggises
+  arsim <- rep(NA,400)
+  arsim[1] <- runif(1
+  for (k in 2:400)
+    arsim[k] <- 0.9*(arsim[k-1]-0.4)+0.4+rnorm(1
+  
+  slope <- 40*plogis(arsim)
+  slopes <- c(slopes
+}
+
+slopes <- NULL		
+for (haggis in 1:15) {		
+  # for each of the 15 haggises	 simulate 400 slope values	
+  arsim <- rep(NA,400)	
+  arsim[1] <- runif(1,0.5,1)
+  for (k in 2:400)		
+    arsim[k] <- 0.9*(arsim[k-1]-0.4)+0.4+rnorm(1,0,0.7)
+  		
+  slope <- 40*plogis(arsim)		
+  slopes <- c(slopes	slope)	
+}		
+		
+temps <- NULL		
+
+
+temps <- NULL
+for (haggis in 1:15) {
+  # for each of the 15 haggises
+  arsim2 <- rep(NA
+  arsim2[1] <- rnorm(1
+  for (k in 2:400)
+    arsim2[k] <- 0.9*(arsim2[k-1]-10)+10+rnorm(1
+  
+  temps <- c(temps
+}
+
+# data frame of covariate values
+covs <- data.frame(slope=slopes
+
+# specify parameters of the step length and turning angle distributions
+stepPar <- c(1
+anglePar <- c(pi
+# (angle mean of -0.3 in state 2
+# clockwise around hills when active)
+
+# specify regression coefficients for the transition probabilities
+beta <- matrix(c(-3.5
+0.35
+-0.01
+0
+               nrow=4
+
+# simulate wild haggis movement data (15 haggises)
+dataraw <- simData(nbAnimals=15
+                   stepPar=stepPar
+                   covs=covs
+
+# only keep relevant columns (animals' ID
+rawHaggis <- dataraw[

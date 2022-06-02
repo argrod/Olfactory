@@ -98,23 +98,6 @@ function linearity(dt,lat,lon,distance,twindow)
     return out
 end
 
-#2018_1 (fDat[3]) and 2019_2 (fDat[17])
-# fDat[17].yrID[1]
-trange=fDat[3].DT[fDat[3].DT .<= (fDat[3].DT[end] - Second(51*60/2))]
-pos=[findNearest(fDat[3].DT,x-(Second(60*51/2))):findNearest(fDat[3].DT,x+(Second(60*51/2))) for x in trange]
-
-findNearest.(Ref(fDat[3].DT),trange-Second(60*51/2))
-
-range.(findNearest.(Ref(fDat[3].DT),trange-Second(60*51/2)),findNearest.(Ref(fDat[3].DT),trange+Second(60*51/2)))
-
-trange[1]
-(abs.(fDat[3].DT - (trange[1] - Second(60*51/2))))
-
-(trange[1] - Second(60*51/2))
-fDat[3].DT[1]
-
-fDat[3].DT[54055]
-fDat[3].DT[54056]
 # add foraging number to foraging data
 function forNo(df)
     forageNo = repeat([NaN],nrow(df))
@@ -298,21 +281,28 @@ allwf = vcat(wDat...)
 
 unique(allwf.tripL)
 
+findall(abs.(diff(allwf.DT)) .> Second(70))
 function consec(dt,gap)
-    
-    sep <- which(abs(diff(WindDat$DT)) > 70)
-WindDat$seq <- 0
-for(b in 1:length(sep)){
-    if(b == 1){
-        WindDat$seq[1:sep[b]] <- b
-    } else if(b == length(sep)){
-        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
-        WindDat$seq[(sep[b]+1):nrow(WindDat)] <- b + 1
-    } else {
-        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
-    }
-}
+    out = fill(0,length(dt))
+    sep = findall(abs.(diff(allwf.DT)) .> Second(gap))
+    for b in 1:length(sep)
+        if b == 1
+            out[1:sep[b]] .= b
+        elseif b == length(sep)
+            out[(sep[b-1]+1):sep[b]] .= b
+            out[(sep[b]+1):length(dt)] .= b
+        else
+            out[(sep[b-1]+1):sep[b]] .= b
+        end
+    end
+    return out
+end
+allwf.seq = consec(allwf.DT,70)    
 
-@rput wDat
-nbStates <- 3 
+# remove all points where bird not approaching FP
+allwf = allwf[all(!isnan, (allwf.distFP); dims = 2),:]
+
+
+# @rput wDat
+# nbStates <- 3 
 
