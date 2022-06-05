@@ -1,4 +1,4 @@
-using DataFrames, CSV, RCall, Geodesy, Dates, Statistics, Glob, CategoricalArrays, DSP, StatsPlots
+using DataFrames, CSV, RCall, Geodesy, Dates, Statistics, Glob, CategoricalArrays, DSP, StatsPlots, Clustering
 using Plots; theme(:dark)
 
 # RECURSIVE FILE SEARCH
@@ -76,6 +76,13 @@ function dist(lat,lon)
     utmz = UTMZfromLLA(wgs84)
     return sqrt.(diff((p->p.x).(utmz.(ll))).^2 + diff((p->p.y).(utmz.(ll))).^2)
 end
+function distToOne(LL1,lats,lons)
+    ll1 = LLA(LL1[1],LL1[2])
+    ll2 = LLA.(lats,lons)
+    utmz = UTMZfromLLA(wgs84)
+    return sqrt.((utmz(ll1).x .- (p->p.x).(utmz.(ll2))).^2 .+ (utmz(ll1).y .- (p->p.y).(utmz.(ll2))).^2)
+end
+
 function speed(dt,lat,lon)
     tdiff = Dates.value.(Second.(diff(dt)))
     spTrav = (dist(lat,lon)./tdiff).*3.6
@@ -276,10 +283,27 @@ for wf in 1:length(wDat)
     end
 end
 
+# find the values of all data within 1 hour of foraging
+allfd = vcat(fDat...)
+ftimes = allfd[findall(allfd.forage .== 1),[:DT,:yrID]]
+# add distance sum to each foraging spot
+allfd.distFP .= NaN
+fPoints = findall(allfd.forage .== 1)
+for b in 1:length(fPoints)
+    allfd.distFP[((allfd.DT[fPoints[b]] - Minute(60)) .< allfd.DT .< allfd.DT[fPoints[b]]) .& (allfd.yrID .== allfd.yrID[fPoints[b]])] = distToOne([allfd.lat[fPoints[b]],allfd.lon[fPoints[b]]],
+        allfd.lat[((allfd.DT[fPoints[b]] - Minute(60)) .< allfd.DT .< allfd.DT[fPoints[b]]) .& (allfd.yrID .== allfd.yrID[fPoints[b]])],
+        allfd.lon[((allfd.DT[fPoints[b]] - Minute(60)) .< allfd.DT .< allfd.DT[fPoints[b]]) .& (allfd.yrID .== allfd.yrID[fPoints[b]])])
+end
+a = DataFrame()
+for (j, k) in zip(ftimes.DT,ftimes.yrID)
+    append!(a, allfd[((j - Minute(60)) .< allfd.DT .< j ) .& (allfd.yrID .== k),:],cols=:union)
+end
+
+scatter(a.distFP[a.distFP .< 1000],a.lin[a.distFP .< 1000])
+
 allwf = vcat(wDat...)
 @df allwf[(allwf.distFP .< 100*1000) .& (allwf.tripL .> 2),:] density(:aligned, group = (:distBin))
 
-unique(allwf.tripL)
 
 findall(abs.(diff(allwf.DT)) .> Second(70))
 function consec(dt,gap)

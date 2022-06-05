@@ -1,5 +1,4 @@
 # FLAPPING RATES FOR AXYTREK DATA
-
 using DataFrames, CSV, RCall, Geodesy, Dates, Distances, Statistics, Glob, CategoricalArrays, DSP, StatsPlots, Peaks
 using Plots; theme(:dark)
 
@@ -38,7 +37,7 @@ function readinAxy(yrID::String)
     )
     # remove missing rows
     dat = dropmissing(dat,:Timestamp)
-    tst.Timestamp = DateTime.(tst.Timestamp,dateformat"d/m/y H:M:S.s") .+ Hour(9)
+    dat.Timestamp = DateTime.(dat.Timestamp,dateformat"d/m/y H:M:S.s") .+ Hour(9)
     return dat
 end
 
@@ -46,7 +45,7 @@ end
 if Sys.iswindows()
     dataloc = "E:/My Drive/PhD/Data/"
 else
-    dataloc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/"
+    dataloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/"
 end
 
 # LOWPASS EQUIRIPPLE FILTER
@@ -60,16 +59,29 @@ function dynstat(x,stop,pass,fs)
     dynX = x .- statX
     return statX, dynX
 end
-
+# find maximum frequencies above limit Hz
+function maxFreqs(signal,limit,fs)
+    winsize = Int(fs*4)
+    numoverlap=round(.9874*winsize)
+    win=Windows.hamming(winsize)
+    spect = spectrogram(signal,winsize,Int(numoverlap),fs=fs,window=win)
+    mark = finddirst(spect.freq .== limit)
+    maxval,maxix = findmax(spect.power[mark:end,:];dims=1)
+    maxix = getindex.(maxix, 1) .+ mark
+    maxFreqs = [spect.freq[x] for x in maxix]
+    return maxFreqs
+end
 # find year and IDs of all wind data
 yrIDs = yrIDGather(dataloc,".*MinDat[\\\\|/](.*)_S.*",[2018,2019])
 
 yrid=yrIDs[1]
-tst = readinAxy(yrid)
+dat = readinAxy(yrid)
 
 fs = 25 # sampling rate
 # lowpass filter to separate dynamic and static acceleration
-X,Y,Z = dynstat.([float.(tst.X),float.(tst.Y),float.(tst.Z)],Ref(1.0),Ref(1.5),Ref(fs))
+X,Y,Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))
+
+maxFr = maxFreqs(Z[2],3,fs)
 
 # MATLAB process
 winsize = Int(fs*4)
@@ -77,6 +89,19 @@ numoverlap=round(.9874*winsize)
 win=Windows.hamming(winsize)
 spectDynZ = spectrogram(Z[2],winsize,Int(numoverlap),fs=fs,window=win)
 
-# plot(perDynZ.Freq)
-# plot(perDynZ.freq,pow2db.(perDynZ.power))
-time(spectDynZ)
+# maximum frequencies of 3Hz+
+threeHzmark = findfirst(spectDynZ.freq .== 3)
+power3Up = spectDynZ.power[threeHzmark:end,:]
+maxval,maxix = findmax(spectDynZ.power[threeHzmark:end,:];dims=1)
+maxFreqs = [spectDynZ.freq[x] for x in getindex.(maxix,1) .+ threeHzmark]
+
+plot(maxFreqs[1:100])
+
+size(spectDynZ.power[13:end,:])
+
+spectDynZ.power[threeHzmark:end,1]
+
+range(13,52)
+
+range(threeHzmark,size(spectDynZ.power,1))
+

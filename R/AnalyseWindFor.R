@@ -261,6 +261,11 @@ ggplot() + geom_point(data=tstAll,aes(x = mean, y = Dist, fill = RlR, pch = leng
 distGaps <- seq(0,90,10)
 distGapsL <- distGaps+10
 b <- 1
+
+LS10kWW <- lapply(distGaps, function(x) watson.wheeler.test(WindDat$RelHead[WindDat$distTo > x & WindDat$distTo < (x + 10)],
+    group = WindDat$tripL[WindDat$distTo > x & WindDat$distTo < (x + 10)]))
+
+
 watson.wheeler.test(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]],
     group = WindDat$tripL[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]] <= 2)
 
@@ -971,7 +976,7 @@ fit.Motor <- bpnr(pred.I = Phaserad ~ 1 + Cond, data = Motor, its = 10000, burn 
 
 traceplot(fit.Motor,parameter="beta1")
 
-fit.Wind <- bpnr(pred.I = RelHead ~ )
+
 
 #####################################################################################################
 ########################################### EXTRA FIGURES ###########################################
@@ -1098,6 +1103,27 @@ ggarrange(long,short,nrow=1,common.legend = T)
 ############################ ATTEMPT AT CIRCULAR LINEAR REGRESSION ############################
 ###############################################################################################
 
+# convert relative wind heading into cross, tail, or headwind category
+WindDat$WindCat <- NA
+WindDat$WindCat[abs(WindDat$RelHead) < (50*pi/180)] <- "Tailwind"
+WindDat$WindCat[abs(WindDat$RelHead) > (50*pi/180) & abs(WindDat$RelHead) < (130*pi/180)] <- "SideWind"
+WindDat$WindCat[abs(WindDat$RelHead) > (130*pi/180)] <- "HeadWind"
+# WindDat$WindCat[WindDat$RelHead <= pi/4 & WindDat$RelHead >= -pi/4] <- "Tailwind"
+# WindDat$WindCat[(WindDat$RelHead < -pi/4 & WindDat$RelHead > -3*pi/4) | (WindDat$RelHead > pi/4 & WindDat$RelHead < 3*pi/4)] <- "Sidewind"
+# WindDat$WindCat[WindDat$RelHead >= 3*pi/4 | WindDat$RelHead <= -3*pi/4] <- "Headwind"
+WindDat$WindCat <- as.factor(WindDat$WindCat)
+WindDat$yrID <- as.factor(WindDat$yrID)
+WindDat$seq <- as.factor(WindDat$seq)
+WindDat$tripL <- as.factor(WindDat$tripL > 2)
+WindDat$timeTo <- WindDat$timeTo/60
+ggplot(WindDat) + 
+    geom_point(aes(x = distTo, y = WSpeed, colour = WindCat))
+
+library(lme4)
+tst <- lmer(timeTo ~ WindCat + WSpeed + spTrav + tripL + (1 | yrID) + (1 | seq), data = WindDat)
+
+summary(tst)
+plot(tst)
 lm.circular()
 
 library(circglmbayes)
@@ -1322,14 +1348,7 @@ for(id in unique(allD$yrID)){
 ggplot(allD,aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()  
 
 
-distHaversine(cbind(allD$lon[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == b-1))+1):(nxtFor-1)],
-    allD$lat[allD$yrID == id][(max(which(allD$forNo[allD$yrID == id] == b-1))+1):(nxtFor-1)]), cbind(allD$lon[allD$yrID == id][nxtFor],allD$lat[allD$yrID == id][nxtFor]))
-
 allD$distToNextFP <- allD$distToNextFP/1000
-
-distsToNextFP <- data.frame(allD %>% dplyr::group_by(yrID, forNoLead) %>% dplyr::summarise(maxDist = max(distToNextFP,na.rm=T)))
-
-ggplot(distsToNextFP, aes(x = maxDist)) + geom_histogram(aes(bins=1000))
 
 # add time from start (to normalise across individuals)
 allD$timeD <- NA
@@ -1355,10 +1374,14 @@ WindDat$offset <- abs(WindDat$RelHead)
 
 ggplot(allD, aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()
 
+################################################################################################
+########################################## HMM FAILED ##########################################
+################################################################################################
+
 # HMM for movement modes in different winds
 library(remotes)
 install_github("bmcclintock/momentuHMM")
-
+library(momentuHMM)
 # separate into segments with consecutive data
 sep <- which(abs(diff(WindDat$DT)) > 70)
 WindDat$seq <- 0
@@ -1385,28 +1408,55 @@ WindDat$angle <- NA
 for(b in unique(WindDat$seq)){
     WindDat$angle[WindDat$seq == b] = c(atan2(diff(WindDat$UTME[WindDat$seq == b]),diff(WindDat$UTMN[WindDat$seq == b])),NA)
 }
-mformWD <- WindDat[c("lat","lon","RelHead","WSpeed","distTo","OutHm","seq")]
-colnames(mformWD) <- c("x","y","RelHead","WSpeed","distFP","OutHm","ID")
+mformWD <- WindDat[c("lat","lon","RelHead","WSpeed","distTo","timeTo","OutHm","seq","tripL")]
+colnames(mformWD) <- c("x","y","RelHead","WSpeed","distFP","timeFP","OutHm","ID","tripL")
+# change trip length to category (1 = long -> 3+ days, 0 = short -> <=2 days)
+mformWD$tripL <- as.factor(mformWD$tripL > 2)
+# change OutHm to category (1 = outward, 0 = homeward)
+mformWD$OutHm <- as.factor(mformWD$OutHm < 0)
 # remove data where birds not approaching FPs
 mformWD <- na.omit(mformWD)
+
 # remove data with < 3 observations
 mformWD <- as.data.frame(mformWD %>%
     group_by(ID) %>%
     filter(n() > 3)    )
 
 lWD <- lapply(unique(mformWD$ID), function(x) prepData(mformWD[mformWD$ID == x,],
-    type="LL", coordNames=c("y","x"), covNames=c("RelHead","WSpeed","distFP","OutHm")))
+    type="LL", coordNames=c("y","x"), covNames=c("RelHead","WSpeed","distFP","tripL","OutHm")))
+
+lWDSimple <- prepData(mformWD[mformWD$ID == unique(mformWD$ID)[15],],
+    type="LL", coordNames=c("y","x"))
+
+mformWD[mformWD$ID == 240,]
+
+nbStates <- 3
+stateNames <- c("transit","olfactory","visual")
+dists <- list(step="gamma", angle = "wrpcauchy")
+par0_m1 <- list()
+plot(lWDSimple)
+
+ggplot(na.omit(WindDat)) + 
+    geom_point(aes(x = lon, y = lat, colour = yrID))
+
+groupSum <- WindDat %>% group_by(seq) %>%
+    summarise(n())
+groupSum$seq[groupSum['n()'] == 107]
+
+
 
 # create a list of distributions
+nbStates <- 3 # number of behaviour states
+stateNames <- c("transit","olfactory","visual")
 dists = <- list(step = "gamma",
-    angle = "vm",
+    angle = "wrpcauchy",
     RelHead = "vm", # relative wind heading
     WSpeed = "weibull", # wind speed
     distFP = "Poisson",
     OutHm = "Categorical")
-nbStates = 3 # number of behaviour states
 Par0 = list(step = )
 
+# create two models, one with ID (individual-level effects) and one without
 MIfitHMM(lWD,nbStates=3,dist=list())
 lWD[1]
 prepData(mformWD[mformWD$ID == 1,],
