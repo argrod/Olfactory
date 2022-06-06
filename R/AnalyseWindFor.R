@@ -1103,6 +1103,10 @@ ggarrange(long,short,nrow=1,common.legend = T)
 ############################ ATTEMPT AT CIRCULAR LINEAR REGRESSION ############################
 ###############################################################################################
 
+ggplot(WindDat[WindDat$distTo < 100 & WindDat$tripL <= 2,]) +
+    stat_density(aes(x = aligned,colour = bin10),position = "identity", fill = NA, size = 1.1) +
+    scale_colour_viridis(discrete = T)
+
 # convert relative wind heading into cross, tail, or headwind category
 WindDat$WindCat <- NA
 WindDat$WindCat[abs(WindDat$RelHead) < (50*pi/180)] <- "Tailwind"
@@ -1122,9 +1126,101 @@ ggplot(WindDat) +
 library(lme4)
 tst <- lmer(timeTo ~ WindCat + WSpeed + spTrav + tripL + (1 | yrID) + (1 | seq), data = WindDat)
 
+# should  + (0 + yrID | seq) OR (1 | seq) be included?
+
+ggplot(WindDat[WindDat$distTo < 100,]) +
+    geom_point(aes(x = timeTo, y = RelHead, group = bin10, colour = WindCat))
+
 summary(tst)
 plot(tst)
-lm.circular()
+confint(tst)
+qqnorm(resid(tst))
+qqline(resid(tst))
+
+# autocorrelation must be handled
+
+acf(resid(tst))
+
+# test the same with GAM setup
+library(mgcv)
+library(visreg)
+WindDat$tripL <- as.character(WindDat$tripL > 2)
+WindDat$yrID <- as.factor(WindDat$yrID)
+WindDat$absRelHead <- abs(WindDat$RelHead)
+WindDat$forno <- as.factor(WindDat$forNo)
+gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + s(spTrav) + tripL + s(yrID, bs="re"),
+    data = WindDat, method = "REML")
+
+visreg(gamtst, "distTo", "tripL", overlay=T, ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)")
+
+visreg(gamtst, "WSpeed", "tripL", overlay=T, ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
+
+plot(gamtst$fitted.values)
+
+names(gamtst$coefficients)
+
+visreg::visreg(gamtst, "distTo")
+visreg::visreg(gamtst, "distTo","tripL")
+visreg::visreg(gamtst, "spTrav")
+
+qqnorm(resid(gamtst))
+qqline(resid(gamtst))
+acf(resid(gamtst))
+pacf(resid(gamtst))
+r1 <- acf(resid(gamtst), plot=FALSE)$acf[2]
+
+
+
+simdat <- start_event(WindDat, column="DT", event=c("yrID", "seq"), label.event="Event")
+
+gamtstAR1 <- gam(absRelHead ~ s(distTo) + s(WSpeed) + s(spTrav) + tripL + s(yrID, bs="re") + s(forNo,bs="re"), data = simdat, rho=r1, AR.start = simdat$start.event, method = "REML")
+
+acf(resid(gamtstAR1))
+
+plot(gamtst)
+
+fixef(tst)
+coef(gamtst)[1:4]
+
+summary(gamtst)
+variance_comp(gamtst)
+summary(gamtst)
+
+visreg(gamtst)
+
+
+
+testdata <- data.frame(distTo = seq(100, 0, length = 100),
+                      RelH = mean(gamtst$model$absRelHead),
+                      WSpeed = mean(gamtst$model$WSpeed),
+                      spTrav = mean(gamtst$model$spTrav),
+                      tripL = "TRUE",
+                      yrID = "2018_1",
+                      forNo = 1)
+
+predDat <- predict(gamtst)
+
+plot(WindDat$absRelHead[1:11156],predDat)
+ 
+length(predDat)
+testdata <- data.frame(distTo = seq(100, 0, length = 100),
+                      RelH = mean(gamtst$model$absRelHead),
+                      WSpeed = mean(gamtst$model$WSpeed),
+                      spTrav = mean(gamtst$model$spTrav),
+                      tripL = "TRUE",
+                      yrID = "2018_1",
+                      forNo = 1)
+fits = predict(gamtst, newdata=testdata, type='response', se=T)
+predicts = data.frame(testdata, fits) %>% 
+  mutate(lower = fit - 1.96*se.fit,
+         upper = fit + 1.96*se.fit)
+
+plot_mod_gam2_response = ggplot(aes(x=distTo,y=fit), data=predicts) +
+  geom_ribbon(aes(ymin = lower, ymax=upper), fill='gray90') +
+  geom_line(color='#00aaff') +
+  ylim(0,pi) +
+  theme_bw()
+
 
 library(circglmbayes)
 # Simulate data

@@ -79,6 +79,13 @@ fs = 25 # sampling rate
 # lowpass filter to separate dynamic and static acceleration
 X,Y,Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))
 
+winsize = Int(fs*4)
+numoverlap=round(.9874*winsize)
+win=Windows.hamming(winsize)
+spect = spectrogram(Z[2],winsize,Int(numoverlap),fs=fs,window=win)
+maxval,maxix = findmax(spect.power;dims=1)
+
+
 maxFr = maxFreqs(dat.Z,fs)
 
 # MATLAB process
