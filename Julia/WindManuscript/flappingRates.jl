@@ -60,14 +60,12 @@ function dynstat(x,stop,pass,fs)
     return statX, dynX
 end
 # find maximum frequencies above limit Hz
-function maxFreqs(signal,limit,fs)
+function maxFreqs(signal,fs)
     winsize = Int(fs*4)
     numoverlap=round(.9874*winsize)
     win=Windows.hamming(winsize)
     spect = spectrogram(signal,winsize,Int(numoverlap),fs=fs,window=win)
-    mark = finddirst(spect.freq .== limit)
-    maxval,maxix = findmax(spect.power[mark:end,:];dims=1)
-    maxix = getindex.(maxix, 1) .+ mark
+    maxval,maxix = findmax(spect.power;dims=1)
     maxFreqs = [spect.freq[x] for x in maxix]
     return maxFreqs
 end
@@ -81,7 +79,7 @@ fs = 25 # sampling rate
 # lowpass filter to separate dynamic and static acceleration
 X,Y,Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))
 
-maxFr = maxFreqs(Z[2],3,fs)
+maxFr = maxFreqs(dat.Z,fs)
 
 # MATLAB process
 winsize = Int(fs*4)
