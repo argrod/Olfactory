@@ -111,6 +111,33 @@ if(Sys.info()['sysname'] == "Darwin"){
     load('E:/My Drive/PhD/Data/WindCalculations1819.RData')
 }
 
+# separate into segments with consecutive data
+sep <- which(abs(diff(WindDat$DT)) > 70)
+WindDat$seq <- 0
+for(b in 1:length(sep)){
+    if(b == 1){
+        WindDat$seq[1:sep[b]] <- b
+    } else if(b == length(sep)){
+        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
+        WindDat$seq[(sep[b]+1):nrow(WindDat)] <- b + 1
+    } else {
+        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
+    }
+}
+# format for momentuHMMData
+colnames(WindDat)
+# add distance travelled column
+WindDat$distTrav <- NA
+for(b in 1:nrow(WindDat)){
+  inds <- which(allD$yrID == WindDat$yrID[b] & allD$DT > (WindDat$DT[b] - lubridate::seconds(5)) & allD$DT < (WindDat$DT[b] + lubridate::seconds(5)))
+  WindDat$distTrav[b] <- mean(allD$distTrav[inds])
+}
+# add angle change
+WindDat$angle <- NA
+for(b in unique(WindDat$seq)){
+    WindDat$angle[WindDat$seq == b] = c(atan2(diff(WindDat$UTME[WindDat$seq == b]),diff(WindDat$UTMN[WindDat$seq == b])),NA)
+}
+
 ################################################################################################################
 ################################  HR AND RALEIGH TEST P VALUES AND AVE HEADINGS ################################
 ################################################################################################################
@@ -971,8 +998,12 @@ for(b in 1:nrow(WindDat)){ # for each row in WindDat
 ############################### BAYESIAN CIRCULAR MIXED EFFECTS MODEL ###############################
 #####################################################################################################
 
-fit.Motor <- bpnr(pred.I = Phaserad ~ 1 + Cond, data = Motor, its = 10000, burn = 100, n.lag = 3, seed = 101)
-
+WindDat$tripL <- as.factor(WindDat$tripL)
+fit.tst <- bpnme(pred.I = RelHead ~ distTo + WSpeed + spTrav  + tripL + (1|yrID),
+    data = na.omit(WindDat[WindDat$distTo < 200,]),
+    its = 10000, burn = 1000, n.lag = 3, seed = 101)
+maps <- data(Maps)
+typeof(WindDat$tripL)
 
 traceplot(fit.Motor,parameter="beta1")
 
@@ -1144,16 +1175,26 @@ acf(resid(tst))
 # test the same with GAM setup
 library(mgcv)
 library(visreg)
-WindDat$tripL <- as.character(WindDat$tripL > 2)
+WindDat$tripL <- WindDat$tripL > 2
+WindDat$tripL <- as.factor(WindDat$tripL)
 WindDat$yrID <- as.factor(WindDat$yrID)
 WindDat$absRelHead <- abs(WindDat$RelHead)
 WindDat$forno <- as.factor(WindDat$forNo)
 gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + s(spTrav) + tripL + s(yrID, bs="re"),
+    data = WindDat, family = "", method = "REML")
+gamtstk10 <- gam(absRelHead ~ s(distTo, k = 10) + s(WSpeed, k = 10) + s(spTrav, k = 10) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
+gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
+    data = WindDat, method = "REML")
+AIC(gamtst,gamtstk10,gamtstk50)
 
-visreg(gamtst, "distTo", "tripL", overlay=T, ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)")
+gam.check(gamtstk50)
 
-visreg(gamtst, "WSpeed", "tripL", overlay=T, ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
+visreg(gamtst, "distTo", "tripL", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)")
+
+visreg(gamtst, "spTrav", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
+
+visreg(gamtst, "WSpeed", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
 
 plot(gamtst$fitted.values)
 
@@ -1478,32 +1519,7 @@ ggplot(allD, aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()
 library(remotes)
 install_github("bmcclintock/momentuHMM")
 library(momentuHMM)
-# separate into segments with consecutive data
-sep <- which(abs(diff(WindDat$DT)) > 70)
-WindDat$seq <- 0
-for(b in 1:length(sep)){
-    if(b == 1){
-        WindDat$seq[1:sep[b]] <- b
-    } else if(b == length(sep)){
-        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
-        WindDat$seq[(sep[b]+1):nrow(WindDat)] <- b + 1
-    } else {
-        WindDat$seq[(sep[b-1]+1):sep[b]] <- b
-    }
-}
-# format for momentuHMMData
-colnames(WindDat)
-# add distance travelled column
-WindDat$distTrav <- NA
-for(b in 1:nrow(WindDat)){
-  inds <- which(allD$yrID == WindDat$yrID[b] & allD$DT > (WindDat$DT[b] - lubridate::seconds(5)) & allD$DT < (WindDat$DT[b] + lubridate::seconds(5)))
-  WindDat$distTrav[b] <- mean(allD$distTrav[inds])
-}
-# add angle change
-WindDat$angle <- NA
-for(b in unique(WindDat$seq)){
-    WindDat$angle[WindDat$seq == b] = c(atan2(diff(WindDat$UTME[WindDat$seq == b]),diff(WindDat$UTMN[WindDat$seq == b])),NA)
-}
+
 mformWD <- WindDat[c("lat","lon","RelHead","WSpeed","distTo","timeTo","OutHm","seq","tripL")]
 colnames(mformWD) <- c("x","y","RelHead","WSpeed","distFP","timeFP","OutHm","ID","tripL")
 # change trip length to category (1 = long -> 3+ days, 0 = short -> <=2 days)
