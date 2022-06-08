@@ -998,16 +998,29 @@ for(b in 1:nrow(WindDat)){ # for each row in WindDat
 ############################### BAYESIAN CIRCULAR MIXED EFFECTS MODEL ###############################
 #####################################################################################################
 
+WindDat$tripL <- WindDat$tripL > 2
 WindDat$tripL <- as.factor(WindDat$tripL)
-fit.tst <- bpnme(pred.I = RelHead ~ distTo + WSpeed + spTrav  + tripL + (1|yrID),
+# create a numeric yearID column
+WindDat$yrIDn <- as.numeric(factor(WindDat$yrID,levels=unique((WindDat$yrID))))
+fit.tst <- bpnme(pred.I = RelHead ~ distTo + WSpeed + spTrav  + tripL + (1|yrIDn),
     data = na.omit(WindDat[WindDat$distTo < 200,]),
     its = 10000, burn = 1000, n.lag = 3, seed = 101)
 maps <- data(Maps)
 typeof(WindDat$tripL)
 
+jpeg(file="fit.tstTraceplot.jpeg")
+traceplot(fit.tst)
+dev.off()
 traceplot(fit.Motor,parameter="beta1")
 
 
+maps <- as.data.frame(bpnreg::Maps)
+
+
+# polynomial fit for speed vs wind direction
+plot(WindDat$RelHead,WindDat$spTrav)
+speedfit <- gam(spTrav ~ s(RelHead,bs = "cc"), data = WindDat)
+gam.check(speedfit)
 
 #####################################################################################################
 ########################################### EXTRA FIGURES ###########################################

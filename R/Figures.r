@@ -872,8 +872,6 @@ for(b in 1:length(tst)){
 }
 allD$havDist <- tster
 
-
-
 SLtripDists <- allD %>% dplyr::group_by(yrID,tripL>2,tripN) %>% dplyr::summarise(n = sum(havDist,na.rm=T))
 colnames(SLtripDists) <- c("yrID","SL","tripN","n")
 # mean short or long trip length
@@ -882,11 +880,9 @@ SLtripDists %>% dplyr::group_by(SL) %>% dplyr::summarise(mean(n))
 dailyDist <- allD %>% dplyr::group_by(yrID,Day) %>% dplyr::summarise(dist=sum(havDist,na.rm=T))
 mean(dailyDist$dist/1000)
 
-
 ggplot(allD[allD$tripL == 1,]) +
   geom_path(aes(x=lon,y=lat,colour=yrID)) +
   ggsn::scalebar(dist=100,model="WGS84",transform=T,dist_unit="km",x.min=min(allD$lon[allD$tripL == 1]),x.max=max(allD$lat[allD$tripL==1]),y.min=min(allD$lat[allD$tripL==1]),y.max=max(allD$lat[allD$tripL==1]))
-
 
 sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],]
 WindDat$WSpd <- sqrt(WindDat$X^2 + WindDat$Y^2)
