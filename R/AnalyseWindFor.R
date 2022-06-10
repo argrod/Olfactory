@@ -138,6 +138,28 @@ for(b in unique(WindDat$seq)){
     WindDat$angle[WindDat$seq == b] = c(atan2(diff(WindDat$UTME[WindDat$seq == b]),diff(WindDat$UTMN[WindDat$seq == b])),NA)
 }
 
+if(Sys.info()['sysname'] == "Darwin"){
+    fileloc <- "/Volumes/GoogleDrive/My Drive/PhD/Data/GPSDominantFrequencies/"
+} else {
+    fileloc <- "E:/My Drive/PhD/Data/GPSDominantFrequencies/"
+}
+freqFiles <- dir(fileloc)
+freq <- vector(mode="list",length=length(freqFiles))
+for(b in 1:length(freqFiles)){
+	freq[[b]] <- data.frame(read.delim(paste0(fileloc,freqFiles[b]),sep=",",header=T))
+	freq[[b]]$DT <- as.POSIXct(freq[[b]]$DT,format="%Y-%m-%dT%H:%M:%OS",tz="")
+}
+
+library(dplyr)
+allFreq <- bind_rows(freq)
+colnames(allFreq) <- c("ID","Time","y","x","domFreq")
+# add dominant dorsoventral frequency
+WindDat$domFreq <- NA
+for(b in seq_len(nrow(WindDat))){
+  inds <- which(allFreq$ID == WindDat$yrID[b] & allFreq$Time > (WindDat$DT[b] - lubridate::seconds(5)) & allFreq$Time < (WindDat$DT[b] + lubridate::seconds(5)))
+  WindDat$domFreq[b] <- mean(allFreq$domFreq[inds])
+}
+
 ################################################################################################################
 ################################  HR AND RALEIGH TEST P VALUES AND AVE HEADINGS ################################
 ################################################################################################################
@@ -998,15 +1020,13 @@ for(b in 1:nrow(WindDat)){ # for each row in WindDat
 ############################### BAYESIAN CIRCULAR MIXED EFFECTS MODEL ###############################
 #####################################################################################################
 
-WindDat$tripL <- WindDat$tripL > 2
-WindDat$tripL <- as.factor(WindDat$tripL)
 # create a numeric yearID column
-WindDat$yrIDn <- as.numeric(factor(WindDat$yrID,levels=unique((WindDat$yrID))))
-fit.tst <- bpnme(pred.I = RelHead ~ distTo + WSpeed + spTrav  + tripL + (1|yrIDn),
+# WindDat$yrIDn <- as.numeric(factor(WindDat$yrID,levels=unique((WindDat$yrID))))
+fit.tst <- bpnme(pred.I = RelHead ~ distTo + WSpeed + tripL + spTrav + (1|yrIDn),
     data = na.omit(WindDat[WindDat$distTo < 200,]),
-    its = 10000, burn = 1000, n.lag = 3, seed = 101)
-maps <- data(Maps)
-typeof(WindDat$tripL)
+    its = 1000, burn = 100, n.lag = 3)
+
+fit.tst$predictiva
 
 jpeg(file="fit.tstTraceplot.jpeg")
 traceplot(fit.tst)
@@ -1194,14 +1214,14 @@ WindDat$yrID <- as.factor(WindDat$yrID)
 WindDat$absRelHead <- abs(WindDat$RelHead)
 WindDat$forno <- as.factor(WindDat$forNo)
 gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + s(spTrav) + tripL + s(yrID, bs="re"),
-    data = WindDat, family = "", method = "REML")
+    data = WindDat, method = "REML")
 gamtstk10 <- gam(absRelHead ~ s(distTo, k = 10) + s(WSpeed, k = 10) + s(spTrav, k = 10) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
 gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
 AIC(gamtst,gamtstk10,gamtstk50)
 
-gam.check(gamtstk50)
+gam.check(gamtst)
 
 visreg(gamtst, "distTo", "tripL", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)")
 
@@ -1209,9 +1229,11 @@ visreg(gamtst, "spTrav", "tripL", ylab="Relative wind direction offset (rad)",xl
 
 visreg(gamtst, "WSpeed", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
 
+ggplot(WindDat) + geom_point(aes(y=absRelHead,x=spTrav))
+
 plot(gamtst$fitted.values)
 
-names(gamtst$coefficients)
+names(gamtst$coefficients)``
 
 visreg::visreg(gamtst, "distTo")
 visreg::visreg(gamtst, "distTo","tripL")
