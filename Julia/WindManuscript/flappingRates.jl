@@ -71,11 +71,11 @@ function maxFreqs(outLocation,yrID,fs)
     # select indeces from 2 seconds to end time - 2 seconds
     GPSInds = GPSInds[(fs*2) .<= GPSInds .<= (nrow(GPSdat) - (fs*2))]
     # lowpass filter to separate dynamic and static acceleration
-    Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))[3]
-    winsize = Int(fs*4)
-    numoverlap=round(.9874*winsize)
+    # Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))[3]
+    winsize = Int(fs*60)
+    numoverlap=round(.5*winsize)
     win=Windows.hamming(winsize)
-    spect = spectrogram(Z[2],winsize,Int(numoverlap),fs=fs,window=win) # spectrogram of dynamic dorsoventral acceleration
+    spect = spectrogram(dat.Z,winsize,Int(numoverlap),fs=fs,window=win) # spectrogram of dynamic dorsoventral acceleration
     maxix = findmax(spect.power;dims=1)[2] # find indeces of maximum frequencies
     maxix = getindex.(maxix,1)
     maxFrec = [spect.freq[x] for x in maxix] # take the frequencies
@@ -94,6 +94,8 @@ function maxFreqs(outLocation,yrID,fs)
     CSV.write(outLocation * yrID * "domFreq.csv",df);
 end
 
+specTime = dat.Timestamp[1] .+ Second.(spect.time)
+
 # file locations for raw acceleration data
 if Sys.iswindows()
     dataloc = "E:/My Drive/PhD/Data/"
@@ -109,7 +111,7 @@ end
 # find year and IDs of all wind data
 yrIDs = yrIDGather(dataloc,".*MinDat[\\\\|/](.*)_S.*",[2018,2019])
 fs = 25
-for b in yrIDs[4:end]
+for b in yrIDs
     maxFreqs(outloc,b,fs)
 end
 
