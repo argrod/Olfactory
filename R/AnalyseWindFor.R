@@ -1033,14 +1033,20 @@ traceplot(fit.tst)
 dev.off()
 traceplot(fit.Motor,parameter="beta1")
 
+# test fit without distance
+fit.nodist <- bpnme(pred.I = RelHead ~ WSpeed + tripL + spTrav + (1|yrIDn),
+    data = na.omit(WindDat[WindDat$distTo < 200,]),
+    its = 1000, burn = 100, n.lag = 3)
 
-maps <- as.data.frame(bpnreg::Maps)
+traceplot(fit.nodist)
+
+fit.noSp <-  bpnme(pred.I = RelHead ~ distTo + WSpeed + tripL + (1|yrIDn),
+    data = na.omit(WindDat[WindDat$distTo < 200,]),
+    its = 1000, burn = 100, n.lag = 3)
 
 
-# polynomial fit for speed vs wind direction
-plot(WindDat$RelHead,WindDat$spTrav)
-speedfit <- gam(spTrav ~ s(RelHead,bs = "cc"), data = WindDat)
-gam.check(speedfit)
+fit(fit.tst)
+fit(fit.nodist)
 
 #####################################################################################################
 ########################################### EXTRA FIGURES ###########################################
@@ -1590,6 +1596,7 @@ groupSum <- WindDat %>% group_by(seq) %>%
     summarise(n())
 groupSum$seq[groupSum['n()'] == 107]
 
+# create previous fits of variables from burner HMM fits
 
 
 # create a list of distributions
