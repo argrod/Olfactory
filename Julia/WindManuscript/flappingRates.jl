@@ -80,7 +80,7 @@ function maxFreqs(outLocation,yrID,fs)
     maxix = getindex.(maxix,1)
     maxFrec = [spect.freq[x] for x in maxix] # take the frequencies
     # take a range of acceleration indeces around the GPS positions
-    mxFrcRanges = range.([maximum([Int(round(x/(30*fs))-(30/spect.time[1])),1]) for x in GPSInds],[minimum([Int(round(x/(30*fs))+(30/spect.time[1])),length(spect.time)]) for x in GPSInds]);
+    mxFrcRanges = range.([maximum([Int(round(x/(30*fs))-(30/spect.time[1])),1]) for x in GPSInds],[minimum([Int(round(x/(30*fs))+(30/spect.time[1])),length(spect.time)]) for x in GPSInds],step=1);
     # take mean max frequencies for each GPS position
     GPSfrec = [mean(maxFrec[x]) for x in mxFrcRanges];
     # create an output

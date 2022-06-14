@@ -1214,15 +1214,13 @@ acf(resid(tst))
 # test the same with GAM setup
 library(mgcv)
 library(visreg)
-WindDat$tripL <- WindDat$tripL > 2
-WindDat$tripL <- as.factor(WindDat$tripL)
 WindDat$yrID <- as.factor(WindDat$yrID)
 WindDat$absRelHead <- abs(WindDat$RelHead)
 WindDat$forno <- as.factor(WindDat$forNo)
-WindU200 <- WindDat[which(WindDat$distTo < 200),]
+WindU2hr <- WindDat[which(WindDat$timeTo < (3600*2)),]
 
-gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + s(spTrav) + tripL + s(yrID, bs="re"),
-    data = WindU200, method = "REML")
+gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + tripL + s(yrID, bs="re"),
+    data = WindU2hr, method = "REML", family = gaussian())
 gamtstk10 <- gam(absRelHead ~ s(distTo, k = 10) + s(WSpeed, k = 10) + s(spTrav, k = 10) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
 gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
