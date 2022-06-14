@@ -1213,8 +1213,10 @@ WindDat$tripL <- as.factor(WindDat$tripL)
 WindDat$yrID <- as.factor(WindDat$yrID)
 WindDat$absRelHead <- abs(WindDat$RelHead)
 WindDat$forno <- as.factor(WindDat$forNo)
+WindU200 <- WindDat[which(WindDat$distTo < 200),]
+
 gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + s(spTrav) + tripL + s(yrID, bs="re"),
-    data = WindDat, method = "REML")
+    data = WindU200, method = "REML")
 gamtstk10 <- gam(absRelHead ~ s(distTo, k = 10) + s(WSpeed, k = 10) + s(spTrav, k = 10) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
 gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
@@ -1230,6 +1232,7 @@ visreg(gamtst, "spTrav", "tripL", ylab="Relative wind direction offset (rad)",xl
 visreg(gamtst, "WSpeed", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
 
 ggplot(WindDat) + geom_point(aes(y=absRelHead,x=spTrav))
+
 
 plot(gamtst$fitted.values)
 
