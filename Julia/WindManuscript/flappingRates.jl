@@ -71,21 +71,16 @@ function maxFreqs(outLocation,yrID,fs)
     # select indeces from 2 seconds to end time - 2 seconds
     GPSInds = GPSInds[(fs*2) .<= GPSInds .<= (nrow(GPSdat) - (fs*2))]
     # lowpass filter to separate dynamic and static acceleration
-    # Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))[3]
+    Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))[3]
     winsize = Int(fs*60)
     numoverlap=round(.5*winsize)
     win=Windows.hamming(winsize)
-    spect = spectrogram(dat.Z,winsize,Int(numoverlap),fs=fs,window=win) # spectrogram of dynamic dorsoventral acceleration
+    spect = spectrogram(Z[2],winsize,Int(numoverlap),fs=fs,window=win) # spectrogram of dynamic dorsoventral acceleration
     maxix = findmax(spect.power;dims=1)[2] # find indeces of maximum frequencies
     maxix = getindex.(maxix,1)
     maxFrec = [spect.freq[x] for x in maxix] # take the frequencies
-    GPSfs = Second(mode(diff(GPSdat.Timestamp[GPSInds]))).value # GPS sampling frequency (in seconds)
     # take a range of acceleration indeces around the GPS positions
-    lower = Int.((GPSInds .- (fs*round(GPSfs/2))) .+ (2*fs))
-    lower[lower .< 1] .= 1
-    upper = Int.((GPSInds .+ (fs*round(GPSfs/2))) .+ fs*2)
-    upper[upper .> length(maxFrec)] .= length(maxFrec)
-    mxFrcRanges = range.(lower,upper);
+    mxFrcRanges = range.([maximum([Int(round(x/(30*fs))-(30/spect.time[1])),1]) for x in GPSInds],[minimum([Int(round(x/(30*fs))+(30/spect.time[1])),length(spect.time)]) for x in GPSInds]);
     # take mean max frequencies for each GPS position
     GPSfrec = [mean(maxFrec[x]) for x in mxFrcRanges];
     # create an output
@@ -93,8 +88,6 @@ function maxFreqs(outLocation,yrID,fs)
     df = DataFrame([repeat([yrID],length(GPSInds)),GPSdat[GPSInds,"Timestamp"],GPSdat[GPSInds,"lat"],GPSdat[GPSInds,"lon"],GPSfrec], namelist);
     CSV.write(outLocation * yrID * "domFreq.csv",df);
 end
-
-specTime = dat.Timestamp[1] .+ Second.(spect.time)
 
 # file locations for raw acceleration data
 if Sys.iswindows()
