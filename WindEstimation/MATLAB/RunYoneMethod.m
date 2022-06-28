@@ -32,7 +32,7 @@ for tg = 1:length(tags)
     tagfiles = filesNs(startsWith(filesNs,tags(tg)));
     for b = 1:length(tagfiles)
         fileID = fopen(strcat(fileloc,tagsFolds(tg),"/",tagfiles(b)));
-        GPSDat = textscan(fileID, '%{yyyy/MM/dd,HH:mm:ss}D %f %f %f %f %f %f %s','Delimiter','\t','HeaderLines',0);
+        GPSDat = textscan(fileID, '%s %s %f %f %f %f %f %f %s','Delimiter','\t','HeaderLines',0);
         fclose(fileID);
         if b > 1
             dat{tg,3} = vertcat(dat{tg,3},GPSDat{1});
@@ -40,10 +40,9 @@ for tg = 1:length(tags)
             dat{tg,5} = vertcat(dat{tg,5},GPSDat{3});
             dat{tg,6} = vertcat(dat{tg,6},GPSDat{4});
         else
-            dat{tg,3} = GPSDat{1};
-            dat{tg,4} = GPSDat{2};
-            dat{tg,5} = GPSDat{3};
-            dat{tg,6} = GPSDat{4};
+            dat{tg,3} = datetime(strcat(GPSDat{1}," ",GPSDat{2}),'InputFormat','dd/MM/yyyy HH:mm:ss');
+            dat{tg,4} = GPSDat{3};
+            dat{tg,5} = GPSDat{4};
         end
     end
 end
@@ -62,7 +61,6 @@ end
 
 for b = 1:length(dat)
     [time, lat, lon] = gettimelatlon(dat, b);
-    forage = dat{b,6};
     [x,y,zone] = deg2utm(lat,lon); % convert from dec degs to UTM
     DistTrav = sqrt(diff(x).^2+diff(y).^2); % calculate distance between GPS points
     tdiff = diff(time); % time difference between GPS points
@@ -72,11 +70,11 @@ for b = 1:length(dat)
     [ss,se] = getsection(.2,300,60,fs,fe);
 %     windestimates(spd,dir,ss,se)
     [vw,wd,va,resn,bh,rwh,wInd] = windestimates5(spd,dir,ss,se);
-    aveDir = zeros(length(forage),1);
+    aveDir = zeros(length(time),1);
     aveDir(wInd(~isnan(wInd))) = bh(~isnan(wInd));
-    wDir = zeros(length(forage),1);
+    wDir = zeros(length(time),1);
     wDir(wInd(~isnan(wInd))) = wd(~isnan(wInd));
-    wSp = zeros(length(forage),1);
+    wSp = zeros(length(time),1);
     wSp(wInd(~isnan(wInd))) = vw(~isnan(wInd));
     Resnorm = NaN(length(lat),1);
     Resnorm(wInd(~isnan(wInd))) = resn(~isnan(wInd)); 
@@ -107,7 +105,7 @@ end
 if ismac()
     fileloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/AxyTrek/";
 else
-    fileloc = "F:/UTokyoDrive/PhD/Data/2016Shearwater/AxyTrek/";
+    fileloc = "E:/My Drive/PhD/Data/2016Shearwater/AxyTrek/";
 end
 files = dir2(strcat(fileloc,"**/*.txt"));
 %files = files(3:end);
@@ -178,23 +176,6 @@ for b = 1:length(dat)
     Resnorm = NaN(length(lat),1);
     Resnorm(wInd(~isnan(wInd))) = resnorm(~isnan(wInd)); 
     
-    % find the foraging points
-%     forSt = find(diff(forage) == 1) + 1;
-%     forEd = find(diff(forage) == -1);
-%     if forSt(1) > forEd(1)
-%         forSt = [1; forSt];
-%     end
-%     if forEd(end) < forSt(end)
-%         forEd = [forEd; length(forage)];
-%     end
-%     distTo = zeros(length(forage),1);
-%     for nxt = 1:length(forSt)
-%         if nxt == 1 && forSt(nxt) ~= 1
-%             distTo(1:(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(1:(forSt(nxt) - 1))).^2 + (y(forSt(nxt)) - y(1:(forSt(nxt) - 1))).^2);
-%         else
-%             distTo((forEd(nxt-1) + 1):(forSt(nxt) - 1)) = sqrt((x(forSt(nxt)) - x(forEd(nxt-1)+1:(forSt(nxt)-1))).^2 + (y(forSt(nxt)) - y(forEd(nxt-1)+1:(forSt(nxt)-1))).^2);
-%         end
-%     end
     outW = table(time,lat,lon,wSpd,wDir,vA,Resnorm);
     % output the data
     writetable(outW, strcat(outloc,"1sFix/",tags(b),"WindYone.txt"));

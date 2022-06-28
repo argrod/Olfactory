@@ -1218,8 +1218,9 @@ WindDat$yrID <- as.factor(WindDat$yrID)
 WindDat$absRelHead <- abs(WindDat$RelHead)
 WindDat$forno <- as.factor(WindDat$forNo)
 WindU2hr <- WindDat[which(WindDat$timeTo < (3600*2)),]
+WindU2hr$tripL <- as.character(WindU2hr$tripL)
 
-gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + tripL + s(yrID, bs="re"),
+gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + tripL + s(yrID, bs="re") + s(seq, bs="re"),
     data = WindU2hr, method = "REML", family = gaussian())
 gamtstk10 <- gam(absRelHead ~ s(distTo, k = 10) + s(WSpeed, k = 10) + s(spTrav, k = 10) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
@@ -1228,6 +1229,15 @@ gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + s(spTrav, 
 AIC(gamtst,gamtstk10,gamtstk50)
 
 gam.check(gamtst)
+library(tidymv)
+
+predDat <- data.frame(distTo = runif(1000,1,200),WSpeed = runif(1000,0,15),
+    tripL = sample(c(TRUE,FALSE),1000,TRUE),yrID = sample(unique(WindU2hr$yrID),1000,TRUE),seq=sample(unique(WindU2hr$seq),1000,TRUE))
+
+gamPreds <- predict(gamtst,predDat,exclude=c("s(yrID)","s(seq)"))
+
+plot(WindU2hr$distTo,WindU2hr$absRelHead)
+points(predDat$distTo,gamPreds,col="r")
 
 visreg(gamtst, "distTo", "tripL", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)")
 
@@ -1252,7 +1262,12 @@ acf(resid(gamtst))
 pacf(resid(gamtst))
 r1 <- acf(resid(gamtst), plot=FALSE)$acf[2]
 
+## TRUNCATED GAMLSS
+library(gamlss)
+library(gamlss.tr)
+AngTrunFam <- trun(par=c(0,pi),family="NO",type="both")
 
+lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID), family = AngTrunFam, data1 = WindDat)
 
 simdat <- start_event(WindDat, column="DT", event=c("yrID", "seq"), label.event="Event")
 

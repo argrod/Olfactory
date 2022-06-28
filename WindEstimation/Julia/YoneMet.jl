@@ -19,7 +19,7 @@ Pkg.add.(["Plots",
 "PlotlyJS",
 "LsqFit"])
 
-using Plots, CSV, GRIB, DataFrames, Query, Dates, CSV, Geodesy, StructArrays, RecursiveArrayTools, Statistics, RCall, NetCDF, DelimitedFiles, Glob, DataFrames, LsqFit
+using Plots, CSV, DataFrames, Query, Dates, CSV, Geodesy, StructArrays, RecursiveArrayTools, Statistics, RCall, NetCDF, DelimitedFiles, Glob, DataFrames, LsqFit
 
 if Sys.iswindows()
     fileloc19 = "E:/My Drive/PhD/Data/2019Shearwater/AxyTrek/"
@@ -32,12 +32,14 @@ for b = 1:length(files)
     append!(EDat, hcat(CSV.File(files[b],header=false,delim="\t") |> DataFrame,fill(readdir(fileloc19)[b],nrow(CSV.File(files[b],header=false,delim="\t") |> DataFrame))))
 end
 
-rename!(EDat,[:DT,:lat,:lon,:c4,:c5,:c6,:c7,:c8,:ID])
-dt = dateformat"y/m/d,H:M:S"
-EDat.DT = DateTime.(EDat.DT,dt);
-
+rename!(EDat,[:date,:time,:lat,:lon,:c4,:c5,:c6,:c7,:c8,:ID])
+dt = dateformat"d/m/y H:M:S"
+[EDat.date EDat.time]
+EDat.DT = DateTime.([join(i) for i=zip(EDat.date.*" ",string.(EDat.time))],dateformat"d/m/y H:M:S");
 tags = unique(EDat.ID);
 sel = EDat[findall(x->x==tags[1],EDat.ID),:];
+
+
 
 # data = [(-2.0,1.0), (0.0, 3.0), (2.0, 1.0)]
 # ptrs = 1:length(data)
@@ -133,7 +135,7 @@ function getsection(F,Win,delta,fs,fe,time)
                     ss[k] = fsa[i] + c * del
                     se[k] = fsa[i] + c * del + window
                 end
-                k = k + 1
+                k += 1
             end
         end
     end
@@ -152,10 +154,15 @@ end
 function circwind(gd,c)
     wx(v) = v[1] * cos(v[2])
     wy(v) = v[1] * sin(v[2])
+
+    ea = @(c)(wy([c(1) c(2)]).*sin(gd) + wx([c(1) c(2)]).*cos(gd) + ...
+    sqrt((wy([c(1) c(2)]).*sin(gd)+wx([c(1) c(2)]).*cos(gd)).^2 ...
+    - wy([c(1) c(2)]).^2 - wx([c(1) c(2)]).^2 + c(3)^2) - vg);
+
     α,β,γ = c
     wy([α,β])*sin(gd) + wx([α,β])*cos(gd) + sqrt((wy([α,β])*sin(gd) + wx([α,β])*cos(gd))^2 - wy([α,β])^2 .- wx([α,β]).^2 + γ^2)
 end
-
+ea = c -> wy([c[1] c[2]]) * sin(gd) + wx([c[1] c[2]]) * cos(gd) + sqrt((wy([c[1] c[2]]) * sin(gd) + wx([c[1] c[2]]) * cos(gd))^2) - wy([c[1] c[2]])^2 - wx([c[1] c[2]])^2 - vg
 circwind.(dir[ss[13]:se[13]],Ref([3,0,9]))
 
 curve_fit(circwind, dir[ss[13]:se[13]], spd[ss[13]:se[13]],[3,0,9],lower = [0.0, -pi, 0.0], upper = [20.0, pi, 20.0])

@@ -31,6 +31,7 @@ subs = [5, 10, 30, 60];
 
 % create another with expanding time windows
 
-wy([3 0]).*sin(gd) + wx([3 0]).*cos(gd) + ...
-sqrt((wy([3 0]).*sin(gd)+wx([3 0]).*cos(gd)).^2 ...
-    - wy([3 0]).^2 - wx([3 0]).^2 + 9^2) - vg
+wy([3 0]).*sin(gd) + wx([3 0]).*cos(gd)
+
+sqrt((wy([3 0]).*sin(gd)+wx([c(1) c(2)]).*cos(gd)).^2 ...
+    - wy([3 0]).^2 - wx([c(1) c(2)]).^2 + c(3)^2)
