@@ -149,7 +149,7 @@ if ismac()
     load('/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/MatlabDat/ReadIn/AllGPSForage.mat');
     outloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2016Shearwater/WindEst/YoneMet/";
 else
-    load('F:/UTokyoDrive/PhD//Data/2016Shearwater/MatlabDat/ReadIn/AllGPSForage.mat');
+    load('E:/My Drive/PhD/Data/2016Shearwater/MatlabDat/ReadIn/AllGPSForage.mat');
     outloc = "F:/UTokyoDrive/PhD/Data/2016Shearwater/WindEst/YoneMet/";
 end
 
@@ -267,8 +267,8 @@ if ismac()
     load('/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/MatlabDat/ReadIn/AllGPSForage.mat');
     outloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2017Shearwater/WindEst/YoneMet/";
 else
-    load('F:/UTokyoDrive/PhD//Data/2017Shearwater/MatlabDat/ReadIn/AllGPSForage.mat');
-    outloc = "F:/UTokyoDrive/PhD//Data/2017Shearwater/WindEst/YoneMet/";
+    load('E:/My Drive/PhD/Data/2017Shearwater/MatlabDat/ReadIn/AllGPSForage.mat');
+    outloc = "E:/My Drive/PhD/Data/2017Shearwater/WindEst/YoneMet/";
 end
 
 %% ANALYSE WIND AS USUAL
@@ -371,8 +371,8 @@ if ismac()
     loc14 = '/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/AxyTrek/';
     outloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/";
 else
-    loc14 = 'F:/UTokyoDrive/PhD//Data/2014Shearwater/AxyTrek/';
-    outloc = "F:/UTokyoDrive/PhD//Data/2014Shearwater/WindEst/YoneMet/";
+    loc14 = 'E:/My Drive/PhD/Data/2014Shearwater/AxyTrek/';
+    outloc = "E:/My Drive/PhD/Data/2014Shearwater/WindEst/YoneMet/";
 end
 files14 = dir2(strcat(loc14,'*.txt'));
 files14 = string({files14.name})';
