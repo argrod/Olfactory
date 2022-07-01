@@ -1,7 +1,7 @@
 library(rerddap)
 library(splitr)
-library(dplyr)
 library(plyr)
+library(dplyr)
 library(ggplot2)
 library(devtools)
 # devtools::install_github("ropenscilabs/rnaturalearth")
@@ -77,7 +77,7 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     distTrav = c(D18$recalDist, D19$recalDist),
     spTrav = c(D18$spTrav, D19$spTrav),
     recalSp = c(D18$recalSp, D19$recalSp),
-    distFk = c(D18$distFromFk, D19$distFromFk),
+    distFk = c(D18$distFk, D19$distFk),
     tripN = c(D18$tripN, D19$tripN),
     tripL = c(D18$tripL, D19$tripL),
     tkb = c(D18$tkb, D19$tkb),
@@ -255,19 +255,19 @@ ggplot(WindDat, aes(x = spTrav, y = WSpeed)) + geom_point() +# coord_polar(start
   theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,family = "Arial"),
     axis.text = element_text(size = 8, family = "Arial")) + scale_y_continuous(name=expression(paste("Ground speed (",ms^{-1},")",sep="")))
 
-ggplot(WindDat[WindDat$rtChg < 0 & WindDat$distFromFk < 100,], aes(x = fminRelHd, y = WSpd)) + geom_point(pch =21, fill = "red") + coord_polar(start = pi) +
+ggplot(WindDat[WindDat$rtChg < 0 & WindDat$distFk < 100,], aes(x = fminRelHd, y = WSpd)) + geom_point(pch =21, fill = "red") + coord_polar(start = pi) +
   scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
   theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,family = "Arial"),
     axis.text = element_text(size = 8, family = "Arial")) + scale_y_continuous(name=expression(paste("Estimated wind speeds (",ms^{-1},")",sep="")))
 ggsave(paste(figLoc,"SpeedAngles.svg",sep=""), device="svg", dpi = 300, height = 5,
       width = 5, units = "in")
-unique(WindDat$yrID[WindDat$rtChg < 0 & WindDat$distFromFk < 100])
+unique(WindDat$yrID[WindDat$rtChg < 0 & WindDat$distFk < 100])
 ggplot(WindDat[WindDat$distTo < 50,], aes(x = fminRelHd, y = distTo)) + geom_point(pch =21, fill = "red") + coord_polar(start = pi) +
   scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
   theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,family = "Arial"),
     axis.text = element_text(size = 8, family = "Arial")) + scale_y_continuous(name=expression(paste("Estimated wind speeds (",ms^{-1},")",sep="")))
 
-ggplot(allListD[allListD$Forage == 1 & allListD$rtChg < 0 & allListD$tripL > 2,], aes(x = distFromFk)) + 
+ggplot(allListD[allListD$Forage == 1 & allListD$rtChg < 0 & allListD$tripL > 2,], aes(x = distFk)) + 
   geom_histogram(bins=50) + 
   theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 12,family = "Arial"),
     axis.text = element_text(size = 10, family = "Arial")) +
@@ -452,42 +452,42 @@ lngbinDat <- data.frame(dist = lengthsL, aveHd = unlist(lapply(1:length(lengths)
 lngbinDat <- lngbinDat[!is.na(lngbinDat$disp),]
 
 # PLOT AVE HEADINGS IN 10KM BLOCKS AS THEY LEAVE FK ISLAND
-leavelengths<-seq(from=0,to=max(WindDat$distFromFk)-1, by = 5)
+leavelengths<-seq(from=0,to=max(WindDat$distFk)-1, by = 5)
 leavelengthsL <- leavelengths+5
-leavingshrt <- WindDat[WindDat$rtChg < 0 & WindDat$tripL <= 2,]
+leavingshrt <- WindDat[((WindDat$OutHm < 0) & (WindDat$tripL == FALSE) & (WindDat$forNo == 1)),]
 leaveShrtDat <- data.frame(dist = rep(NA,length(leavelengths)), aveHd = rep(NA,length(leavelengths)), disp = rep(NA,length(leavelengths)), hrP = rep(NA,length(leavelengths)))
 for(b in 1:length(leavelengths)){
-  if(sum(leavingshrt$distFromFk >= leavelengths[b] & leavingshrt$distFromFk < leavelengthsL[b]) > 20){
+  if(sum(leavingshrt$distFk >= leavelengths[b] & leavingshrt$distFk < leavelengthsL[b]) > 20){
     leaveShrtDat$dist[b] = leavelengths[b]
-    leaveShrtDat$aveHd[b] = circ.mean(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[b] & leavingshrt$distFromFk < leavelengthsL[b]])
-    leaveShrtDat$disp[b] = circ.disp(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[b] & leavingshrt$distFromFk < leavelengthsL[b]])$rbar
-    leaveShrtDat$hrP[b] = as.numeric(HR_test(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[b] & leavingshrt$distFromFk < leavelengthsL[b]])[2])
+    leaveShrtDat$aveHd[b] = circ.mean(leavingshrt$RelHead[leavingshrt$distFk >= leavelengths[b] & leavingshrt$distFk < leavelengthsL[b]])
+    leaveShrtDat$disp[b] = circ.disp(leavingshrt$RelHead[leavingshrt$distFk >= leavelengths[b] & leavingshrt$distFk < leavelengthsL[b]])$rbar
+    leaveShrtDat$hrP[b] = as.numeric(HR_test(leavingshrt$RelHead[leavingshrt$distFk >= leavelengths[b] & leavingshrt$distFk < leavelengthsL[b]])[2])
   }
 }
 save(leaveShrtDat,file="/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalc/shrtLeaveDat.RData")
 leaveShrtDat <- leaveShrtDat[!is.na(leaveShrtDat$dist),]
-# leaveShrtDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[x] & leavingshrt$distFromFk < leavelengthsL[x]]))),
-  # disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[x] & leavingshrt$distFromFk < leavelengthsL[x]])$var)),
-  # uniP = unlist(lapply(1:length(leavelengths), function(x) HR_test(leavingshrt$RelHead[leavingshrt$distFromFk >= leavelengths[x] & leavingshrt$distFromFk < leavelengthsL[x]])[2])))
+# leaveShrtDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leavingshrt$RelHead[leavingshrt$distFk >= leavelengths[x] & leavingshrt$distFk < leavelengthsL[x]]))),
+  # disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leavingshrt$RelHead[leavingshrt$distFk >= leavelengths[x] & leavingshrt$distFk < leavelengthsL[x]])$var)),
+  # uniP = unlist(lapply(1:length(leavelengths), function(x) HR_test(leavingshrt$RelHead[leavingshrt$distFk >= leavelengths[x] & leavingshrt$distFk < leavelengthsL[x]])[2])))
 leavinglng <- WindDat[WindDat$rtChg < 0 & WindDat$tripL > 2,]
 leaveLngDat <- data.frame(dist = rep(NA,length(leavelengths)), aveHd = rep(NA,length(leavelengths)), disp = rep(NA,length(leavelengths)), hrP = rep(NA,length(leavelengths)))
 for(b in 1:length(leavelengths)){
-  if(sum(leavinglng$distFromFk >= leavelengths[b] & leavinglng$distFromFk < leavelengthsL[b]) > 20){
+  if(sum(leavinglng$distFk >= leavelengths[b] & leavinglng$distFk < leavelengthsL[b]) > 20){
     leaveLngDat$dist[b] = leavelengths[b]
-    leaveLngDat$aveHd[b] = circ.mean(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[b] & leavinglng$distFromFk < leavelengthsL[b]])
-    leaveLngDat$disp[b] = circ.disp(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[b] & leavinglng$distFromFk < leavelengthsL[b]])$rbar
-    leaveLngDat$hrP[b] = as.numeric(HR_test(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[b] & leavinglng$distFromFk < leavelengthsL[b]])[2])
+    leaveLngDat$aveHd[b] = circ.mean(leavinglng$RelHead[leavinglng$distFk >= leavelengths[b] & leavinglng$distFk < leavelengthsL[b]])
+    leaveLngDat$disp[b] = circ.disp(leavinglng$RelHead[leavinglng$distFk >= leavelengths[b] & leavinglng$distFk < leavelengthsL[b]])$rbar
+    leaveLngDat$hrP[b] = as.numeric(HR_test(leavinglng$RelHead[leavinglng$distFk >= leavelengths[b] & leavinglng$distFk < leavelengthsL[b]])[2])
   }
 }
-# leaveLngDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[x] & leavinglng$distFromFk < leavelengthsL[x]]))),
-#   disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[x] & leavinglng$distFromFk < leavelengthsL[x]])$var)),
-#   uniP = unlist(lapply(1:length(leavelengths), function(x) HR_test(leavinglng$RelHead[leavinglng$distFromFk >= leavelengths[x] & leavinglng$distFromFk < leavelengthsL[x]])[2])))
+# leaveLngDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leavinglng$RelHead[leavinglng$distFk >= leavelengths[x] & leavinglng$distFk < leavelengthsL[x]]))),
+#   disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leavinglng$RelHead[leavinglng$distFk >= leavelengths[x] & leavinglng$distFk < leavelengthsL[x]])$var)),
+#   uniP = unlist(lapply(1:length(leavelengths), function(x) HR_test(leavinglng$RelHead[leavinglng$distFk >= leavelengths[x] & leavinglng$distFk < leavelengthsL[x]])[2])))
 save(leaveLngDat,file="/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalc/lngLeaveDat.RData")
 leaveLngDat <- leaveLngDat[!is.na(leaveLngDat$disp),]
 # leaving <- WindDat[WindDat$rtChg < 0 ,]
-# leaveDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leaving$RelHead[leaving$distFromFk >= leavelengths[x] & leaving$distFromFk < leavelengthsL[x]]))),
-#   disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leaving$RelHead[leaving$distFromFk >= leavelengths[x] & leaving$distFromFk < leavelengthsL[x]])$var)),
-#   uniP = unlist(lapply(1:length(leavelengths), function(x) r.test(leaving$RelHead[leaving$distFromFk >= leavelengths[x] & leaving$distFromFk < leavelengthsL[x]])$p.value)))
+# leaveDat <- data.frame(dist = leavelengths, aveHd = unlist(lapply(1:length(leavelengths), function(x) circ.mean(leaving$RelHead[leaving$distFk >= leavelengths[x] & leaving$distFk < leavelengthsL[x]]))),
+#   disp = unlist(lapply(1:length(leavelengths), function(x) circ.disp(leaving$RelHead[leaving$distFk >= leavelengths[x] & leaving$distFk < leavelengthsL[x]])$var)),
+#   uniP = unlist(lapply(1:length(leavelengths), function(x) r.test(leaving$RelHead[leaving$distFk >= leavelengths[x] & leaving$distFk < leavelengthsL[x]])$p.value)))
 # leaveDat <- leaveDat[!is.na(leaveDat$disp),]
 
 ggplot() + geom_point(data=leaveShrtDat[leaveShrtDat$hrP < 0.01,], aes(x = aveHd, y = dist, fill = "red"), pch = 21) +
@@ -508,25 +508,29 @@ ggplot() + geom_point(data=leaveShrtDat[leaveShrtDat$hrP < 0.01 & leaveShrtDat$d
 ggsave(paste(figLoc,"LeavingHeadings<200.svg",sep=""), device="svg", dpi = 300, height = 5,
       width = 5, units = "in")
 
-ggplot(WindDat[WindDat$rtChg < 0 & WindDat$distFromFk < 200 & WindDat$tripL > 2,], aes(x = RelHead)) + geom_density(alpha=.3) + 
+ggplot(WindDat[WindDat$rtChg < 0 & WindDat$distFk < 200 & WindDat$tripL > 2,], aes(x = RelHead)) + geom_density(alpha=.3) + 
   coord_polar(start = pi)
 
-lm.circular(as.circular(WindDat$RelHead), x=WindDat$distFromFk, type="c-l",verbose=T, init=c(1))
+lm.circular(y=as.circular(WindDat$RelHead), x=WindDat$distFk, type="c-l",verbose=T, init=c(1))
 x<-cbind(rnorm(10),rep(1,10))
 y<-circular(2*atan(c(x%*%c(5,1))))+rvonmises(10, mu=circular(0), kappa=100)
 lm.circular(y=y, x=x, init=c(5,1), type='c-l', verbose=TRUE)
 
+speedFit <- lm.circular(y=as.circular(WindDat$RelHead),
+  x = WindDat$spTrav, type = "c-l", verbose = T, init= c(1))
+
+
 fit.Motor <- bpnr(pred.I = Phaserad ~ 1 + Cond, data = Motor, its = 10000, burn = 100, n.lag = 3, seed = 101)
 
-fit.RelH <- bpnr(pred.I = (RelHead+pi) ~ 1 + distFromFk + (1|yrID) + WSpd, data = WindDat[WindDat$tripL > 2,], its = 10000, burn = 200, n.lag = 20, seed = 101)
+fit.RelH <- bpnr(pred.I = (RelHead+pi) ~ 1 + distFk + (1|yrID) + WSpd, data = WindDat[WindDat$tripL > 2,], its = 10000, burn = 200, n.lag = 20, seed = 101)
 traceplot(fit.RelH)
 
-plot(WindDat$RelHead ~ WindDat$distFromFk)
+plot(WindDat$RelHead ~ WindDat$distFk)
 WindDat <- WindDat[,-which(names(WindDat) %in% c("timeTo","forHd","spTrav","minHd"))]
 WindDat$yrIDnm <- as.numeric(factor(WindDat$yrID))
-testr <- bpnme(pred.I = RelHead ~ distFromFk + WSpd + (1|yrIDnm), data = WindDat[1:20,], its = 10000, burn = 1000, n.lag = 3)
+testr <- bpnme(pred.I = RelHead ~ distFk + WSpd + (1|yrIDnm), data = WindDat[1:20,], its = 10000, burn = 1000, n.lag = 3)
 WindDat$offset
-tstr <- lm(offset ~ distTo + distFromFk + WSpd, data = WindDat)
+tstr <- lm(offset ~ distTo + distFk + WSpd, data = WindDat)
 summary(tstr)
 plot(tstr)
 
@@ -594,37 +598,37 @@ ggdraw() +
 
 # RETURNING
 # PLOT AVE HEADINGS IN 10KM BLOCKS AS THEY ret FK ISLAND
-retlengths<-seq(from=max(WindDat$distFromFk)-1, to = 5, by = -5)
+retlengths<-seq(from=max(WindDat$distFk)-1, to = 5, by = -5)
 retlengthsL <- retlengths+5
 leavingshrt <- WindDat[WindDat$rtChg < 0 & WindDat$tripL <= 2,]
 retShrtDat <- data.frame(dist = rep(NA,length(retlengths)), aveHd = rep(NA,length(retlengths)), disp = rep(NA,length(retlengths)), hrP = rep(NA,length(retlengths)))
 for(b in 1:length(retlengths)){
-  if(sum(leavingshrt$distFromFk >= retlengths[b] & leavingshrt$distFromFk < retlengthsL[b]) > 20){
+  if(sum(leavingshrt$distFk >= retlengths[b] & leavingshrt$distFk < retlengthsL[b]) > 20){
     retShrtDat$dist[b] = retlengths[b]
-    retShrtDat$aveHd[b] = circ.mean(leavingshrt$RelHead[leavingshrt$distFromFk >= retlengths[b] & leavingshrt$distFromFk < retlengthsL[b]])
-    retShrtDat$disp[b] = circ.disp(leavingshrt$RelHead[leavingshrt$distFromFk >= retlengths[b] & leavingshrt$distFromFk < retlengthsL[b]])$rbar
-    retShrtDat$hrP[b] = as.numeric(HR_test(leavingshrt$RelHead[leavingshrt$distFromFk >= retlengths[b] & leavingshrt$distFromFk < retlengthsL[b]])[2])
+    retShrtDat$aveHd[b] = circ.mean(leavingshrt$RelHead[leavingshrt$distFk >= retlengths[b] & leavingshrt$distFk < retlengthsL[b]])
+    retShrtDat$disp[b] = circ.disp(leavingshrt$RelHead[leavingshrt$distFk >= retlengths[b] & leavingshrt$distFk < retlengthsL[b]])$rbar
+    retShrtDat$hrP[b] = as.numeric(HR_test(leavingshrt$RelHead[leavingshrt$distFk >= retlengths[b] & leavingshrt$distFk < retlengthsL[b]])[2])
   }
 }
 save(retShrtDat,file="/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalc/shrtretDat.RData")
 retShrtDat <- retShrtDat[!is.na(retShrtDat$dist),]
 
-# retShrtDat <- data.frame(dist = retlengths, aveHd = unlist(lapply(1:length(retlengths), function(x) circ.mean(leavingshrt$RelHead[leavingshrt$distFromFk >= retlengths[x] & leavingshrt$distFromFk < retlengthsL[x]]))),
-  # disp = unlist(lapply(1:length(retlengths), function(x) circ.disp(leavingshrt$RelHead[leavingshrt$distFromFk >= retlengths[x] & leavingshrt$distFromFk < retlengthsL[x]])$var)),
-  # uniP = unlist(lapply(1:length(retlengths), function(x) HR_test(leavingshrt$RelHead[leavingshrt$distFromFk >= retlengths[x] & leavingshrt$distFromFk < retlengthsL[x]])[2])))
-leavinglng <- WindDat[WindDat$rtChg < 0 & WindDat$tripL > 2 & WindDat$distFromFk <= 200,]
+# retShrtDat <- data.frame(dist = retlengths, aveHd = unlist(lapply(1:length(retlengths), function(x) circ.mean(leavingshrt$RelHead[leavingshrt$distFk >= retlengths[x] & leavingshrt$distFk < retlengthsL[x]]))),
+  # disp = unlist(lapply(1:length(retlengths), function(x) circ.disp(leavingshrt$RelHead[leavingshrt$distFk >= retlengths[x] & leavingshrt$distFk < retlengthsL[x]])$var)),
+  # uniP = unlist(lapply(1:length(retlengths), function(x) HR_test(leavingshrt$RelHead[leavingshrt$distFk >= retlengths[x] & leavingshrt$distFk < retlengthsL[x]])[2])))
+leavinglng <- WindDat[WindDat$rtChg < 0 & WindDat$tripL > 2 & WindDat$distFk <= 200,]
 retLngDat <- data.frame(dist = rep(NA,length(retlengths)), aveHd = rep(NA,length(retlengths)), disp = rep(NA,length(retlengths)), hrP = rep(NA,length(retlengths)))
 for(b in 1:length(retlengths)){
-  if(sum(leavinglng$distFromFk >= retlengths[b] & leavinglng$distFromFk < retlengthsL[b]) > 20){
+  if(sum(leavinglng$distFk >= retlengths[b] & leavinglng$distFk < retlengthsL[b]) > 20){
     retLngDat$dist[b] = retlengths[b]
-    retLngDat$aveHd[b] = circ.mean(leavinglng$RelHead[leavinglng$distFromFk >= retlengths[b] & leavinglng$distFromFk < retlengthsL[b]])
-    retLngDat$disp[b] = circ.disp(leavinglng$RelHead[leavinglng$distFromFk >= retlengths[b] & leavinglng$distFromFk < retlengthsL[b]])$rbar
-    retLngDat$hrP[b] = as.numeric(HR_test(leavinglng$RelHead[leavinglng$distFromFk >= retlengths[b] & leavinglng$distFromFk < retlengthsL[b]])[2])
+    retLngDat$aveHd[b] = circ.mean(leavinglng$RelHead[leavinglng$distFk >= retlengths[b] & leavinglng$distFk < retlengthsL[b]])
+    retLngDat$disp[b] = circ.disp(leavinglng$RelHead[leavinglng$distFk >= retlengths[b] & leavinglng$distFk < retlengthsL[b]])$rbar
+    retLngDat$hrP[b] = as.numeric(HR_test(leavinglng$RelHead[leavinglng$distFk >= retlengths[b] & leavinglng$distFk < retlengthsL[b]])[2])
   }
 }
-# retLngDat <- data.frame(dist = retlengths, aveHd = unlist(lapply(1:length(retlengths), function(x) circ.mean(leavinglng$RelHead[leavinglng$distFromFk >= retlengths[x] & leavinglng$distFromFk < retlengthsL[x]]))),
-#   disp = unlist(lapply(1:length(retlengths), function(x) circ.disp(leavinglng$RelHead[leavinglng$distFromFk >= retlengths[x] & leavinglng$distFromFk < retlengthsL[x]])$var)),
-#   uniP = unlist(lapply(1:length(retlengths), function(x) HR_test(leavinglng$RelHead[leavinglng$distFromFk >= retlengths[x] & leavinglng$distFromFk < retlengthsL[x]])[2])))
+# retLngDat <- data.frame(dist = retlengths, aveHd = unlist(lapply(1:length(retlengths), function(x) circ.mean(leavinglng$RelHead[leavinglng$distFk >= retlengths[x] & leavinglng$distFk < retlengthsL[x]]))),
+#   disp = unlist(lapply(1:length(retlengths), function(x) circ.disp(leavinglng$RelHead[leavinglng$distFk >= retlengths[x] & leavinglng$distFk < retlengthsL[x]])$var)),
+#   uniP = unlist(lapply(1:length(retlengths), function(x) HR_test(leavinglng$RelHead[leavinglng$distFk >= retlengths[x] & leavinglng$distFk < retlengthsL[x]])[2])))
 save(retLngDat,file="/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalc/lngretDat.RData")
 retLngDat <- retLngDat[!is.na(retLngDat$disp),]
 
@@ -647,7 +651,7 @@ ggsave(paste(figLoc,"ReturningHeadings.svg",sep=""), device="svg", dpi = 300, he
 #   scale_y_continuous(name="Distance from nest site (km)") + theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
 #     family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
 # colnames(WindDat)
-# ggplot(WindDat[WindDat$rtChg < 0,], aes(x = RelHead, y=distFromFk,fill=trip)) + geom_point(pch=21,colour = 'black') + coord_polar(start=pi)
+# ggplot(WindDat[WindDat$rtChg < 0,], aes(x = RelHead, y=distFk,fill=trip)) + geom_point(pch=21,colour = 'black') + coord_polar(start=pi)
 # ggplot(WindDat[WindDat$rtChg < 0,], aes(x = RelHead, fill = trip)) + geom_histogram(colour='black',bins=50,alpha=.6) + coord_polar(start=pi) +
 #   scale_y_continuous(name="Count") + theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
 #     family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
@@ -1051,7 +1055,7 @@ for(b in 1:length(distGaps)){
     } else {
         roseplt <- ggplot(WindDat[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b],]) + 
             geom_histogram(aes(x = RelHead), colour = "black", bins = 30, fill = "#d9d9d9") + scale_y_continuous(name = "Count") +
-            # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distFromFk >= distGaps[b] & WindDat$distFromFk < distGapsL[b]]), linetype = 1, colour = "red") +
+            # geom_vline(xintercept = circ.mean(WindDat$RelHead[WindDat$distFk >= distGaps[b] & WindDat$distFk < distGapsL[b]]), linetype = 1, colour = "red") +
             coord_polar(start=pi) + scale_x_continuous(name = "Relative wind heading", breaks = c(pi,-pi/2,0,pi/2), labels = c("Head","Side","Tail","Side"), limits = c(-pi,pi)) + 
             theme_bw() + theme(panel.grid.minor = element_blank()) + theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10,
                 family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) 
@@ -1404,7 +1408,7 @@ tstr[1,]
 ggplot(data.frame(inters,avDistEst), aes(x = inters, y = rbar)) + geom_point()
 
 
-ggplot(WindDat, aes(x=RelHead,y=WSpd,colour=distFromFk>10)) + geom_point()+coord_polar(start=pi)
+ggplot(WindDat, aes(x=RelHead,y=WSpd,colour=distFk>10)) + geom_point()+coord_polar(start=pi)
 
 WindDat$diffOf <- pi - abs(WindDat$RelHead)
 WindDat$diffOf[WindDat$diffOf < ]
