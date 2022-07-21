@@ -77,13 +77,9 @@ allD <- data.frame(DT=c(D18$DT, D19$DT),
     distTrav = c(D18$recalDist, D19$recalDist),
     spTrav = c(D18$spTrav, D19$spTrav),
     recalSp = c(D18$recalSp, D19$recalSp),
-    distFk = c(D18$distFk, D19$distFk),
-    tripN = c(D18$tripN, D19$tripN),
-    tripL = c(D18$tripL, D19$tripL),
-    tkb = c(D18$tkb, D19$tkb),
-    dv = c(D18$dv, D19$dv),
-    UTME = c(D18$UTME, D19$UTME),
-    UTMN = c(D18$UTMN, D19$UTMN))
+    distFk = c(D18$distFk, D19$distFromFk),
+    tripN = c(D18$tripN, D19$tripNo),
+    tripL = c(D18$tripL, D19$tripL))
 allD$Year <- format(allD$DT, format = "%Y")
 allD$forage <- allD$dv == 1 | allD$tkb == 1
 allD$yrID <- paste(format(allD$DT,'%Y'),"_",sub("\\_S.*","",allD$tagID),sep="")
@@ -278,7 +274,7 @@ ggplot(WindDat[WindDat$distTo > 50,], aes(x = fminRelHd, y = WSpd)) + geom_point
 ggplot(WindDat[WindDat$DT < as.POSIXct("2019/01/01"),], aes(x = DT, y = WSpd)) + geom_point()
 
 
-WindDat$fminRelHd <- WindDat$fminHd - WindDat$WHd
+WindDat$fminRelHd <- WindDat$fminHd - WindDat$WHead
 WindDat$fminRelHd[WindDat$fminRelHd < -pi] <- WindDat$fminRelHd[WindDat$fminRelHd < -pi] + 2*pi
 WindDat$fminRelHd[WindDat$fminRelHd > pi] <- WindDat$fminRelHd[WindDat$fminRelHd > pi] - 2*pi
 
@@ -888,13 +884,13 @@ ggplot(allD[allD$tripL == 1,]) +
   geom_path(aes(x=lon,y=lat,colour=yrID)) +
   ggsn::scalebar(dist=100,model="WGS84",transform=T,dist_unit="km",x.min=min(allD$lon[allD$tripL == 1]),x.max=max(allD$lat[allD$tripL==1]),y.min=min(allD$lat[allD$tripL==1]),y.max=max(allD$lat[allD$tripL==1]))
 
-sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],]
+sbst = allD[allD$yrID == indivWinds[6],]
 WindDat$WSpd <- sqrt(WindDat$X^2 + WindDat$Y^2)
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-    geom_path(data=ListD[[6]][ListD[[6]]$DT > as.POSIXct("2018/09/08 10:20:00") & ListD[[6]]$DT > as.POSIXct("2018/09/08 10:30:00"),], aes(x = Lon, y = Lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1 & 
+    geom_path(data=ListD[[6]][ListD[[6]]$DT > as.POSIXct("2018/09/08 10:20:00") & ListD[[6]]$DT > as.POSIXct("2018/09/08 10:30:00"),], aes(x = Lon, y = Lat)) + geom_point(data=allD[allD$yrID == indivWinds[6] & allD$forage == 1 & 
       allD$DT > as.POSIXct("2018/09/08 10:20:00") & allD$DT > as.POSIXct("2018/09/08 10:30:00"),],
     aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
-  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[6],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")),
+  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[6],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.05,"inches")),
   radius = .5*(WindDat$WSpd[WindDat$yrID == indivWinds[6]]/max(WindDat$WSpd[WindDat$yrID == indivWinds[6]]))) +
   scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
   geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,200)],xend=sbst$lon[seq(2,nrow(sbst),200)],
@@ -908,14 +904,14 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
 ggsave(paste(figLoc,"ExampleWind.svg",sep=""), device="svg", dpi = 300, height = 6,
       width = 6, units = "in")
 
-sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),]
+sbst = allD[allD$yrID == yrid[1] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),]
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     coord_sf(xlim = c(142.3, 142.7), ylim = c(39.5, 39.75)) +
-    geom_path(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),],aes(x=lon,y=lat)) +
-  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[a] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
-    aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")), alpha = .6,
-    radius = .3*(WindDat$WSpd[WindDat$yrID == indivWinds[a] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpd[WindDat$yrID == indivWinds[a]]))) +  
-  geom_point(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) +
+    geom_path(data = allD[allD$yrID == yrid[1] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),],aes(x=lon,y=lat)) +
+  geom_spoke(data = WindDat[WindDat$yrID == yrid[1] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
+    aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.05,"inches")), alpha = .6,
+    radius = .3*(WindDat$WSpd[WindDat$yrID == yrid[1] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpd[WindDat$yrID == yrid[1]]))) +  
+  geom_point(data = allD[allD$yrID == yrid[1] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) +
   geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,50)],xend=sbst$lon[seq(2,nrow(sbst),50)],
     y=sbst$lat[seq(1,nrow(sbst)-1,50)],yend=sbst$lat[seq(2,nrow(sbst),50)]),arrow = arrow(length = unit(0.08,"inches"))) +
   scale_x_continuous(name="Lon", breaks=seq(142.3,142.7,.2)) +
@@ -931,8 +927,8 @@ ggsave(paste(figLoc,"ExampleWindNearForage.svg",sep=""), device="svg", dpi = 300
 
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     coord_sf(xlim = c(140, 144), ylim = c(39, 42.5)) +
-    geom_path(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6],],aes(x=lon,y=lat)) +
-  geom_point(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[6] & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) + 
+    geom_path(data = allD[allD$yrID == indivWinds[6],],aes(x=lon,y=lat)) +
+  geom_point(data = allD[allD$yrID == indivWinds[6] & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) + 
   scale_x_continuous(name="Lon", breaks=seq(140,144,1)) +
   scale_y_continuous(name="Lat", breaks=seq(39,42.5,1)) +
   scale_fill_manual(name = "Foraging points", values = "deepskyblue", labels="") +
@@ -957,16 +953,21 @@ ggplot() + geom_polygon(aes(x=long,y=lat),colour="grey",data = nc2[[2]]) +
   scale_y_continuous(position='right') + coord_equal()
 colnames(japan)
 
+ggplot(allD[allD$yrID == yrid[1],],aes(x=lon,y=lat)) + geom_path() +
+  geom_spoke(data = WindDat[WindDat$yrID == yrid[1] ,],
+    aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.03,"inches")), alpha = .6,
+    radius = .3*(WindDat$WSpd[WindDat$yrID == yrid[1]]/max(WindDat$WSpd[WindDat$yrID == yrid[1]])))
+
 yrid <- unique(WindDat$yrID)
-sbst = allD[allD$yrID == yrid[5] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),]
+sbst = allD[allD$yrID == yrid[1] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),]
 inset <- ggplot() + geom_path(data = sbst,aes(x=lon,y=lat)) +
   # annotation_scale(location = 'br') +
-  geom_spoke(data = WindDat[WindDat$yrID == yrid[5] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
+  geom_spoke(data = WindDat[WindDat$yrID == yrid[1] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
     aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.03,"inches")), alpha = .6,
-    radius = .3*(WindDat$WSpd[WindDat$yrID == yrid[5] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpd[WindDat$yrID == yrid[5]]))) +  
+    radius = .3*(WindDat$WSpd[WindDat$yrID == yrid[1] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpd[WindDat$yrID == yrid[1]]))) +  
   geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,50)],xend=sbst$lon[seq(2,nrow(sbst),50)],
     y=sbst$lat[seq(1,nrow(sbst)-1,50)],yend=sbst$lat[seq(2,nrow(sbst),50)]),arrow = arrow(length = unit(0.08,"inches"))) +
-  geom_point(data = allD[allD$yrID == yrid[5] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=3) +
+  geom_point(data = allD[allD$yrID == yrid[1] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=3) +
     scale_y_continuous(name="",breaks=c(39.5,39.6,39.7), position = "right",
       labels=as.character(c(39.5,39.6,39.7))) +
     scale_x_continuous(name="") +
@@ -996,11 +997,11 @@ inset <- ggplot() + geom_path(data = sbst,aes(x=lon,y=lat)) +
       st.dist = .1,x.min = min(sbst$lon), x.max = 142.65, y.min = min(sbst$lat), y.max = max(sbst$lat), location = 'topleft',box.fill=c("black","white"))
 inset
 # example wind with inset
-full <- ggplot() + geom_path(data = allD[allD$yrID == yrid[5],], aes(x = lon, y = lat)) +
+full <- ggplot() + geom_path(data = allD[allD$yrID == yrid[1],], aes(x = lon, y = lat)) +
   geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-  geom_point(data = allD[allD$yrID == yrid[5] & allD$forage == 1,], aes(x = lon, y = lat, fill = "deepskyblue"),pch = 21) + 
-  geom_spoke(data = WindDat[WindDat$yrID == yrid[5],], aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.03,"inches")),
-  radius = .3*(WindDat$WSpd[WindDat$yrID == yrid[5]]/max(WindDat$WSpd[WindDat$yrID == yrid[5]]))) + 
+  geom_point(data = allD[allD$yrID == yrid[1] & allD$forage == 1,], aes(x = lon, y = lat, fill = "deepskyblue"),pch = 21) + 
+  geom_spoke(data = WindDat[WindDat$yrID == yrid[1],], aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.03,"inches")),
+  radius = .3*(WindDat$WSpd[WindDat$yrID == yrid[1]]/max(WindDat$WSpd[WindDat$yrID == yrid[1]]))) + 
   coord_sf(xlim = c(139, 144), ylim = c(39, 42.5)) +
   scale_x_continuous(name="Longitude") +
   scale_y_continuous(name="Latitude") +
@@ -1020,10 +1021,10 @@ a <- 5
 WindDat[WindDat$yrID == indivWinds[a] & WindDat$distTo < 10 & (WindDat$RelHead < -2.6 | WindDat$RelHead > 2.6),c(1:3,26)]
 
 a=8
-sbst = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a],]
+sbst = allD[allD$yrID == indivWinds[a],]
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-    coord_sf(xlim = c(141, 145), ylim = c(39, 43)) + geom_path(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a],], aes(x = lon, y = lat)) + geom_point(data=allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$forage == 1,], aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
-  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[a],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHd), arrow = arrow(length = unit(0.05,"inches")),
+    coord_sf(xlim = c(141, 145), ylim = c(39, 43)) + geom_path(data=allD[allD$yrID == indivWinds[a],], aes(x = lon, y = lat)) + geom_point(data=allD[allD$yrID == indivWinds[a] & allD$forage == 1,], aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
+  geom_spoke(data = WindDat[WindDat$yrID == indivWinds[a],], aes(x = Lon, y = Lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.05,"inches")),
   radius = .5*(WindDat$WSpd[WindDat$yrID == indivWinds[a]]/max(WindDat$WSpd[WindDat$yrID == indivWinds[a]]))) +
   geom_segment(aes(x=sbst$lon[seq(1,nrow(sbst)-1,300)],xend=sbst$lon[seq(2,nrow(sbst),300)],
     y=sbst$lat[seq(1,nrow(sbst)-1,300)],yend=sbst$lat[seq(2,nrow(sbst),300)]),arrow = arrow(length = unit(0.1,"inches"))) +
@@ -1036,7 +1037,82 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     scale_y_continuous(breaks = c(39,40,41,42), labels = c("39","40","41","42"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
     scale_x_continuous(labels = c("140", "141", "142", "143", "144"), name = paste("Longitude (","\u00b0E",")", sep = ""))
 
+tmp50 <- vector(mode='list',length=20)
+for(b in 1:length(yrid)){
+  tmp50[[b]] <- sapply(unique(WindDat$forNo[WindDat$yrID == yrid[b]]), function(x)
+    nrow(WindDat[WindDat$forNo == x & WindDat$yrID == yrid[b] & WindDat$distTo < 50,]))
+}
 
+## ANIMATION OF BIRD AND WIND TRAVELLING TOWARDS FORAGING POINT
+# using tag 4
+selWDat <- WindDat[WindDat$yrID == "2018_9" & WindDat$DT <= as.POSIXct('2018/09/04 5:55:09',format="%Y/%m/%d %H:%M:%S",tz="") & WindDat$DT > as.POSIXct('2018/09/04 4:0:00',tz=''),]
+selD <- allD[allD$yrID == "2018_9" & allD$DT <= as.POSIXct('2018/09/04 5:55:09',format="%Y/%m/%d %H:%M:%S",tz="") & allD$DT > as.POSIXct('2018/09/04 4:0:00',format="%Y/%m/%d %H:%M:%S",tz=""),]
+ggplot() + geom_point(aes(x = lon,y=lat),data=selD) + 
+  geom_point(aes(x=lon,y=lat,fill=forage),pch=21,data=selD[selD$forage==1,]) +
+  geom_spoke(data = selWDat, aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.05,"inches")), radius = .03*selWDat$WSpeed/max(selWDat$WSpeed,na.omit=T))
+
+library(ggsn)
+library(png)
+library(grid)
+library(magick)
+
+brd <- image_read("/Users/aran/Documents/GitHub/Olfactory/R/birdTop.png")
+brd <- image_transparent(brd,'white')
+raster <- as.raster(image)
+
+p1 <- ggplot() +
+    coord_sf(xlim = c(144.7, 145.01), ylim = c(42.7, 43)) + 
+    geom_path(data=selD,aes(x = lon, y = lat), alpha = 0) +
+    geom_spoke(data = selWDat, aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.05,"inches")), radius = .03*selWDat$WSpeed/max(selWDat$WSpeed,na.omit=T), alpha = 0) +
+    geom_point(aes(x=lon,y=lat,fill="#CC3300"),pch=21,data=selD[selD$forage==1,]) +
+    scale_fill_manual(name = "Foraging", values="#CC3300",labels="", drop = F) +
+    guides(fill = guide_legend(override.aes = list(fill="#CC3300",pch=21,alpha=1))) +
+    ggsn::scalebar(dist=5,model="WGS84",transform=T,dist_unit="km",x.min=144.7,x.max=145.01,y.min=42.7,y.max=43,nudge_y=.025,location="bottomleft",border.size=.4) +
+    theme_bw() + theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank()) + 
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 10)) +
+    scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
+    scale_x_continuous("Longitude") + scale_y_continuous("Latitude")
+p1
+p1 + annotate(geom="raster",x=144.8,y=144.9,angle=14)
+selD$birdAngle <- c(atan2(diff(selD$UTMN),diff(selD$UTME)),NA) / (pi/180)
+# convert to 0 degrees as north coordinates
+selD$birdAngle <- (-selD$birdAngle + 90) %% 360
+
+# animation frames save location
+if(Sys.info()['sysname'] == "Darwin"){
+    dir_out <- "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Figures/Visuals/WindToFP/"
+} else {
+    dir_out <- "I:/My Drive/PD/Figures/Visuals/WindToFP/"
+}
+
+for(b in selD$DT){
+  adding <- p1 
+  adding <- adding +
+  geom_point(aes(x=lon,y=lat),fill="#CC3300",colour="#CC3300",pch=21,data=selD[selD$forage==1,],stroke=1) +
+  annotation_custom(rasterGrob(magick::image_rotate(brd,selD$birdAngle[selD$DT == b]),height=.4,width=.4),
+    xmin = selD$lon[selD$DT == b]-.05, ymin = selD$lat[selD$DT==b]-.05,
+    xmax = selD$lon[selD$DT == b]+.05, ymax = selD$lat[selD$DT==b]+.05) + 
+  geom_path(data=selD[selD$DT <= b,],aes(x = lon, y = lat)) +
+  geom_spoke(data = selWDat[which(selWDat$DT <= b),], aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.05,"inches")), radius = .03*selWDat[max(which(selWDat$DT <= b)),]$WSpeed/max(selWDat[selWDat$DT <= b,]$WSpeed,na.omit=T),lwd=1)
+    
+  fp <- file.path(dir_out, paste0(as.character(b),".png"))
+
+  ggsave(adding, filename=fp, width = 5, height = 5, units = "in",
+        device = "png")
+}
+
+p1 + annotation_custom(rasterGrob(magick::image_rotate(brd,90)))
+
+imgs <- list.files(dir_out,full.names=T)
+img_list <- lapply(imgs,image_read)
+img_joined <- image_join(img_list)
+img_animated <- image_animate(img_joined, fps = 5)
+
+## save to disk
+image_write(image = img_animated,
+            path = paste0(dir_out,"FPOlfactory.gif"))
+
+WindDat[WindDat$yrID == yrid[1],],aes(x=lon,y=lat)
 # RELATIVE HEADINGS AS BIRDS LEAVE COLONY
 one2Ten <- vector(mode="list",length=10)
 distGaps <- seq(0,9,1)
@@ -1224,11 +1300,11 @@ ggplot(data.frame(inters, cirDistEst), aes(x = inters, y = rbar)) + geom_line() 
 ggsave(paste(figLoc,"dispDist.svg",sep=""), device="svg", dpi = 300, height = 5,
       width = 5, units = "in")
 
-WindDat$fminRelH <- WindDat$fminHd-WindDat$WHd
+WindDat$fminRelH <- WindDat$fminHd-WindDat$WHead
 
 plot(WindDat$fminRelH, WindDat$RelHead)
 
-plot(WindDat$fminHd-WindDat$WHd,WindDat$Head-WindDat$WHd)
+plot(WindDat$fminHd-WindDat$WHead,WindDat$Head-WindDat$WHead)
 
 
 WindDat$fminRelH[WindDat$fminRelH < -pi] <- WindDat$fminRelH[WindDat$fminRelH < -pi] + 2*pi
@@ -1508,11 +1584,11 @@ ggplot() +
 
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
     coord_sf(xlim = c(142.3, 142.7), ylim = c(39.5, 39.75)) +
-    geom_path(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),],aes(x=lon,y=lat)) +
+    geom_path(data = allD[allD$yrID == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00"),],aes(x=lon,y=lat)) +
   geom_spoke(data = WindDat[WindDat$yrID == indivWinds[a] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00"),],
     aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.05,"inches")), alpha = .6,
     radius = .3*(WindDat$WSpd[WindDat$yrID == indivWinds[a] & WindDat$DT > as.POSIXct("2018-08-29 05:00:00") & WindDat$DT < as.POSIXct("2018-08-29 07:00:00")]/max(WindDat$WSpd[WindDat$yrID == indivWinds[a]]))) +  
-  geom_point(data = allD[paste(allD$tagID, allD$Year, sep = "") == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) +
+  geom_point(data = allD[allD$yrID == indivWinds[a] & allD$DT > as.POSIXct("2018-08-29 05:00:00") & allD$DT < as.POSIXct("2018-08-29 07:00:00") & allD$forage == 1,],aes(x=lon,y=lat, fill=factor(forage)), pch=21,size=2) +
   # geom_segment(data = allD[allD$yrID==indivWinds[a],],aes(x=lon[seq(1,nrow(sbst)-1,50)],xend=lon[seq(2,nrow(sbst),50)],
     # y=lat[seq(1,nrow(sbst)-1,50)],yend=lat[seq(2,nrow(sbst),50)]),arrow = arrow(length = unit(0.08,"inches"))) +
   scale_x_continuous(name="Lon", breaks=seq(142.3,142.7,.2)) +
@@ -1526,13 +1602,13 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
 
 
 ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
-    geom_path(data=allD[allD$yrID == tmp50$yrid[5],], aes(x = lon, y = lat)) + geom_point(data=allD[allD$yrID == tmp50$yrid[5] & allD$forage == 1 & allD$DT > as.POSIXct("2018/09/08 10:20:00") & allD$DT > as.POSIXct("2018/09/08 10:30:00"),],
+    geom_path(data=allD[allD$yrID == tmp50$yrid[1],], aes(x = lon, y = lat)) + geom_point(data=allD[allD$yrID == tmp50$yrid[1] & allD$forage == 1 & allD$DT > as.POSIXct("2018/09/08 10:20:00") & allD$DT > as.POSIXct("2018/09/08 10:30:00"),],
     aes(x = lon, y = lat), pch = 21, fill = "deepskyblue") +
-  geom_spoke(data = WindDat[WindDat$yrID == tmp50$yrid[5],], aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.05,"inches")),
-  radius = .5*(WindDat$WSpd[WindDat$yrID == tmp50$yrid[5]]/max(WindDat$WSpd[WindDat$yrID == tmp50$yrid[5]]))) +
+  geom_spoke(data = WindDat[WindDat$yrID == tmp50$yrid[1],], aes(x = lon, y = lat, colour = WSpd, angle = WHead), arrow = arrow(length = unit(0.05,"inches")),
+  radius = .5*(WindDat$WSpd[WindDat$yrID == tmp50$yrid[1]]/max(WindDat$WSpd[WindDat$yrID == tmp50$yrid[1]]))) +
   scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd") +
-  geom_segment(aes(x=allD[allD$yrID == tmp50$yrid[5],]$lon[seq(1,nrow(allD[allD$yrID == tmp50$yrid[5],])-1,200)],xend=allD[allD$yrID == tmp50$yrid[5],]$lon[seq(2,nrow(allD[allD$yrID == tmp50$yrid[5],]),200)],
-    y=allD[allD$yrID == tmp50$yrid[5],]$lat[seq(1,nrow(allD[allD$yrID == tmp50$yrid[5],])-1,200)],yend=allD[allD$yrID == tmp50$yrid[5],]$lat[seq(2,nrow(allD[allD$yrID == tmp50$yrid[5],]),200)]),arrow = arrow(length = unit(0.1,"inches"))) +
+  geom_segment(aes(x=allD[allD$yrID == tmp50$yrid[1],]$lon[seq(1,nrow(allD[allD$yrID == tmp50$yrid[1],])-1,200)],xend=allD[allD$yrID == tmp50$yrid[1],]$lon[seq(2,nrow(allD[allD$yrID == tmp50$yrid[1],]),200)],
+    y=allD[allD$yrID == tmp50$yrid[1],]$lat[seq(1,nrow(allD[allD$yrID == tmp50$yrid[1],])-1,200)],yend=allD[allD$yrID == tmp50$yrid[1],]$lat[seq(2,nrow(allD[allD$yrID == tmp50$yrid[1],]),200)]),arrow = arrow(length = unit(0.1,"inches"))) +
   theme_bw() + theme(panel.grid = element_blank()) +
     theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 8,
         family = "Arial"), axis.text = element_text(size = 8, family = "Arial")) + 
