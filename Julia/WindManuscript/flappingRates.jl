@@ -76,8 +76,8 @@ function maxFreqs(outLocation,yrID,fs)
     numoverlap=round(.5*winsize)
     win=Windows.hamming(winsize)
     spect = spectrogram(Z[2],winsize,Int(numoverlap),fs=fs,window=win) # spectrogram of dynamic dorsoventral acceleration
-    maxix = findmax(spect.power;dims=1)[2] # find indeces of maximum frequencies
-    maxix = getindex.(maxix,1)
+    maxix = findmax(spect.power[3 .<= spect.freq .<= 6,:];dims=1)[2] # find indeces of maximum frequencies
+    maxix = getindex.(maxix,1) .+ findfirst(spect.freq .>= 3) .- 1
     maxFrec = [spect.freq[x] for x in maxix] # take the frequencies
     # take a range of acceleration indeces around the GPS positions
     mxFrcRanges = range.([maximum([Int(round(x/(30*fs))-(30/spect.time[1])),1]) for x in GPSInds],[minimum([Int(round(x/(30*fs))+(30/spect.time[1])),length(spect.time)]) for x in GPSInds],step=1);
@@ -93,13 +93,13 @@ end
 if Sys.iswindows()
     dataloc = "E:/My Drive/PhD/Data/"
 else
-    dataloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/"
+    dataloc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/"
 end
 # output locations for GPS dominant frequencies (dorsoventral)
 if Sys.iswindows()
     outloc = "E:/My Drive/PhD/Data/GPSDominantFrequencies/"
 else
-    outloc = "/Volumes/GoogleDrive/My Drive/PhD/Data/GPSDominantFrequencies/"
+    outloc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/GPSDominantFrequencies/"
 end
 # find year and IDs of all wind data
 yrIDs = yrIDGather(dataloc,".*MinDat[\\\\|/](.*)_S.*",[2018,2019])
