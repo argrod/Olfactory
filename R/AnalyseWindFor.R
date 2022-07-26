@@ -1274,7 +1274,11 @@ visreg(gamtst, "WSpeed", "tripL", ylab="Relative wind direction offset (rad)",xl
 ggplot(WindDat) +
     geom_point(aes(y = WSpeed, x = domFreq, colour = RelHead))
 
+jpeg(file="/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Figures/GAM.jpeg")
+
 visreg(gamtst, "distTo", "tripL", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)")
+
+dev.off()
 
 visreg(gamtst, "domFreq", "tripL", ylab="Relative wind direction offset (rad)",xlab="Dominant heave frequency (Hz)")
 
@@ -1321,11 +1325,34 @@ library(gamlss.tr)
 library(distreg.vis)
 AngTrunFam <- trun(par=c(0,pi),family="NO",type="both")
 
+<<<<<<< HEAD
 lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID), family = trun(par=c(0,pi),family="NO",type="both"), data = na.omit(WindU2hr))
 
 plot(lssGamFit)
 
 
+=======
+lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID), family = trun(par=c(0,pi),family="NO",type="both"), data = na.omit(subset(WindDat,WindDat$timeTo < (2*3600))))
+
+plot(absRelHead ~ distTo, col='lightblue', data = WindDat)
+lines(fitted(lssGamFit)[order(WindDat$distTo)]~WindDat$distTo[order(WindDat$distTo)])
+
+library(gamlss.util)
+plotSimpleGamlss(absRelHead, distTo, lssGamFit, data=WindDat)
+
+plot(lssGamFit)
+wp(lssGamFit,ylim.all=.5)
+
+plot(absRelHead ~ distTo, data = na.omit(subset(WindDat,timeTo < (2*3600))))
+lines(na.omit(subset(WindDat,timeTo < (2*3600)))$distTo,fitted(lssGamFit),col='red')
+
+length(fitted(lssGamFit))
+nrow(na.omit(subset(WindDat,timeTo < (2*3600))))
+qstats<-Q.stats(lssGamFit,xvar=na.omit(WindDat)$absRelHead,n.inter=10)
+print(qstats, digits=3)
+
+lssGamFitNoTrip <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + random(yrID), family = trun(par=c(0,pi),family="NO",type="both"), data = na.omit(WindDat))
+>>>>>>> bcc85c1969e4d1036aba58d7a1d71f5dbf0a0196
 
 simdat <- start_event(WindDat, column="DT", event=c("yrID", "seq"), label.event="Event")
 
@@ -1613,23 +1640,33 @@ for(id in unique(allD$yrID)){
     allD$timeD[allD$yrID == id] = difftime(allD$DT[allD$yrID == id],allD$DT[allD$yrID == id][1],units="mins")
 }
 
-spHd <- lm(spTrav ~ offset + WSpeed, data = WindDat)
+spHd <- lm(spTrav ~ poly(RelHead,2), data = WindDat)
 summary(spHd)
+plot(spHd)
 
-spFun <- function(x) x - 
-ggplot(WindDat, aes(x = offset, y = spTrav)) + geom_point() +
+lm_eqn <- function(x,y){
+    m <- lm(y ~ poly(x,2));
+    eq <- substitute(italic(y) == c *""* italic(x^2)* + b *""* italic(x) + a  * ","~~italic(r)^2~"="~r2, 
+         list(a = format(unname(coef(m)[1]), digits = 2),
+              b = format(unname(coef(m)[2]), digits = 2),
+              c = format(unname(coef(m)[3]), digits = 2),
+             r2 = format(summary(m)$r.squared, digits = 3)))
+    as.character(as.expression(eq));
+}
 
-ggplot() + geom_line(colour = "red", data = spHdf, aes(x = predOut, y = spdPred))
-
-ggplot() + 
-    geom_point(data = WindDat, aes(x = offset, y= spTrav))
-    
-     +
-     geom_line(data=spHdf, aes(x = predOut, y = spdPred), colour = "red")
-
-WindDat$offset <- abs(WindDat$RelHead)
-
-ggplot(allD, aes(x = timeD, y = distToNextFP, colour = yrID)) + geom_line()
+ggplot(WindDat, aes(x = RelHead, y = spTrav)) + geom_point() +
+    stat_smooth(method='lm', se=T, fill=NA,
+        formula = y ~ poly(x,2,raw=T),colour="red") + 
+    theme_bw() + 
+    theme(panel.grid = element_blank()) +
+    theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 14), axis.text = element_text(size = 14)) +
+    scale_y_continuous("Ground speed (kph)") +
+    scale_x_continuous("Relative wind heading (rad)") +
+    geom_text(aes(x = -1, y = 125), hjust=0,
+        label=lm_eqn(WindDat$RelHead,WindDat$spTrav), parse = T)
+ggsave("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Conferences/Mextpresentation/WindCorr.png", , dpi = 300, height = 6,
+    width = 6, units = "in", family = "Arial")
+dev.off()
 
 ################################################################################################
 ########################################## HMM FAILED ##########################################
