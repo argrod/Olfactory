@@ -1219,17 +1219,20 @@ WindDat$absRelHead <- abs(WindDat$RelHead)
 WindDat$forno <- as.factor(WindDat$forNo)
 WindU2hr <- WindDat[which(WindDat$timeTo < (3600*2)),]
 WindU2hr$tripL <- as.character(WindU2hr$tripL)
+WindU2hr$year <- year(WindU2hr$DT)
+WindDat$year <- year(WindDat$DT)
 
-gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + tripL + s(yrID, bs="re") + s(seq, bs="re"),
+gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + tripL + s(yrID, bs="re"),
     data = WindU2hr, method = "REML", family = gaussian())
 gamtstk10 <- gam(absRelHead ~ s(distTo, k = 10) + s(WSpeed, k = 10) + s(spTrav, k = 10) + tripL + s(yrID, bs="re"),
-    data = WindDat, method = "REML")
-gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
+    data = WindU2hr, method = "REML")
+gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + year + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
 AIC(gamtst,gamtstk10,gamtstk50)
 
 gam.check(gamtst)
 library(tidymv)
+summary(gamtstk50)
 
 predDat <- data.frame(distTo = runif(1000,1,200),WSpeed = runif(1000,0,15),
     tripL = sample(c(TRUE,FALSE),1000,TRUE),yrID = sample(unique(WindU2hr$yrID),1000,TRUE),seq=sample(unique(WindU2hr$seq),1000,TRUE))
@@ -1239,9 +1242,13 @@ gamPreds <- predict(gamtst,predDat,exclude=c("s(yrID)","s(seq)"))
 plot(WindU2hr$distTo,WindU2hr$absRelHead)
 points(predDat$distTo,gamPreds,col="r")
 
-visreg(gamtst, "distTo", "tripL", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)")
+visreg(gamtstk50, "distTo", "tripL", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)",ylim=c(0,pi))
 
-visreg(gamtst, "spTrav", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
+visreg(gamtstk50, "distTo", "year", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)",ylim=c(0,pi))
+
+visreg(gamtst, "WSpeed", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
+
+
 
 visreg(gamtst, "WSpeed", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
 
@@ -1265,9 +1272,14 @@ r1 <- acf(resid(gamtst), plot=FALSE)$acf[2]
 ## TRUNCATED GAMLSS
 library(gamlss)
 library(gamlss.tr)
+library(distreg.vis)
 AngTrunFam <- trun(par=c(0,pi),family="NO",type="both")
 
-lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID), family = AngTrunFam, data1 = WindDat)
+lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID), family = trun(par=c(0,pi),family="NO",type="both"), data = na.omit(WindU2hr))
+
+plot(lssGamFit)
+
+
 
 simdat <- start_event(WindDat, column="DT", event=c("yrID", "seq"), label.event="Event")
 
@@ -1392,7 +1404,7 @@ WindDat$distTo <- as.numeric(WindDat$distTo)
 WindDat$WSpeed <- as.numeric(WindDat$WSpeed)
 WindDat$tripL <- as.numeric(WindDat$tripL)
 WindDat$OutHm <- as.numeric(WindDat$OutHm)
-bcr <- bpnme(pred.I = RelHead ~ distTo + WSpeed + tripL + OutHm + (1|yrID),
+bcr <- bpnme(pred.I = RelHead ~ distTo + WSpeed + tripL + (1|yrIDn),
     data = na.omit(WindDat), its = 1000, burn = 100, n.lag = 3, seed = 101)
 
 WindDat$OutHm <- as.factor(WindDat$OutHm)
@@ -1446,8 +1458,9 @@ ggplot(WindDat) + geom_point(aes(x = RelHead, y = distTo)) +
 
 plot(WindDat$RelHead, WindDat$spTrav)
 
-wSpTrav <- lm.circular(y = circular(WindDat$RelHead+pi,units="radians"),
-    x = )
+wSpTrav <- lm.circular(y = circular(na.omit(WindDat)$RelHead+pi,units="radians"),
+    x = na.omit(WindDat)$spTrav, type = "c-l", init = 1)
+summary(wSpTrav)
 
 lines(seq(min(residuals(distOff)),max(residuals(distOff)),length.out=nrow(WindDat)))
 
