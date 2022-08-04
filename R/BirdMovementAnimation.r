@@ -56,10 +56,10 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("E:/My Drive/PhD/Data/DatEth2018.RData")
-    load("E:/My Drive/PhD/Data/DatEth2019.RData")
-    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("I:/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
+    load("I:/My Drive/PD/Data/DatEth2018.RData")
+    load("I:/My Drive/PD/Data/DatEth2019.RData")
+    outloc <- "I:/My Drive/PD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D18 <- bind_rows(Dat)
 D19 <- bind_rows(Dat19)
@@ -104,7 +104,7 @@ p1 = ggplot(selD) +
 if(Sys.info()['sysname'] == "Darwin"){
     dir_out <- "/Volumes/GoogleDrive/My Drive/PhD/Figures/Visuals/2018Tracks/"
 } else {
-    dir_out <- "E:/My Drive/PhD/Figures/Visuals/2018Tracks/"
+    dir_out <- "I:/My Drive/PD/Figures/Visuals/2018Tracks/"
 }
 
 tseq <- seq(selD$DT[1], selD$DT[nrow(selD)],by = "hour")
@@ -209,7 +209,7 @@ p1
 if(Sys.info()['sysname'] == "Darwin"){
     dir_out <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Admin/AORIPresentation/Animation/WithPrev9/"
 } else {
-    dir_out <- "E:/My Drive/PhD/Admin/AORIPresentation/Animation/WithPrev9/"
+    dir_out <- "I:/My Drive/PD/Admin/AORIPresentation/Animation/WithPrev9/"
 }
 
 selD <- allD[allD$yrID == "2018_9",]
@@ -274,3 +274,17 @@ for(b in 1:length(tseq)){
     rm(adding)
 }
 
+
+adding <- adding +
+  geom_spoke(data = WindDat[WindDat$yrID == "2018_9",], aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.03,"inches")),
+  radius = .5*(WindDat$WSpeed[WindDat$yrID == "2018_9"]/max(WindDat$WSpeed[WindDat$yrID == "2018_9"]))) +
+  scale_colour_distiller(name="Wind Speed (m/s)", direction = 1, palette = "YlOrRd")
+
+
+    ggsave(plot = adding,
+        filename = "I:/My Drive/PD/Figures/Visuals/ForagingAndWind.png", width = 5, height = 5, units = "in",
+        device = "png")
+
+    rm(adding)
+
+colnames(WindDat)

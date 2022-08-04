@@ -58,10 +58,10 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/DatEth2019.RData")
     outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("E:/My Drive/PhD/Data/DatEth2018.RData")
-    load("E:/My Drive/PhD/Data/DatEth2019.RData")
-    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("I:/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
+    load("I:/My Drive/PD/Data/DatEth2018.RData")
+    load("I:/My Drive/PD/Data/DatEth2019.RData")
+    outloc <- "I:/My Drive/PD/Manuscripts/BehaviourIdentification/Figures/"
 }
 # for(d in Dat){
 #     d$distTrav <- c(NA,distHaversine(cbind(d$Lon[1:(nrow(d)-1)],d$Lat[1:(nrow(d)-1)]),
@@ -107,8 +107,8 @@ if(Sys.info()['sysname'] == "Darwin"){
     # windLoc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/"
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/WindCalculations1819.RData")
 } else {
-    # windLoc <- 'E:/My Drive/PhD/Data/2018Shearwater/WindEst/MinDat/'
-    load('E:/My Drive/PhD/Data/WindCalculations1819.RData')
+    # windLoc <- 'I:/My Drive/PD/Data/2018Shearwater/WindEst/MinDat/'
+    load('I:/My Drive/PD/Data/WindCalculations1819.RData')
 }
 
 # separate into segments with consecutive data
@@ -141,7 +141,7 @@ for(b in unique(WindDat$seq)){
 if(Sys.info()['sysname'] == "Darwin"){
     fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/GPSDominantFrequencies/"
 } else {
-    fileloc <- "E:/My Drive/PhD/Data/GPSDominantFrequencies/"
+    fileloc <- "I:/My Drive/PD/Data/GPSDominantFrequencies/"
 }
 freqFiles <- dir(fileloc)
 freq <- vector(mode="list",length=length(freqFiles))
@@ -182,7 +182,7 @@ for(b in 1:length(distGaps)){
     tst<-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),iter=999)
     pvals[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
-save(pvals,file='E:/My Drive/PhD/Data/pvals.RData')
+save(pvals,file='I:/My Drive/PD/Data/pvals.RData')
 
 # repeat for 1 km bins from 10 downwards
 distGaps <- seq(0,9,1)
@@ -193,7 +193,7 @@ for(b in 1:length(distGaps)){
     tst<-HR_test(circular(na.omit(WindDat$RelHead[WindDat$distTo >= distGaps[b] & WindDat$distTo < distGapsL[b]])),iter=999)
     pvals1km[[b]] <- data.frame(Distance=paste0(as.character(distGaps[b]),"-",as.character(distGapsL[b])),RlP = RaylT$p.value,RlR = RaylT$r.bar,HRp = tst[2])
 }
-save(pvals1km,file='E:/My Drive/PhD/Data/pvals1km.RData')
+save(pvals1km,file='I:/My Drive/PD/Data/pvals1km.RData')
 
 distGaps <- seq(0,100,10)
 distGapsL <- distGaps+10
@@ -259,7 +259,7 @@ for(b in 1:length(wws)){
 if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvalsLS.RData")
 } else {
-    load('E:/My Drive/PhD/Data/pvalsLS.RData')
+    load('I:/My Drive/PD/Data/pvalsLS.RData')
 }
 for(df in pvalsLS){
     rownames(df) <- NULL
@@ -833,8 +833,8 @@ plot
 if(Sys.info()['sysname'] == "Darwin"){
     fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
-    fileloc <- "E:/My Drive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
-    forLoc <- "E:/My Drive/PhD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
+    fileloc <- "I:/My Drive/PD/Data/2019Shearwater/WindEst/YoneMet/"
+    forLoc <- "I:/My Drive/PD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
 }
 
 files <- dir(fileloc)
@@ -938,9 +938,9 @@ if(Sys.info()['sysname'] == "Darwin"){
     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/20182019AnalysisDat.RData")
     outloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
 } else {
-    # load("E:/My Drive/PhD/Data/2019Shearwater/2019Dat.RData")
-    load("E:/My Drive/PhD/Data/20182019AnalysisDat.RData")
-    outloc <- "E:/My Drive/PhD/Manuscripts/BehaviourIdentification/Figures/"
+    # load("I:/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
+    load("I:/My Drive/PD/Data/20182019AnalysisDat.RData")
+    outloc <- "I:/My Drive/PD/Manuscripts/BehaviourIdentification/Figures/"
 }
 D19 <- bind_rows(Dat19)
 allD <- data.frame(DT=D19$DT,
@@ -1215,7 +1215,7 @@ acf(resid(tst))
 if(Sys.info()['sysname'] == "Darwin"){
     fileloc <- "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/GPSDominantFrequencies/"
 } else {
-    fileloc <- "E:/My Drive/PhD/Data/GPSDominantFrequencies/"
+    fileloc <- "I:/My Drive/PD/Data/GPSDominantFrequencies/"
 }
 freqFiles <- dir(fileloc)
 freq <- vector(mode="list",length=length(freqFiles))
@@ -1262,15 +1262,6 @@ gamPreds <- predict(gamtst,predDat,exclude=c("s(yrID)","s(seq)"))
 plot(WindU2hr$distTo,WindU2hr$absRelHead)
 points(predDat$distTo,gamPreds,col="r")
 
-<<<<<<< HEAD
-visreg(gamtstk50, "distTo", "tripL", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)",ylim=c(0,pi))
-
-visreg(gamtstk50, "distTo", "year", ylab="Relative wind direction offset (rad)",xlab="Distance to next FP (km)",ylim=c(0,pi))
-
-visreg(gamtst, "WSpeed", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
-
-
-=======
 ggplot(WindDat) +
     geom_point(aes(y = WSpeed, x = domFreq, colour = RelHead))
 
@@ -1283,7 +1274,6 @@ dev.off()
 visreg(gamtst, "domFreq", "tripL", ylab="Relative wind direction offset (rad)",xlab="Dominant heave frequency (Hz)")
 
 visreg(gamtst, "spTrav", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
->>>>>>> 8c3025f5298b40e10d4bb326bed678969c7c3a54
 
 visreg(gamtst, "WSpeed", "tripL", ylab="Relative wind direction offset (rad)",xlab="Wind speed (m/s)")
 
@@ -1325,20 +1315,10 @@ library(gamlss.tr)
 library(distreg.vis)
 AngTrunFam <- trun(par=c(0,pi),family="NO",type="both")
 
-<<<<<<< HEAD
-lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID), family = trun(par=c(0,pi),family="NO",type="both"), data = na.omit(WindU2hr))
-
-plot(lssGamFit)
-
-
-=======
 lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID), family = trun(par=c(0,pi),family="NO",type="both"), data = na.omit(subset(WindDat,WindDat$timeTo < (2*3600))))
 
 plot(absRelHead ~ distTo, col='lightblue', data = WindDat)
 lines(fitted(lssGamFit)[order(WindDat$distTo)]~WindDat$distTo[order(WindDat$distTo)])
-
-library(gamlss.util)
-plotSimpleGamlss(absRelHead, distTo, lssGamFit, data=WindDat)
 
 plot(lssGamFit)
 wp(lssGamFit,ylim.all=.5)
@@ -1352,7 +1332,6 @@ qstats<-Q.stats(lssGamFit,xvar=na.omit(WindDat)$absRelHead,n.inter=10)
 print(qstats, digits=3)
 
 lssGamFitNoTrip <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + random(yrID), family = trun(par=c(0,pi),family="NO",type="both"), data = na.omit(WindDat))
->>>>>>> bcc85c1969e4d1036aba58d7a1d71f5dbf0a0196
 
 simdat <- start_event(WindDat, column="DT", event=c("yrID", "seq"), label.event="Event")
 
@@ -1465,7 +1444,7 @@ for(b in 1:length(distGaps)){
 # if(Sys.info()['sysname'] == "Darwin"){
 #     load("/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/pvalsUniq.RData")
 # } else {
-#     load('E:/My Drive/PhD/Data/pvalsUniq.RData')
+#     load('I:/My Drive/PD/Data/pvalsUniq.RData')
 # }
 
 # bayesian circular regression model based on projected normal distribution
@@ -1477,11 +1456,7 @@ WindDat$distTo <- as.numeric(WindDat$distTo)
 WindDat$WSpeed <- as.numeric(WindDat$WSpeed)
 WindDat$tripL <- as.numeric(WindDat$tripL)
 WindDat$OutHm <- as.numeric(WindDat$OutHm)
-<<<<<<< HEAD
-bcr <- bpnme(pred.I = RelHead ~ distTo + WSpeed + tripL + (1|yrIDn),
-=======
 bcr <- bpnme(pred.I = RelHead ~ distTo + WSpeed + tripL + domFreq + (1|yrIDn),
->>>>>>> 8c3025f5298b40e10d4bb326bed678969c7c3a54
     data = na.omit(WindDat), its = 1000, burn = 100, n.lag = 3, seed = 101)
 
 WindDat$OutHm <- as.factor(WindDat$OutHm)
@@ -1661,10 +1636,11 @@ ggplot(WindDat, aes(x = RelHead, y = spTrav)) + geom_point() +
     theme(panel.grid = element_blank()) +
     theme(panel.border = element_rect(colour = 'black', fill = NA), text = element_text(size = 14), axis.text = element_text(size = 14)) +
     scale_y_continuous("Ground speed (kph)") +
-    scale_x_continuous("Relative wind heading (rad)") +
+    scale_x_continuous("Relative wind heading", breaks=c(-pi,-pi/2,0,pi/2,pi), 
+    labels = c("Head","Side","Tail","Side","Head")) +
     geom_text(aes(x = -1, y = 125), hjust=0,
         label=lm_eqn(WindDat$RelHead,WindDat$spTrav), parse = T)
-ggsave("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Conferences/Mextpresentation/WindCorr.png", , dpi = 300, height = 6,
+ggsave("I:/My Drive/PD/Conferences/Mextpresentation/WindCorr.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
