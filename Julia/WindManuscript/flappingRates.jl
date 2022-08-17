@@ -88,6 +88,73 @@ function maxFreqs(outLocation,yrID,fs)
     df = DataFrame([repeat([yrID],length(GPSInds)),GPSdat[GPSInds,"Timestamp"],GPSdat[GPSInds,"lat"],GPSdat[GPSInds,"lon"],GPSfrec], namelist);
     CSV.write(outLocation * yrID * "domFreq.csv",df);
 end
+# find peaks and troughs of signal (all)
+function pkstrghs(signal)
+    peaks = Int[]
+    if length(signal)>1
+        if signal[1]>signal[2]
+            push!(peaks,1)
+        end
+        for i=2:length(signal)-1
+            if signal[i-1]<signal[i]>signal[i+1]
+                push!(peaks,i)
+            end
+        end
+        if signal[end]>signal[end-1]
+            push!(peaks,length(signal))
+        end
+    end
+    troughs = Int[]
+    if length(signal)>1
+        if signal[1]<signal[2]
+            push!(troughs,1)
+        end
+        for i=2:length(signal)-1
+            if signal[i-1]>signal[i]<signal[i+1]
+                push!(troughs,i)
+            end
+        end
+        if signal[end]<signal[end-1]
+            push!(troughs,length(signal))
+        end
+    end
+    # ensure equal number of peaks and troughs
+    while length(peaks) != length(troughs)
+        if troughs[1] < peaks[1]
+            troughs = troughs[2:end]
+        elseif peaks[end] > troughs[end]
+            peaks = peaks[1:end-1]
+        end
+    end
+    peaks,troughs
+end
+
+# flapping vs gliding rates (minute average)
+function flapglide(outLocation,yrID,fs)
+    dat = readinAxy(yrID) # read in acceleration
+    # lowpass filter to separate dynamic and static acceleration
+    Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))[3]
+    pks,trghs = pkstrghs(Z[2])
+    
+    density(Z[2])
+    # create an output
+    namelist = [:yrID,:DT,:lat,:lon,:domFreq]
+    df = DataFrame([repeat([yrID],length(GPSInds)),GPSdat[GPSInds,"Timestamp"],GPSdat[GPSInds,"lat"],GPSdat[GPSInds,"lon"],GPSfrec], namelist);
+    CSV.write(outLocation * yrID * "domFreq.csv",df);
+end
+dat = readinAxy(yrIDs[1])
+Z = dynstat(dat.Z,1.0,1.5,25)
+
+plot(Z[2][1:10])
+diff(Z[2][1:10]) .> 0
+
+pkstrghs(Z[2][1:10])
+
+Z[2][pks] .- Z[2][trghs]
+
+
+
+g = density(Z[2])
 
 # file locations for raw acceleration data
 if Sys.iswindows()

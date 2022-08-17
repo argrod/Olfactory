@@ -1284,14 +1284,110 @@ ggplot(WindDat) + geom_point(aes(y=absRelHead,x=distTo, colour = seq))
 WindDat %>% group_by(seq) %>%
     summarise(difftime(range(DT)[2],range(DT)[1],units="mins"))
 
+numFors <- WindDat %>% 
+    group_by(forNo, yrID) %>%
+    dplyr::summarise(n())
+
+which(numFors$'n()' == max(numFors$'n()'))
+numFors[70,]
+
+# calculate the foraging number for each row of allD
+# add foraging number for each indiv
+allD$forNo <- NA
+# add a column of transitions to foraging (foraging starts)
+forChg = diff(allD$forage) == 1
+if(allD$forage[1] == 1){
+    forChg <- c(TRUE,forChg)
+} else {
+    forChg <- c(FALSE,forChg)
+}
+allD$forChg <- forChg
+# add up all previous transitions to foraging, therefore giving the foraging number
+for(b in 1:nrow(allD)){
+    # find next foraging point
+    if(any(allD$yrID == allD$yrID[b] & allD$DT > allD$DT[b] & allD$forage == 1)){
+        nxtForInd <- min(which(allD$yrID == allD$yrID[b] & allD$DT > allD$DT[b] & allD$forage == 1),na.rm=T)
+        # sum(allD$forage[1:nxtForInd][allD$yrID == WindDat$yrID[b]])
+        allD$forNo[b] <- sum(allD$forChg[allD$yrID == allD$yrID[b] & allD$DT <= allD$DT[nxtForInd]])
+    }
+}
+
+ggplot() + 
+    # geom_path(aes(x = lon, y= lat)) +
+    geom_spoke(data = WindDat[WindDat$forNo == 19 & WindDat$yrID == "2018_3",], aes(x = lon, y = lat, colour = WSpeed, angle = WHead), arrow = arrow(length = unit(0.05,"inches")),
+    radius = .3*(WindDat$WSpeed[WindDat$forNo == 19 & WindDat$yrID == "2018_3"]/max(WindDat$WSpeed[WindDat$forNo == 19 & WindDat$yrID == "2018_3"],na.rm=T))) +
+    geom_path(data = allD[which(allD$DT > WindDat$DT[WindDat$forNo == 19 & WindDat$yrID == "2018_3"][1] & allD$yrID == "2018_3" & allD$DT < allD$DT[min(which(allD$DT > WindDat$DT[WindDat$forNo == 19 & WindDat$yrID == "2018_3"][1]  & allD$yrID == "2018_3" & allD$forage == 1))]),], aes(x=lon,y=lat)) + 
+    geom_point(data = allD[min(which(allD$DT > WindDat$DT[WindDat$forNo == 19 & WindDat$yrID == "2018_3"][1]  & allD$yrID == "2018_3" & allD$forage == 1)),], aes(x=lon,y=lat), colour = "green")
 
 
-# create predictions for continuous data 0:100
-predictData <- data.frame(distTo = runif(10000,0,100),
-    WSpeed = runif(10000,0,15),
-    tripL = sample(c(TRUE,FALSE),10000,TRUE),
-    yrID = sample(unique(WindDat$yrID),10000,TRUE))
-predictions <- predict(gamtst, predictData, exclude = "s(yrID, bs='re')")
+allD[allD$DT > WindDat$DT[WindDat$forNo == 19 & WindDat$yrID == "2018_3"][1]
+
+min(which(allD$DT > WindDat$DT[WindDat$forNo == 19 & WindDat$yrID == "2018_3"][1]  & allD$yrID == "2018_3" & allD$forage == 1))
+allD$DT[141742]
+
+
+
+WindDat %>% 
+    group_by(forNo,yrID) %>% 
+    dplyr::summarise(max(absRelHead) - min(absRelHead))
+
+ggplot(WindDat[WindDat$timeTo < (2*3600),]) + 
+    geom_point(aes(x = distTo, y = absRelHead, colour = yrID), size = .4)
+
+# for each foraging point, check the track prior to it and collect some information (linearity?)
+# only look at data for which there are wind values within the preceeding 2 hours
+allD$forage[is.na(allD$forage)] = FALSE
+forSts <- which(diff(allD$forage) == 1) + 1 # find foraging start points (to not repeat for consecutive foraging points)
+forWind <- data.frame(tag=character(),allDIndS=integer(),allDIndE=integer(),
+    windDatS = integer(), windDatE = integer(), linearity = double(),
+    aveRelWind = double(), stdRelWind = double(), aveWSpeed = double(), stdWSpeed = double(),
+    approachSpeed = double(), )
+# function to calculate linearity
+linearity <- function(DT,lat,lon){
+    return(distHaversine(cbind(lon[c(1,length(lon))],lat[c(1,length(lat))]))/
+        sum(distHaversine(cbind(lon,lat))))
+}
+# function to calculate approach speed
+appSpeed <- function(DT,lat,lon){
+    dist <- distHaversine(cbind(lon,lat))
+    speed <- (dist/10^-3)/difftime(DT[length(DT)],DT[1],units="hours")
+    return(speed)
+}
+
+for(b in 1:length(forSts)){
+    if(any(WindDat$yrID == allD$yrID[forSts[b]] & 
+        WindDat$DT < allD$DT[forSts[b]] & WindDat$DT > (allD$DT[forSts[b]] - 2*3600))){
+            allDStart <- min(which(allD$yrID == allD$yrID[forSts[b]] & 
+                allD$DT > (allD$DT[forSts[b]] - 2*3600)))
+            windDStart <- min(which(WindDat$yrID == allD$yrID[forSts[b]] &
+                WindDat$DT < allD$DT[forSts[b]] & WindDat$DT > (allD$DT[forSts[b]] - 2*3600)))
+            windDEnd <- max(which(WindDat$yrID == allD$yrID[forSts[b]] &
+                WindDat$DT < allD$DT[forSts[b]] & WindDat$DT > (allD$DT[forSts[b]] - 2*3600)))
+            forWind <- rbind(forWind, 
+                data.frame(tag = allD$yrID[forSts[b]], 
+                allDIndS = allDStart,
+                allDIndE = forSts[b] - 1,
+                windDatS = windDStart,
+                windDatE = windDEnd,
+                linearity = linearity(allD$DT[allDStart:(forSts[b]-1)],
+                    allD$lat[allDStart:(forSts[b]-1)],
+                    allD$lon[allDStart:(forSts[b]-1)]),
+                aveRelWind = atan2(mean(sin(WindDat$RelHead[windDStart:windDEnd])),
+                    mean(cos(WindDat$RelHead[windDStart:windDEnd]))),
+                stdRelWind = sqrt(1 - (mean(sin(WindDat$RelHead[windDStart:windDEnd]))^2 +
+                    mean(cos(WindDat$RelHead[windDStart:windDEnd]))^2)), # Yamartino method
+                aveWSpeed = mean(WindDat$WSpeed[windDStart:windDEnd]),
+                stdWSpeed = sd(WindDat$WSpeed[windDStart:windDEnd]),
+                approachSpeed = mean(appSpeed(allD$DT[allDStart:(forSts[b]-1)],
+                    allD$lat[allDStart:(forSts[b]-1)],
+                    allD$lon[allDStart:(forSts[b]-1)])),
+                ))
+        }
+}
+
+ggplot(forWind) + 
+    geom_point(aes(x = linearity, y = stdWSpeed))
+
 
 library(brms)
 # fitbrm <- brm(formula = RelHead ~ distTo + domFreq + WSpeed + (1 + seq|yrID),
@@ -1313,9 +1409,10 @@ r1 <- acf(resid(gamtst), plot=FALSE)$acf[2]
 library(gamlss)
 library(gamlss.tr)
 library(distreg.vis)
+library(gamlss.util)
 AngTrunFam <- trun(par=c(0,pi),family="NO",type="both")
 
-lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID), family = trun(par=c(0,pi),family="NET",type="both"), data = na.omit(subset(WindDat,WindDat$timeTo < (2*3600))))
+lssGamFit <- gamlss(formula = absRelHead ~ cs(distTo) + cs(WSpeed) + tripL + random(yrID) + random(forno), family = trun(par=c(0,pi),"NO",type='both'), data = na.omit(subset(WindDat,WindDat$timeTo < (2*3600))))
 
 plot(absRelHead ~ distTo, col='lightblue', data = WindDat)
 lines(fitted(lssGamFit)[order(WindDat$distTo)]~WindDat$distTo[order(WindDat$distTo)])
@@ -1326,10 +1423,7 @@ dtop(lssGamFit,xvar=na.omit(subset(WindDat,WindDat$timeTo < (2*3600)))$distTo)
 
 gamlss::centiles.fan(lssGamFit)
 
-m0<-lms(hc,age,families=c("BCCGo","BCPEo","BCTo"),data=dutchboys,
-        k=3,calibration=F, trans.x=T)
-
-plot(absRelHead ~ distTo, data = na.omit(subset(WindDat,timeTo < (2*3600))))
+plot(absRelHead ~ distTo, data = na.omit(subset(WindDat,timeTo < (3*3600))))
 lines(na.omit(subset(WindDat,timeTo < (2*3600)))$distTo,fitted(lssGamFit),col='red')
 
 length(fitted(lssGamFit))
@@ -1748,7 +1842,7 @@ processWind <- prepData(data=WindDat, covNames=c())
 
 
 library(moveHMM)
-set.seed(1122334455)
+set.seed(1121934455)
 
 ## Simulate covariate values 
 # (slopes in degrees
