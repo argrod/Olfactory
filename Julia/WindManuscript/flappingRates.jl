@@ -1,5 +1,5 @@
 # FLAPPING RATES FOR AXYTREK DATA
-using DataFrames, CSV, RCall, Geodesy, Dates, Distances, Statistics, Glob, CategoricalArrays, DSP, StatsPlots, Peaks, StatsBase
+using DataFrames, CSV, RCall, Geodesy, Dates, Distances, Statistics, Glob, CategoricalArrays, DSP, StatsPlots, Peaks, StatsBase, KernelDensity
 using Plots; theme(:dark)
 
 # RECURSIVE FILE SEARCH
@@ -92,69 +92,74 @@ end
 function pkstrghs(signal)
     peaks = Int[]
     if length(signal)>1
-        if signal[1]>signal[2]
-            push!(peaks,1)
-        end
         for i=2:length(signal)-1
-            if signal[i-1]<signal[i]>signal[i+1]
+            if signal[i-1]<=signal[i]>signal[i+1]
                 push!(peaks,i)
             end
-        end
-        if signal[end]>signal[end-1]
-            push!(peaks,length(signal))
         end
     end
     troughs = Int[]
     if length(signal)>1
-        if signal[1]<signal[2]
-            push!(troughs,1)
-        end
         for i=2:length(signal)-1
-            if signal[i-1]>signal[i]<signal[i+1]
+            if signal[i-1]>signal[i]<=signal[i+1]
                 push!(troughs,i)
             end
         end
-        if signal[end]<signal[end-1]
-            push!(troughs,length(signal))
-        end
     end
-    # ensure equal number of peaks and troughs
-    while length(peaks) != length(troughs)
-        if troughs[1] < peaks[1]
-            troughs = troughs[2:end]
-        elseif peaks[end] > troughs[end]
-            peaks = peaks[1:end-1]
-        end
+    # ensure starts with peaks and ends with trough
+    if troughs[1] < peaks[1]
+        troughs = troughs[2:end]
+    elseif peaks[end] > troughs[end]
+        peaks = peaks[1:end-1]
     end
     peaks,troughs
 end
 
 # flapping vs gliding rates (minute average)
-function flapglide(outLocation,yrID,fs)
+function flapglide(outLocation,yrID,fs,flapFreq)
     dat = readinAxy(yrID) # read in acceleration
     # lowpass filter to separate dynamic and static acceleration
-    Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))[3]
-    pks,trghs = pkstrghs(Z[2])
+    _,Z = dynstat.([float.(dat.X),float.(dat.Y),float.(dat.Z)],Ref(1.0),Ref(1.5),Ref(fs))[3]
+    pks,trghs = pkstrghs(Z)
+    den = kde(Z[pks] .- Z[trghs])
+    sep = den.x[findmax(den.density[.5 .<= den.x .<= 1])[2] + minimum(findall(den.x .>= .5))]
+    flaps = pks[findall((DZ[pks] .- DZ[trghs]) .> sep)]
+    # group flaps by typically flapping frequency
     
-    density(Z[2])
+
+    density(Z)
     # create an output
     namelist = [:yrID,:DT,:lat,:lon,:domFreq]
     df = DataFrame([repeat([yrID],length(GPSInds)),GPSdat[GPSInds,"Timestamp"],GPSdat[GPSInds,"lat"],GPSdat[GPSInds,"lon"],GPSfrec], namelist);
     CSV.write(outLocation * yrID * "domFreq.csv",df);
 end
 dat = readinAxy(yrIDs[1])
-Z = dynstat(dat.Z,1.0,1.5,25)
+_,DZ = dynstat(dat.Z,1.0,1.5,25)
+pks,trghs = pkstrghs(DZ)
+[length(pks),length(trghs)]
+den = kde(DZ[pks] .- DZ[trghs])
+plot(den)
 
 plot(Z[2][1:10])
 diff(Z[2][1:10]) .> 0
 
 pkstrghs(Z[2][1:10])
 
+plot(dat.Timestamp[350000:400000],DZ[350000:400000])
+plot!(dat.Timestamp[pks[350000 .< pks .< 400000]],DZ[pks[350000 .< pks .< 400000]] .- DZ[trghs[350002 .< trghs .< 400000]])
+[pks[35000 .< pks .< 40000]]
 Z[2][pks] .- Z[2][trghs]
 
+den = kde(DZ[pks] .- DZ[trghs],boundary=(0,10))
+plot(den)
+xlims!(0,1)
+
+# find the two maxima (one above .5)
+den.x[findmax(den.density)[2]]
 
 
-g = density(Z[2])
+
+den.x[findmin(den.density[0.0 .<= den.x .<= .91])[2]]
 
 # file locations for raw acceleration data
 if Sys.iswindows()
