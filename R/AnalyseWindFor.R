@@ -1,4 +1,5 @@
-install.packages("Gmisc")
+install.packages("Gmisc",dependencies=T)
+install.packages("circular",dependencies=T)
 install.packages("sf")
 install.packages("rnaturalearth")
 install.packages("rnaturalearthdata")
