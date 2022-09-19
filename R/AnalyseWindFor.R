@@ -1341,7 +1341,7 @@ forSts <- which(diff(allD$forage) == 1) + 1 # find foraging start points (to not
 forWind <- data.frame(tag=character(),allDIndS=integer(),allDIndE=integer(),
     windDatS = integer(), windDatE = integer(), linearity = double(),
     aveRelWind = double(), stdRelWind = double(), aveWSpeed = double(), stdWSpeed = double(),
-    approachSpeed = double(), )
+    approachSpeed = double()) #, meanFlapRatio = double(), stdFlapRatio = double())
 # function to calculate linearity
 linearity <- function(DT,lat,lon){
     return(distHaversine(cbind(lon[c(1,length(lon))],lat[c(1,length(lat))]))/
@@ -1354,15 +1354,40 @@ appSpeed <- function(DT,lat,lon){
     return(speed)
 }
 
+# read in the flap ratios
+if(Sys.info()['sysname'] == "Darwin"){
+    flapfileloc <- "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/flappingDurations/"
+} else {
+    flapfileloc <- "I:/My Drive/PD/Data/flappingDurations/"
+}
+files <- dir(flapfileloc)
+for(b in 1:length(files)){
+    if(b == 1){
+        flapDat <- read.delim(paste0(flapfileloc,files[b]), sep = ',', header = T)
+    } else {
+        toAdd <- read.delim(paste0(flapfileloc,files[b]), sep = ',', header = T)
+        flapDat <- rbind(flapDat,toAdd)
+    }
+}
+
 for(b in 1:length(forSts)){
-    if(any(WindDat$yrID == allD$yrID[forSts[b]] & 
+    if(b > 1){
+        if(any(WindDat$yrID[WindDat$DT > allD$DT[forSts[b-1]]] == allD$yrID[forSts[b]] &
+        WindDat$DT[WindDat$DT > allD$DT[forSts[b-1]]] < allD$DT[forSts[b]] & WindDat$DT[WindDat$DT > allD$DT[forSts[b-1]]] > (allD$DT[forSts[b]] - 2*3600))){
+            
+
+            allD$DT[which.min(allD$yrID == allD$yrID[forSts[b]] & allD$forage == 1)]
+        }
+    } else {
+        if(any(WindDat$yrID == allD$yrID[forSts[b]] & 
         WindDat$DT < allD$DT[forSts[b]] & WindDat$DT > (allD$DT[forSts[b]] - 2*3600))){
             allDStart <- min(which(allD$yrID == allD$yrID[forSts[b]] & 
-                allD$DT > (allD$DT[forSts[b]] - 2*3600)))
+                allD$DT > (allD$DT[forSts[b]] - 2*3600) & 
+                allD$DT > (allD$DT[])))
             windDStart <- min(which(WindDat$yrID == allD$yrID[forSts[b]] &
                 WindDat$DT < allD$DT[forSts[b]] & WindDat$DT > (allD$DT[forSts[b]] - 2*3600)))
             windDEnd <- max(which(WindDat$yrID == allD$yrID[forSts[b]] &
-                WindDat$DT < allD$DT[forSts[b]] & WindDat$DT > (allD$DT[forSts[b]] - 2*3600)))
+                WindDat$DT < allD$DT[forSts[b]] & WindDat$DT > (allD$DT[forSts[b]] - 2*3600)))  
             forWind <- rbind(forWind, 
                 data.frame(tag = allD$yrID[forSts[b]], 
                 allDIndS = allDStart,
@@ -1380,9 +1405,12 @@ for(b in 1:length(forSts)){
                 stdWSpeed = sd(WindDat$WSpeed[windDStart:windDEnd]),
                 approachSpeed = mean(appSpeed(allD$DT[allDStart:(forSts[b]-1)],
                     allD$lat[allDStart:(forSts[b]-1)],
-                    allD$lon[allDStart:(forSts[b]-1)])),
+                    allD$lon[allDStart:(forSts[b]-1)]))#,
+                # meanFlapRatio = mean(allD$meanFlapRatio[allDStart:(forSts[b] - 1)]),
+                # stdFlapRatio = mean(allD$sdFlapRatio[allDStart:(forSts[b] - 1)])
                 ))
         }
+    }
 }
 
 ggplot(forWind) + 
