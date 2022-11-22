@@ -2,6 +2,7 @@ import scipy as sp
 import numpy as np
 import pandas as pd
 import utm
+import csv
 from statistics import mode
 import torch
 import os, re, glob, pyproj, math, datetime
@@ -191,10 +192,10 @@ def GOFtests(hed,nr,nd,answ):
     cond3 = (nrp.pvalue > 0.05) * (ndp.pvalue > 0.05) * (cnrnd.pvalue > 0.05)
     return [cond1,cond2,cond3]
 
-outfile = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/PyOut.csv"
-with open(outfile,'a') as fd:
-    fd.write(['Time','Lat','Lon','X','Y','WindHead','BirdHead'])
-
+outfile = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/PyOut.txt"
+with open(outfile,'w',newline='') as f:
+    writer = csv.writer(f, delimiter = ',')
+    writer.writerow(['Time','Lat','Lon','X','Y','WindHead','BirdHead'])
 
 
 # Process
@@ -242,7 +243,7 @@ _,_,testPars = initPars(-3,df.track_speed[windows[0]],df.track_direction[windows
 testAns = windOptims(df.track_speed[windows[0]],df.track_direction[windows[0]],constv,testPars)
 testYoko,testTate = yokoTate(testAns.x,constv)
 
-
+X,Y,_,_ = utm.from_latlon(np.array(df.lat),np.array(df.lon))
 
 testmgd,testkappa,testpars = initPars(-3,df.track_speed[windows[0]],df.track_direction[windows[0]],constv)
 testAns=windOptims(df.track_speed[windows[0]],df.track_direction[windows[0]],constv,testpars)
@@ -300,3 +301,11 @@ cond1 = (yoko/tate) > 1
 cond2 = (np.cos(meangd)*np.cos(mu) + np.sin(meangd)*np.sin(mu)) > 0
 cond3 = (nrp.pvalue > 0.05) * (ndp.pvalue > 0.05) * (cnrnd.pvalue > 0.05)
 [cond1,cond2,cond3]
+
+
+RDat = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/Rdata.txt")
+RDat.rename(columns = {'Unnamed: 0':'Index','Unnamed: 1':'DT','Unnamed: 2':'lat','Unnamed: 3':'lon','X':'X','Y':'Y','Unnamed: 6':'speed','Unnamed: 7':'head'},inplace=True)
+RDat.DT = pd.to_datetime(RDat.DT,format="%Y-%m-%d %H:%M:%S")
+
+plt.plot(RDat.speed[0:100],df.track_speed[0:100])
+plt.show()
