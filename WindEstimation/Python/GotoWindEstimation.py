@@ -21,8 +21,9 @@ def Likelihoodww(data1: np.ndarray,data2: np.ndarray,cv: np.ndarray): # calculat
             lp = (par[0]-2) * math.log(r1) - (r1/b)**par[0] + par[1]*rx + par[2]*ry + math.log(par[0]) - math.log(b) + (1-par[0])*math.log(b) - math.log(sp.special.iv(0,np.sqrt(par[1]**2 + par[2]**2),))
             L = L+lp
         return L/(-1)
-        print(L)
     return f
+
+# logs used on r1 (always +ve), par[0], b (cv/gamma(1+1/par[0]), always +ve), and besselI(+ve value)
 
 def Weibull_sd(a,b): # standard deviation of Weibull distribution
     return b*np.sqrt(sp.special.gamma(1+2/a) - sp.special.gamma(1+1/a)*sp.special.gamma(1+1/a))
@@ -46,6 +47,9 @@ def readBIPAxy(filename): # read in AxyTrek data as formatted by BIP system
 
 def nearest(items, pivot): # find the nearest time position
     return min(items, key=lambda x: abs(x - pivot))
+
+def nearestInd(items, pivot): # find the nearest index
+    return min(range(len(items)), key=lambda i: abs(items[i] - pivot))
 
 def timeRescale(dat,tdiff): # calculated indeces for rescaling time (DT) for regular sampling every tdiff mins
     return dat.iloc[np.arange(0,len(dat),step=np.timedelta64(tdiff,'m')/np.timedelta64(mode(np.diff(dat['DT'])),'s')).astype(int),:].reset_index()
@@ -89,11 +93,11 @@ def A1inv(x):
 
 def windowFit(DF,start,end,cutT,cutV,cutLength):
     # generate windows capable of running the estimation method. Requirements are 51 minutes of data, with 75% of expected samples
-    if (DF.DT[end] - DF.DT[start]) <= np.timedelta64(cutT,'m'):
-        if sum((DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)) >= cutLength:
-            return np.array(range(start,end))[(DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)]
+    if sum((DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)) >= cutLength:
+        return np.array(range(start,end))[(DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)]
 
-def findWindows(DF,cutv,windowlength=51): # calculate appropriate windows from datetimes using minimum 
+def findWindows(DF,cutv,windowlength=51): 
+    # calculate appropriate windows from datetimes using minimum 
     # start from minimum possible point
     fs = 1/np.abs(np.timedelta64(mode(np.diff(DF.DT)),'m')).astype(int) # in Hz
     expSamp = round(51 * fs) # expected number of samples
@@ -116,7 +120,7 @@ def initPars(head,spd,hed,cv):
     return meangd,initkappa,[inita,initmux,initmuy,initwx,initwy]
 
 def windOptims(spd,hed,cv,pars):
-    return minimize(Likelihoodww(spd,hed,cv),pars,bounds=((0,np.inf),(-np.inf,np.inf),(-np.inf,np.inf),(-np.inf,np.inf),(-np.inf,np.inf)),method="L-BFGS-B")
+    return minimize(Likelihoodww(spd,hed,cv),pars,bounds=([0,None],[None,None],[None,None],[None,None],[None,None]),options={'gtol':1e-15},method="L-BFGS-B")
 
 def yokoTate(optimAns,cv):
     yoko = Von_Mises_sd(np.sqrt(optimAns[2]*optimAns[2] + optimAns[1]*optimAns[1])) * Weibull_mean(optimAns[0],cv/sp.special.gamma(1+1/optimAns[0]))
@@ -127,7 +131,7 @@ def ensureOptimConv(optimAns,spd,hed,cv):
     newAns = optimAns
     # for try_no in range(100):
     pars = [newAns.x[0],newAns.x[1],newAns.x[2],newAns.x[3],newAns.x[4]]
-        # try:
+    # substitute first parameter if estimated < 0
     newAns = windOptims(spd,hed,cv,pars)
         #     if newAns.success:
         #         break
@@ -138,13 +142,10 @@ def ensureOptimConv(optimAns,spd,hed,cv):
 def windOptim(initHead,spd,head,cv):
     # run first optimisation
     _,_,par = initPars(initHead,spd,head,cv)
-    try:
-        answ = windOptims(spd,head,cv,par)
-        # SD of heading vector perpendicular (yoko) and along (tate) mean direction
-        yoko,tate=yokoTate(answ.x,cv)
-        # repeat MLE to ensure convergence
-    except ValueError:
-        pass
+    answ = windOptims(spd,head,cv,par)
+    # SD of heading vector perpendicular (yoko) and along (tate) mean direction
+    yoko,tate=yokoTate(answ.x,cv)
+    # repeat MLE to ensure convergence
     if 'tate' in locals():
         answ,[yoko,tate] = ensureOptimConv(answ,spd,head,cv)
         return answ,yoko,tate
@@ -178,6 +179,34 @@ def stringify(vars):
     sep = ","
     return [str(x) for x in vars]
 
+def maxLikeWind(r,d,cv):
+    hd_try = 3
+    answ_best = np.nan
+    max_like = np.nan
+    for id_hd in range(-hd_try,hd_try):
+    
+        # perform optimisation routine
+        answ,yoko,tate = windOptim(id_hd,r,d,cv)
+
+        if hasattr(answ,'success'):
+            if (not np.isnan(tate)) & (answ.status==0):
+        
+                # calculate speeds and headings
+                nr,nd = headSpdDir(r,d,answ)
+        
+                # GOF tests
+                if np.isnan(max_like) & (np.prod(GOFtests(d,nr,nd,answ,yoko,tate,cv)) == 1):
+                    max_like = answ.fun
+                    answ_best = answ
+
+                if (answ.fun > max_like) & (np.prod(GOFtests(d,nr,nd,answ,yoko,tate,cv)) == 1):
+                    max_like = answ.fun
+                    answ_best = answ
+
+    return answ_best
+for x in range(1372,len(windows)):
+    maxLikeWind(RDat.track_speed[windows[x]],RDat.track_direction[windows[x]],cv)
+
 def windEstimation(file: str,outfile: str,cutv: float=4.1667,cv=34.7/3.6,windowLength: int =51,rescaleTime: bool =True):
     # wind estimation from bird GPS track
     # filename      - location of BiP formatted file
@@ -198,40 +227,55 @@ def windEstimation(file: str,outfile: str,cutv: float=4.1667,cv=34.7/3.6,windowL
 
     # max likelihood calculations for wind estimation
     for win in windows:
-
-        # set the initial values for max likelihood
-        max_like = np.nan
-        answ_best = np.nan
+        
         
         r = dat.track_speed[win]
         d = dat.track_direction[win]
-        hd_try = 3
-        for id_hd in range(-hd_try,hd_try):
-        
-            # perform optimisation routine        
-            answ,yoko,tate = windOptim(id_hd,r,d,cv)
-            if hasattr(answ,'success'):
-                if (not np.isnan(tate)) & (answ.status==0):
-            
-                    # calculate speeds and headings
-                    nr,nd = headSpdDir(r,d,answ)
-            
-                    # GOF tests
-                    if np.isnan(max_like) & (np.prod(GOFtests(d,nr,nd,answ,yoko,tate,cv)) == 1):
-                        max_like = answ.fun
-                        answ_best = answ
-
-                    elif (answ.fun > max_like) & (np.prod(GOFtests(d,nr,nd,answ,yoko,tate,cv)) == 1):
-                        max_like = answ.fun
-                        answ_best = answ
-
-                    else:
-                        answ_best = np.nan
+        try:
+            answ_best = maxLikeWind(r,d,cv)
+        except:
+            pass
 
         if type(answ_best) != float:
             with open(outfile,'a',newline='') as f:
                 writer = csv.writer(f, delimiter = ',')
                 writer.writerow(stringify([(RDat.DT[round((np.max(win)+np.min(win))/2)]),RDat.lat[round((np.max(win)+np.min(win))/2)],RDat.lon[round((np.max(win)+np.min(win))/2)],np.arctan2(answ_best.x[2],answ_best.x[1]),answ_best.x[3],answ_best.x[4]]))
+
+def roundTo(x,rn):
+    return np.format_float_positional(x, precision=rn, unique=False, fractional=False, trim='k')
+
+def makeForGraphText(num,rn):
+    if (num < 0.1) & (num != 0):
+        afterE = round(math.log10(num) - (0.5 if math.log10(num)<0 else 0))
+        precede = roundTo(num * 10**abs(afterE),3)
+        return str(precede) + "e" + str(afterE)
+    else:
+        return roundTo(num,rn)
+
+# taken from 'https://gist.github.com/kn1cht/89dc4f877a90ab3de4ddef84ad91124e', circular python package by kn1cht
+def Circcorrcoef(x, y, deg=True, test=False):
+    '''Circular correlation coefficient of two angle data(default to degree)
+    Set `test=True` to perform a significance test.
+    '''
+    convert = np.pi / 180.0 if deg else 1
+    sx = np.frompyfunc(np.sin, 1, 1)((x - Circmean(x, deg)) * convert)
+    sy = np.frompyfunc(np.sin, 1, 1)((y - Circmean(y, deg)) * convert)
+    r = (sx * sy).sum() / np.sqrt((sx ** 2).sum() * (sy ** 2).sum())
+
+    if test:
+        l20, l02, l22 = (sx ** 2).sum(),(sy ** 2).sum(), ((sx ** 2) * (sy ** 2)).sum()
+        test_stat = r * np.sqrt(l20 * l02 / l22)
+        p_value = 2 * (1 - sp.stats.norm.cdf(abs(test_stat)))
+        return tuple(round(v, 7) for v in (r, test_stat, p_value))
+    return round(r, 7)
+
+def Circmean(angles, deg=True):
+    '''Circular mean of angle data(default to degree)
+    '''
+    a = np.deg2rad(angles) if deg else np.array(angles)
+    angles_complex = np.frompyfunc(cmath.exp, 1, 1)(a * 1j)
+    mean = cmath.phase(angles_complex.sum()) % (2 * np.pi)
+    return round(np.rad2deg(mean) if deg else mean, 7)
 
 # location of sample BiP data and resultant estimates CSV
 if platform == "darwin":
@@ -243,13 +287,45 @@ else:
 
 rTestFile = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/Rdataframe.txt"
 
+
+pyOut = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/PyOut.txt")
+pyOut.Time = pd.to_datetime(pyOut.Time,format="%Y-%m-%d %H:%M:%S")
+rOut = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/ROut.txt",on_bad_lines='skip',header=None)
+rOut.rename(columns={0:'row',1:'DT',2:'lat',3:'lon',4:'meanHead',5:'X',6:'Y'},inplace=True)
+rOut.DT = pd.to_datetime(rOut.DT,format="%Y-%m-%d %H:%M:%S")
+
+nearestInd(RDat.DT,pd.to_datetime("2021-08-29 19:16:05",format="%Y-%m-%d %H:%M:%S"))
+
+combDat = []
+for x in range(len(rOut)):
+    ind = nearestInd(pyOut.Time,rOut.DT[x])
+    combDat.append([rOut.DT[x],rOut.X[x],pyOut.X[ind],rOut.Y[x],pyOut.Y[ind]])
+combDat = pd.DataFrame(combDat)
+combDat.rename(columns={0:'DT',1:'rX',2:'pyX',3:'rY',4:'pyY'},inplace=True)
+plt.scatter(combDat.rX,combDat.pyX)
+plt.plot([np.min(combDat.rX),np.max(combDat.rX)],[np.min(combDat.pyX),np.max(combDat.pyX)])
+plt.show()
+plt.scatter(combDat.rY,combDat.pyY)
+plt.plot([np.min(combDat.rY),np.max(combDat.rY)],[np.min(combDat.pyY),np.max(combDat.pyY)])
+plt.show()
+
+plt.scatter(np.sqrt(combDat.rX**2 + combDat.rY**2),np.sqrt(combDat.pyX**2 + combDat.pyY**2))
+plt.show()
+
+
+plt.scatter(np.arctan2(combDat.rY,combDat.rX),np.arctan2(combDat.pyY,combDat.pyX))
+plt.show()
+RDat.DT[windows[0]]
 windEstimation(filename,outfile)
 
 pyTest = pd.read_csv(outfile)
 
+
 tdiffs = np.abs(RDat.DT - (pd.to_datetime("2021-08-24 19:43:01",format="%Y-%m-%d %H:%M:%S")))
 
 RDat.DT[1499]
+np.max(windows[0]) - np.min(windows[0])
+plt.plot(RDat.track_speed[windows[0]])
 
 windows = findWindows(df,4.1667,51)
 out = [windMLE(df.track_speed[win],df.track_direction[win],34.7/3.6) for win in windows]
@@ -411,7 +487,7 @@ plt.show()
 
 
 RDat = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/Rdataframe.txt")
-RDat.rename(columns = {'Unnamed: 0':'Index','Unnamed: 1':'DT','Unnamed: 2':'lat','Unnamed: 3':'lon','X':'X','Y':'Y','Unnamed: 6':'speed','Unnamed: 7':'head','Unnamed: 8':'distance'},inplace=True)
+# RDat.rename(columns = {'Unnamed: 0':'Index','Unnamed: 1':'DT','Unnamed: 2':'lat','Unnamed: 3':'lon','X':'X','Y':'Y','Unnamed: 6':'speed','Unnamed: 7':'head','Unnamed: 8':'distance'},inplace=True)
 RDat.DT = pd.to_datetime(RDat.DT,format="%Y-%m-%d %H:%M:%S")
 
 windows = findWindows(RDat,4.1667,51)
@@ -453,3 +529,20 @@ id_hd=-3
 
 plt.plot(RDat.track_speed[win])
 plt.show()
+
+
+Xpr = sp.stats.pearsonr(combDat.rX,combDat.pyX)
+
+def roundTo(x,rn):
+    return np.format_float_positional(x, precision=rn, unique=False, fractional=False, trim='k')
+
+def makeForGraphText(num,rn):
+    if num < 0.1:
+        afterE = round(math.log10(num) - (0.5 if math.log10(num)<0 else 0))
+        precede = roundTo(num * 10**abs(afterE),3)
+        return str(precede) + "e" + str(afterE)
+    else:
+        return roundTo(num,rn)
+
+roundTo(Xpr.statistic,3)
+makeForGraphText(Xpr.pvalue,3)
