@@ -9,6 +9,8 @@ from sys import platform
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from functools import partial
+import circular
+import cmath
 
 def Likelihoodww(data1: np.ndarray,data2: np.ndarray,cv: np.ndarray): # calculate log-likelihood of the model
     def f(par):
@@ -54,31 +56,67 @@ def nearestInd(items, pivot): # find the nearest index
 def timeRescale(dat,tdiff): # calculated indeces for rescaling time (DT) for regular sampling every tdiff mins
     return dat.iloc[np.arange(0,len(dat),step=np.timedelta64(tdiff,'m')/np.timedelta64(mode(np.diff(dat['DT'])),'s')).astype(int),:].reset_index()
 
-def distLatLon(lat,lon):
-    X,Y,_,_ = utm.from_latlon(np.array(lat),np.array(lon))
-    return np.append(np.nan,np.sqrt(np.diff(X)**2,np.diff(Y)**2))
+def angles(longitudes,latitudes):
+    lon1 = longitudes.values[:-1]                                                                                       
+    lat1 = latitudes.values[:-1]                                                                                        
+    lon2 = longitudes.values[1:]                                                                                        
+    lat2 = latitudes.values[1:]
+    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])   
 
-def spTrav(DT,lat,lon,threshold=0): # distance and speed from time (DT), lat, and lon with option for a threshold speed
-    dist = distLatLon(lat,lon)
-    speed = (dist)/np.array(np.append(np.nan,np.diff(DT)/np.timedelta64(1,'s')))
-    if threshold != 0:
-        while np.nanmax(speed) > threshold:
-            lat = lat[speed < threshold]
-            lon = lon[speed < threshold]
-            dist = distLatLon(X,Y)
-            speed = (dist)/np.array([np.nan,np.diff(DT)/np.timedelta64(1,'s')])
-    return dist, speed
+    X = lon2 - lon1
+    Y = lat2 - lat1
+    return np.append(np.nan,np.arctan2(Y,X))
+
+def gps_speed(longitudes, latitudes, timestamps):                                                                       
+    """                                                                                                                 
+    Calculates the instantaneous speed from the GPS positions and timestamps. The distances between the points          
+    are calculated using a vectorized haversine calculation the great circle distance between two arrays of points on   
+    the earth (specified in decimal degrees). All args must be of equal length.                                         
+ 
+    Args:                                                                                                               
+        longitudes: pandas series of longitudes                                                                         
+        latitudes:  pandas series of latitudes                                                                          
+        timestamps: pandas series of timestamps                                                                         
+ 
+    Returns:                                                                                                            
+        Speed is returned an array in m/s.                                                                             
+ 
+    Example:                                                                                                            
+        >>> df['gpsSpeed'] = gps_speed(df.longitude, df.latitude, df.recordedAt)
+    """                                                                                                                 
+ 
+    assert longitudes.shape[0] > 1                                                                                      
+    assert latitudes.shape[0] > 1                                                                                       
+    assert timestamps.shape[0] > 1                                                                                      
+ 
+    lon1 = longitudes.values[:-1]                                                                                       
+    lat1 = latitudes.values[:-1]                                                                                        
+    lon2 = longitudes.values[1:]                                                                                        
+    lat2 = latitudes.values[1:]                                                                                         
+ 
+    # Vectorized haversine calculation                                                                                  
+    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])                                                  
+    a = np.sin((lat2 - lat1) / 2.0)**2 + (np.cos(lat1) * np.cos(lat2) * np.sin((lon2 - lon1) / 2.0)**2)                 
+    dist = 6371 * 2 * np.arcsin(np.sqrt(a)) * 1000
+    time_array = (timestamps.diff().dt.seconds ).values[1:]                                                       
+ 
+    # Calculate the speed                                                                                               
+    time_array[time_array == 0] = np.nan  # To avoid division by zero                                                   
+    speed = dist / time_array                                                                                       
+ 
+    # Make the arrays as long as the input arrays                                                                        
+    speed = np.insert(speed, 0, np.nan, axis=0)
+    dist = np.insert(dist, 0, np.nan, axis=0)                                                                         
+ 
+    return dist,speed
 
 def prePare(filename, convertToMin: bool = True): # prepare BIP data as per required for Goto original method. Adds columns 'dt' (elapsed time from fix to previous time point in seconds), 'dist' (distance travelled from previous point in m), 'track_speed' (in m/sec), 'track_direction' in rad
     df = readBIPAxy(filename)
     if convertToMin:
         df = timeRescale(df,1)
     df['dt'] = np.append(np.nan,(np.diff(df['DT']) / np.timedelta64(1,'s')).astype(float))
-    X,Y,_,_ = utm.from_latlon(np.array(df['lat']),np.array(df['lon']))
-    vg_x_obs = np.diff(X)
-    vg_y_obs = np.diff(Y)
-    df['dist'], df['track_speed'] = spTrav(df['DT'],df['lat'],df['lon'])
-    df['track_direction'] = np.append(np.nan,[math.atan2(vg_y_obs[x],vg_x_obs[x]) for x in range(len(vg_x_obs))])
+    df['dist'], df['track_speed'] = gps_speed(df['lon'],df['lat'],df['DT'])
+    df['track_direction'] = angles(df['lon'],df['lat'])
     return df
 
 def A1inv(x):
@@ -91,9 +129,9 @@ def A1inv(x):
         else:
             return 1/(pow(x,3) - 4 * pow(x,2) + 3 * x)
 
-def windowFit(DF,start,end,cutT,cutV,cutLength):
+def windowFit(DF,start,end,cutT,cutV,cutLength,windowlength):
     # generate windows capable of running the estimation method. Requirements are 51 minutes of data, with 75% of expected samples
-    if sum((DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)) >= cutLength:
+    if sum(((DF.DT[end] - DF.DT[start]) <= np.timedelta64(cutT*windowlength,'s')) & (DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)) >= cutLength:
         return np.array(range(start,end))[(DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)]
 
 def findWindows(DF,cutv,windowlength=51): 
@@ -104,7 +142,7 @@ def findWindows(DF,cutv,windowlength=51):
     cutlength = round(45/51 * fs * 51)
     error_of_sampling_interval = 5 * fs # give 5 seconds of leeway for samples to be found in
     cutt = ((60 * fs) + error_of_sampling_interval).astype(int)
-    return list(filter(lambda item: item is not None,[windowFit(DF,x,x+expSamp,cutt,cutv,cutlength) for x in range(len(DF) - expSamp)]))
+    return list(filter(lambda item: item is not None,[windowFit(DF,x,x+expSamp,cutt,cutv,cutlength,windowlength) for x in range(len(DF) - expSamp)]))
 
 def initPars(head,spd,hed,cv):
     inita = 0
@@ -204,8 +242,6 @@ def maxLikeWind(r,d,cv):
                     answ_best = answ
 
     return answ_best
-for x in range(1372,len(windows)):
-    maxLikeWind(RDat.track_speed[windows[x]],RDat.track_direction[windows[x]],cv)
 
 def windEstimation(file: str,outfile: str,cutv: float=4.1667,cv=34.7/3.6,windowLength: int =51,rescaleTime: bool =True):
     # wind estimation from bird GPS track
@@ -228,18 +264,18 @@ def windEstimation(file: str,outfile: str,cutv: float=4.1667,cv=34.7/3.6,windowL
     # max likelihood calculations for wind estimation
     for win in windows:
         
-        
         r = dat.track_speed[win]
         d = dat.track_direction[win]
         try:
             answ_best = maxLikeWind(r,d,cv)
+
+            if type(answ_best) != float:
+                with open(outfile,'a',newline='') as f:
+                    writer = csv.writer(f, delimiter = ',')
+                    writer.writerow(stringify([(RDat.DT[round((np.max(win)+np.min(win))/2)]),RDat.lat[round((np.max(win)+np.min(win))/2)],RDat.lon[round((np.max(win)+np.min(win))/2)],np.arctan2(answ_best.x[2],answ_best.x[1]),answ_best.x[3],answ_best.x[4]]))
+        
         except:
             pass
-
-        if type(answ_best) != float:
-            with open(outfile,'a',newline='') as f:
-                writer = csv.writer(f, delimiter = ',')
-                writer.writerow(stringify([(RDat.DT[round((np.max(win)+np.min(win))/2)]),RDat.lat[round((np.max(win)+np.min(win))/2)],RDat.lon[round((np.max(win)+np.min(win))/2)],np.arctan2(answ_best.x[2],answ_best.x[1]),answ_best.x[3],answ_best.x[4]]))
 
 def roundTo(x,rn):
     return np.format_float_positional(x, precision=rn, unique=False, fractional=False, trim='k')
@@ -280,13 +316,19 @@ def Circmean(angles, deg=True):
 # location of sample BiP data and resultant estimates CSV
 if platform == "darwin":
     filename = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/SampleAxyTrek.csv"
-    outfile = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/PyOut.txt"
+    outfile = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/PyNewOut.txt"
 else:
     filename = "I:/My Drive/PD/Data/TestingData/SampleAxyTrek.csv"
-    outfile = "I:/My Drive/PD/Data/TestingData/PyOut.txt"
+    outfile = "I:/My Drive/PD/Data/TestingData/PyNewOut.txt"
 
 rTestFile = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/Rdataframe.txt"
 
+
+
+
+
+ogDat = pd.read_csv(filename)
+ogDat['DT'] = pd.to_datetime(ogDat.time,format="%Y-%m-%d %H:%M:%S")
 
 pyOut = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/PyOut.txt")
 pyOut.Time = pd.to_datetime(pyOut.Time,format="%Y-%m-%d %H:%M:%S")
@@ -327,7 +369,7 @@ RDat.DT[1499]
 np.max(windows[0]) - np.min(windows[0])
 plt.plot(RDat.track_speed[windows[0]])
 
-windows = findWindows(df,4.1667,51)
+windows = findWindows(pDat,4.1667,51)
 out = [windMLE(df.track_speed[win],df.track_direction[win],34.7/3.6) for win in windows]
 
 for win in windows:
@@ -481,6 +523,130 @@ RDat = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.
 RDat.rename(columns = {'Unnamed: 0':'Index','Unnamed: 1':'DT','Unnamed: 2':'lat','Unnamed: 3':'lon','X':'X','Y':'Y','Unnamed: 6':'speed','Unnamed: 7':'head','Unnamed: 8':'distance'},inplace=True)
 RDat.DT = pd.to_datetime(RDat.DT,format="%Y-%m-%d %H:%M:%S")
 
+dat = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/SampleAxyTrek.csv")
+dat = dat.loc[~np.isnan(dat.latitude),]
+dat['DT'] = pd.to_datetime(dat['time'].str[0:-6], format = "%Y-%m-%d %H:%M:%S")
+dat = timeRescale(dat,1)
+dat = dat.iloc[1:].reset_index()
+
+
+X,Y,zone,extra = utm.from_latlon(np.array(dat.latitude),np.array(dat.longitude))
+
+combDat = []
+for x in range(len(RDat)):
+    ind = nearestInd(dat.DT,RDat.DT[x])
+# inds = [nearestInd(dat.DT,RDat.DT[x]) for x in range(len(RDat))]
+    combDat.append([RDat.DT[x],RDat.lat[x],RDat.lon[x],RDat.X[x],RDat.Y[x],RDat.speed[x],RDat['head'][x],dat.latitude[ind],dat.longitude[ind],X[ind],Y[ind],pDat.track_speed[ind],pDat.track_direction[ind]])
+combDat = pd.DataFrame(combDat)
+combDat.rename(columns={0:'DT',1:'rlat',2:'rlon',3:'rX',4:'rY',5:'rSpeed',6:'rDir',7:'pylat',8:'pylon',9:'pyX',10:'pyY',11:'pySpeed',12:'pyDir'},inplace=True)
+
+plt.plot(combDat.rlat,combDat.pylat)
+plt.show()
+
+plt.scatter(combDat.DT,combDat.rX,color='orange')
+plt.plot(combDat.DT,combDat.pyX)
+plt.show()
+
+
+plt.scatter(combDat.DT,combDat.rSpeed,color='orange')
+plt.plot(combDat.DT,combDat.pySpeed)
+plt.show()
+
+spFromR = np.sqrt(np.diff(combDat.rX)**2 + np.diff(combDat.rY)**2)
+spFromPy = np.sqrt(np.diff(combDat.pyX)**2 + np.diff(combDat.pyY)**2)
+plt.scatter(combDat.DT.iloc[1:],spFromR,color='orange')
+plt.plot(combDat.DT.iloc[1:],spFromPy)
+plt.show()
+
+plt.plot(combDat.rX-combDat.pyX)
+plt.show()
+
+combDat.rX-combDat.pyX
+
+next(filter(lambda i: i[1] > 1, enumerate(combDat.rX-combDat.pyX)))
+
+combDat.iloc[350:355]
+
+pstart=prproj.Proj()
+p=pyproj.Proj(proj='utm',zone=54,ellps='WGS84')
+newx,newy = p(combDat.pylat[0],combDat.pylon[0])
+plt.plot(combDat.rX - newx)
+plt.show()
+
+p = pyproj.Proj(proj='utm',zone=54,ellps='WGS84')
+testx,testy = p(combDat.pylon, combDat.pylat)
+
+plt.plot(combDat.rX - testx)
+plt.show()
+
+plt.hist(pDat.track_speed,1000)
+plt.show()
+
+def haversine(longitudes, latitudes):                                                                                  
+    ''' Returns the distance between the points in m. Vectorized and will work with arrays and return an array of       
+    distances, but will also work with scalars and return a scalar.'''
+    lon1 = longitudes.values[:-1]                                                                                       
+    lat1 = latitudes.values[:-1]                                                                                        
+    lon2 = longitudes.values[1:]                                                                                        
+    lat2 = latitudes.values[1:]                                                    
+    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])                                                  
+    a = np.sin((lat2 - lat1) / 2.0)**2 + (np.cos(lat1) * np.cos(lat2) * np.sin((lon2 - lon1) / 2.0)**2)                 
+    distance = 6371 * 2 * np.arcsin(np.sqrt(a)) * 1000
+    return distance
+
+dist = haversine(pDat.lon,pDat.lat)
+
+
+
+rAngles = angles(RDat.lon,RDat.lat)
+
+angles([-94.581213,-90.200203],[39.099912,38.627089])
+
+lon1 = [-94.581213,-90.200203][0]                                                                                       
+lat1 = [39.099912,38.627089][0]                                                                                        
+lon2 = [-94.581213,-90.200203][1]                                                                                        
+lat2 = [39.099912,38.627089][1]
+lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])   
+
+X = np.cos(lat2) * np.sin(abs(lon1 - lon2))
+Y = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(abs(lon1 - lon2))
+np.arctan2(X,Y)
+
+
+plt.plot(rAngles-RDat['head'][1:])
+plt.show()
+
+plt.scatter(pDat.dist.iloc[1:],dist)
+plt.show()
+
+rDist = haversine(RDat.lon,RDat.lat)
+
+plt.scatter(rDist,RDat.distance[1:])
+plt.show()
+
+plt.scatter(gps_speed(RDat.lon,RDat.lat,RDat.DT),RDat.speed)
+plt.show()
+
+
+
+
+602765.105332 - 602732.104824
+4.357874e+06 - 4.357927e+06 
+
+
+plt.plot(combDat.rX - combDat.pyX)
+plt.show()
+
+import geopandas as gpd
+from shapely.geometry import Point
+
+s = gpd.GeoSeries([Point(x,y) for x, y in zip(dat.longitude, dat.latitude)])
+
+geo_df = gpd.GeoDataFrame(df[['id', 'population']], geometry=s)
+# Define crs for our geodataframe:
+geo_df.crs = {'init': 'epsg:4326'} 
+
+
 plt.plot(RDat.DT[0:100],df.DT[0:100])
 plt.plot(df.DT[0:100],df.track_speed[0:100])
 plt.show()
@@ -546,3 +712,10 @@ def makeForGraphText(num,rn):
 
 roundTo(Xpr.statistic,3)
 makeForGraphText(Xpr.pvalue,3)
+
+
+testX = [616346.3,616508.1,616525.7,616662.2,616896.6,617050.6,617262.6,617437.6,617612.4,617790.4,618021.1,618239.4,618275.7,618360.0,618576.5,618828.3,618885.4,619110.2,619296.7,619482.6,619610.9,619581.8,619518.4,619712.1,619792.5,619646.2,619407.5,619359.7,619396.9,619444.6,619466.0,619510.7,619561.4,619692.4,619897.2,620071.4,620258.8,620505.5,620668.4,620898.0,621117.8,621368.8,621660.5,621893.5,622179.5,622476.7,622828.2,623118.4,623291.6,623621.2,623993.0]
+testY = [4374798,4375076,4375051,4375289,4375823,4376271,4376805,4377170,4377545,4378104,4378585,4379094,4379300,4379688,4380082,4380530,4380613,4380917,4381464,4382003,4382205,4382087,4382131,4382434,4383066,4383584,4384243,4384838,4385375,4386066,4386788,4387448,4388163,4388851,4389366,4390033,4390672,4391244,4391853,4392531,4393173,4393849,4394391,4395002,4395622,4396185,4396832,4397508,4398042,4398602,4399149]
+
+plt.plot(combDat.DT[963:1013],combDat.rX)
+len(range(963,1013))
