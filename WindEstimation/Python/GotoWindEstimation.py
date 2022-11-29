@@ -4,12 +4,11 @@ import pandas as pd
 import csv
 import utm
 from statistics import mode
-import os, pyproj, math, datetime
+import pyproj, math
 from sys import platform
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from functools import partial
-import circular
 import cmath
 
 def Likelihoodww(data1: np.ndarray,data2: np.ndarray,cv: np.ndarray): # calculate log-likelihood of the model
@@ -129,6 +128,21 @@ def A1inv(x):
         else:
             return 1/(pow(x,3) - 4 * pow(x,2) + 3 * x)
 
+# def windowFit(dataF,start,cutT,cutV,cutLength,windowlength):
+#     # generate windows capable of running the estimation method. Requirements are 51 minutes of data, with 75% of expected samples
+#     end = start + next(filter(lambda i: i[1] >= windowlength*60, enumerate(np.cumsum(dataF.dt[0::]))))[0]
+#     if sum((dataF.track_speed[start:end] > cutV) & (dataF.dt[start:end] < cutT) & (dataF.track_direction[start:end] != 100)) >= cutLength:
+#         return np.array(range(start,end))[(dataF.track_speed[start:end] > cutV) & (dataF.dt[start:end] < cutT) & (dataF.track_direction[start:end] != 100)]
+
+# def findWindows(dataF,cutv,windowlength=51): # calculate appropriate windows from datetimes using minimum 
+#     # start from minimum possible point
+#     fs = 60/(np.abs(np.timedelta64(mode(np.diff(pDat.DT)),'s'))).astype(int)  # in Hz
+#     expSamp = round(windowlength * fs) # expected number of samples
+#     cutlength = round(45/51 * fs * expSamp)
+#     error_of_sampling_interval = 5 * fs # give 5 seconds of leeway for samples to be found in
+#     cutt = ((60 * fs) + error_of_sampling_interval).astype(int)
+#     return list(filter(lambda item: item is not None,[windowFit(dataF,x,cutt,cutv,cutlength,windowlength) for x in range(0,len(dataF)-next(filter(lambda i: i[1] >= windowlength*60, enumerate(np.cumsum(dataF.dt[::-1]))))[0]-1)]))
+
 def windowFit(DF,start,end,cutT,cutV,cutLength,windowlength):
     # generate windows capable of running the estimation method. Requirements are 51 minutes of data, with 75% of expected samples
     if sum(((DF.DT[end] - DF.DT[start]) <= np.timedelta64(cutT*windowlength,'s')) & (DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)) >= cutLength:
@@ -158,7 +172,7 @@ def initPars(head,spd,hed,cv):
     return meangd,initkappa,[inita,initmux,initmuy,initwx,initwy]
 
 def windOptims(spd,hed,cv,pars):
-    return minimize(Likelihoodww(spd,hed,cv),pars,bounds=([0,None],[None,None],[None,None],[None,None],[None,None]),options={'gtol':1e-15},method="L-BFGS-B")
+    return minimize(Likelihoodww(spd,hed,cv),pars,bounds=([0.01,None],[None,None],[None,None],[None,None],[None,None]),method="L-BFGS-B")
 
 def yokoTate(optimAns,cv):
     yoko = Von_Mises_sd(np.sqrt(optimAns[2]*optimAns[2] + optimAns[1]*optimAns[1])) * Weibull_mean(optimAns[0],cv/sp.special.gamma(1+1/optimAns[0]))
@@ -167,15 +181,13 @@ def yokoTate(optimAns,cv):
 
 def ensureOptimConv(optimAns,spd,hed,cv):
     newAns = optimAns
-    # for try_no in range(100):
     pars = [newAns.x[0],newAns.x[1],newAns.x[2],newAns.x[3],newAns.x[4]]
     # substitute first parameter if estimated < 0
-    newAns = windOptims(spd,hed,cv,pars)
-        #     if newAns.success:
-        #         break
-        # except:
-        #     continue
-    return newAns, yokoTate(newAns.x,cv)
+    if newAns.x[0] >= 0.01:
+        newAns = windOptims(spd,hed,cv,pars)
+        return newAns, yokoTate(newAns.x,cv)
+    else:
+        return optimAns, yokoTate(optimAns.x,cv)
 
 def windOptim(initHead,spd,head,cv):
     # run first optimisation
@@ -266,17 +278,13 @@ def windEstimation(file: str,outfile: str,cutv: float=4.1667,cv=34.7/3.6,windowL
         
         r = dat.track_speed[win]
         d = dat.track_direction[win]
-        try:
-            answ_best = maxLikeWind(r,d,cv)
+        answ_best = maxLikeWind(r,d,cv)
 
-            if type(answ_best) != float:
-                with open(outfile,'a',newline='') as f:
-                    writer = csv.writer(f, delimiter = ',')
-                    writer.writerow(stringify([(RDat.DT[round((np.max(win)+np.min(win))/2)]),RDat.lat[round((np.max(win)+np.min(win))/2)],RDat.lon[round((np.max(win)+np.min(win))/2)],np.arctan2(answ_best.x[2],answ_best.x[1]),answ_best.x[3],answ_best.x[4]]))
+        if type(answ_best) != float:
+            with open(outfile,'a',newline='') as f:
+                writer = csv.writer(f, delimiter = ',')
+                writer.writerow(stringify([(dat.DT[round((np.max(win)+np.min(win))/2)]),dat.lat[round((np.max(win)+np.min(win))/2)],dat.lon[round((np.max(win)+np.min(win))/2)],np.arctan2(answ_best.x[2],answ_best.x[1]),answ_best.x[3],answ_best.x[4]]))
         
-        except:
-            pass
-
 def roundTo(x,rn):
     return np.format_float_positional(x, precision=rn, unique=False, fractional=False, trim='k')
 
@@ -353,12 +361,86 @@ plt.show()
 
 plt.scatter(np.sqrt(combDat.rX**2 + combDat.rY**2),np.sqrt(combDat.pyX**2 + combDat.pyY**2))
 plt.show()
-
+windows=findWindows(pDat,34.7/3.6,51)
 
 plt.scatter(np.arctan2(combDat.rY,combDat.rX),np.arctan2(combDat.pyY,combDat.pyX))
 plt.show()
 RDat.DT[windows[0]]
 windEstimation(filename,outfile)
+
+pyGen = pd.read_csv(outfile)
+pyGen.Time = pd.to_datetime(pyGen.Time,format="%Y-%m-%d %H:%M:%S")
+rGen = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/ROut.txt",header=None)
+rGen.rename(columns={0:'row',1:'DT',2:'lat',3:'lon',4:'meanHead',5:'X',6:'Y'},inplace=True)
+rGen.DT = pd.to_datetime(rGen.DT,format="%Y-%m-%d %H:%M:%S")
+
+combDat = []
+for x in range(len(rGen)):
+    ind = nearestInd(pyGen.Time,rGen.DT[x])
+    combDat.append([rGen.DT[x],rGen.X[x],pyGen.X[ind],rGen.Y[x],pyGen.Y[ind]])
+combDat = pd.DataFrame(combDat)
+combDat.rename(columns={0:'DT',1:'rX',2:'pyX',3:'rY',4:'pyY'},inplace=True)
+
+plt.scatter(combDat.DT,combDat.rX,color='orange',label="R")
+plt.scatter(combDat.DT,combDat.pyX,label="Py")
+plt.legend()
+plt.xlabel("Time")
+plt.ylabel("Estimated wind X component")
+plt.show()
+
+# compare X
+plt.scatter(combDat.rY,combDat.pyY)
+plt.xlabel("Time")
+plt.ylabel("Estimated wind Y component")
+plt.show()
+
+props = dict(boxstyle='round', facecolor='lightgrey')
+
+rAngCorr = Circcorrcoef(np.arctan2(combDat.rY,combDat.rX),np.arctan2(combDat.pyY,combDat.pyX),deg=False,test=True)
+fig,ax=plt.subplots()
+ax.scatter(np.arctan2(combDat.rY,combDat.rX),np.arctan2(combDat.pyY,combDat.pyX))
+ax.plot(np.arange(-np.pi,np.pi),np.arange(-np.pi,np.pi),color='red',linestyle='dashed')
+ax.set_title("Estimated wind heading comparison")
+ax.set_xlabel("R generated wind heading (rad)")
+ax.set_ylabel("Python generated wind heading (rad)")
+ax.text(0.1, 0.9,
+     "corr = " + makeForGraphText(rAngCorr[0],3) + "\n" + "p < 0.05",
+     horizontalalignment='left',
+     verticalalignment='center',
+     transform = ax.transAxes,
+     bbox = props)
+plt.show()
+
+Ypr = sp.stats.pearsonr(np.sqrt(combDat.rY**2+combDat.rX**2),np.sqrt(combDat.pyY**2 + combDat.pyX**2))
+fig,ax=plt.subplots()
+ax.scatter(np.sqrt(combDat.rY**2+combDat.rX**2),np.sqrt(combDat.pyY**2 + combDat.pyX**2))
+ax.plot(np.arange(0,12),np.arange(0,12),color='red',linestyle='dashed')
+ax.set_title("Estimated wind speed comparison")
+ax.set_xlabel("R generated wind speed (m/s$^2$)")
+ax.set_ylabel("Python generated wind speed (m/s$^2$)")
+ax.text(0.1, 0.9,
+     "corr = " + makeForGraphText(Ypr.statistic,3) + "\n" + "p = " + makeForGraphText(Ypr.pvalue,3),
+     horizontalalignment='left',
+     verticalalignment='center',
+     transform = ax.transAxes,
+     bbox = props)
+plt.show()
+
+fig, ax = plt.subplots()
+ax.scatter(RDat.DT,RDat.speed,color='orange',label="R")
+ax.plot(pDat.DT,pDat.track_speed,label="Py")
+ax.legend()
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
+ax.set_ylabel("Bird ground speed (m/s$^2$)")
+plt.show()
+
+fig, ax = plt.subplots()
+ax.scatter(RDat.DT,RDat['head'],color='orange',label="R")
+ax.scatter(pDat.DT,pDat.track_direction,label="Py",s=.7)
+ax.legend()
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%m-%d"))
+ax.set_ylabel("Bird heading (rad)")
+plt.show()
 
 pyTest = pd.read_csv(outfile)
 
@@ -518,7 +600,6 @@ cond2 = (np.cos(meangd)*np.cos(mu) + np.sin(meangd)*np.sin(mu)) > 0
 cond3 = (nrp.pvalue > 0.05) * (ndp.pvalue > 0.05) * (cnrnd.pvalue > 0.05)
 [cond1,cond2,cond3]
 
-
 RDat = pd.read_csv("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/Rdata.txt")
 RDat.rename(columns = {'Unnamed: 0':'Index','Unnamed: 1':'DT','Unnamed: 2':'lat','Unnamed: 3':'lon','X':'X','Y':'Y','Unnamed: 6':'speed','Unnamed: 7':'head','Unnamed: 8':'distance'},inplace=True)
 RDat.DT = pd.to_datetime(RDat.DT,format="%Y-%m-%d %H:%M:%S")
@@ -560,6 +641,9 @@ plt.show()
 
 plt.plot(combDat.rX-combDat.pyX)
 plt.show()
+
+pyResults = pd.read_csv(outfile)
+
 
 combDat.rX-combDat.pyX
 
