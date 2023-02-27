@@ -1248,7 +1248,7 @@ gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + tripL + s(yrID, bs="re"),
     data = WindU2hr, method = "REML", family = gaussian())
 gamtstk10 <- gam(absRelHead ~ s(distTo, k = 10) + s(WSpeed, k = 10) + s(spTrav, k = 10) + tripL + s(yrID, bs="re"),
     data = WindU2hr, method = "REML")
-gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + year + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
+# gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + year + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
 AIC(gamtst,gamtstk10,gamtstk50)
 
@@ -1378,16 +1378,12 @@ appSpeed <- function(DT,lat,lon){
     return(speed)
 }
 
-sapply(c(1,inds[2:length(inds)]), function(x) linearity(lat[inds[(x-1)]:inds[x]],lon[inds[(x-1)]:inds[x]]))
-
-sapply(range(2,3), function(x) print(x))
-
 # issues with this portion lie with the requirement to find travel data prior to foraging, but also after the previous foraging point. Potentially, could just run through each unique forID and take the foraging starts from there
 allD$forage[is.na(allD$forage)] = FALSE
 grouped <- allD %>% group_by(yrID) # group by yrID
 indivs <- group_split(grouped)
 
-groupedStarts <- grouped %>% group_map(~ c(1,which(diff(c(FALSE,.x$forage)) == 1))) # find foraging startpoints for each group
+groupedStarts <- grouped %>% group_map(~ unique(c(1,which(diff(c(FALSE,.x$forage)) == 1)))) # find foraging startpoints for each group
 groupW <- WindDat %>% group_by(yrID) # group similarly for wind data
 indivWind <- group_split(groupW)
 # work through each group
@@ -1433,8 +1429,10 @@ latlonAngle <- function(lat,lon){
     coordinates(xy) <- c("X","Y")
     proj4string(xy) <- CRS("+proj=longlat +datum=WGS84")
     res <- spTransform(xy, CRS("+proj=utm +zone=54 +datum=WGS84"))
-    return(atan2(diff(res$coords.x2),diff(res$coords.x1)))
+    return(atan2(diff(res$Y),diff(res$X)))
 }
+
+
 
 ggplot(forWind) + 
     geom_point(aes(x = aveRelWind, y = linearity)) + 
@@ -1442,34 +1440,40 @@ ggplot(forWind) +
 
 # calculate movement characteristics for each individual prior to foraging
 # look at change in linearity on approach, see if there is a turning point
-moveCharac <- rep(list(approachDet), length(groupedStarts))
+moveCharac <- data.frame(tag=character(),
+    approachSpeed = double(), distTo = double(), step_length = double(), angle = double())
+
 for(b in 1:length(groupedStarts)){
-    approachDet <- data.frame(tag=character(),indivIndS=integer(),indivIndE=integer(),
+    approachDet <- data.frame(tag=character(),
         approachSpeed = double(), distTo = double(), step_length = double(), angle = double())
     for(c in 2:length(groupedStarts[[b]])){
-        approachDet <- min(which(indivs[[b]]$yrID == indivs[[b]]$yrID[groupedStarts[[b]][c]] & 
+
+        if(any(indivs[[b]]$yrID == indivs[[b]]$yrID[groupedStarts[[b]][c]] &
             indivs[[b]]$DT > (indivs[[b]]$DT[groupedStarts[[b]][c]] - 3600) &
-            indivs[[b]]$DT > indivs[[b]]$DT[groupedStarts[[b]][c-1]]))
-        forWind <- rbind(forWind, 
-        data.frame(tag = indivs[[b]]$yrID[groupedStarts[[b]][c]], 
-            indivIndS = allDStart,
-            indivIndE = groupedStarts[[b]][c] - 1,
-            approachSpeed = mean(appSpeed(indivs[[b]]$DT[allDStart:(groupedStarts[[b]][c]-1)],
-                indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c]-1)],
-                indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c]-1)])),
-            distTo = sapply(allDStart:(groupedStarts[[b]][c] - 1), 
-                function(x) distHaversine(indivs[[b]][x,c("lon","lat")], indivs[[b]][groupedStarts[[b]][c],c("lon","lat")]))
+            indivs[[b]]$DT < indivs[[b]]$DT[groupedStarts[[b]][c]])){
+
+            allDStart <- min(which(indivs[[b]]$yrID == indivs[[b]]$yrID[groupedStarts[[b]][c]] & 
+                indivs[[b]]$DT > (indivs[[b]]$DT[groupedStarts[[b]][c]] - 3600) &
+                indivs[[b]]$DT < (indivs[[b]]$DT[groupedStarts[[b]][c]]) &
+                indivs[[b]]$DT > indivs[[b]]$DT[groupedStarts[[b]][c-1]]))
+            moveCharac <- rbind(moveCharac, 
+            data.frame(tag = rep(indivs[[b]]$yrID[groupedStarts[[b]][c]],groupedStarts[[b]][c] - allDStart), 
+                approachSpeed = appSpeed(indivs[[b]]$DT[allDStart:(groupedStarts[[b]][c])],
+                    indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c])],
+                    indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c])]),
+                distTo = sapply(allDStart:(groupedStarts[[b]][c]-1), 
+                    function(x) distHaversine(indivs[[b]][x,c("lon","lat")], indivs[[b]][groupedStarts[[b]][c],c("lon","lat")])),
+                step_length = (distHaversine(cbind(indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c])],
+                    indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c])]))/1000),
+                angle = latlonAngle(indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c])],indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c])])))
             
-            mapply(distHaversine, indivs[[b]][allDStart:(groupedStarts[[b]][c] - 1),c("lon","lat")], indivs[[b]][groupedStarts[[b]][c],c("lon","lat")])
-            sapply(indivs[[b]][allDStart:(groupedStarts[[b]][c] - 1),c("lon","lat")], 
-                function(x) distHaversine(,indivs[[b]][groupedStarts[[b]][c],c("lon","lat")])),
-            step_length = c((distHaversine(cbind(indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c] - 1)],
-                indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c] - 1)]))/1000),NA),
-            angle = latlonAngle(indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c] - 1)],indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c] - 1)])))
+            }
+
     }
-    moveCharac[[b]] <- approachDet
+
 }
-distHaversine(rbind(cbind(indivs[[b]]$lon[allDStart],indivs[[b]]$lat[allDStart]),c(indivs[[b]]$lon[groupedStarts[[b]][c]],indivs[[b]]$lat[groupedStarts[[b]][c]])))
+
+ggplot(moveCharac) + geom_point(aes(y = distTo, x = angle)) + coord_polar()
 
 library(brms)
 # fitbrm <- brm(formula = RelHead ~ distTo + domFreq + WSpeed + (1 + seq|yrID),

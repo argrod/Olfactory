@@ -10,6 +10,7 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from functools import partial
 import cmath
+import glob, re
 
 def Likelihoodww(data1: np.ndarray,data2: np.ndarray,cv: np.ndarray): # calculate log-likelihood of the model
     def f(par):
@@ -36,7 +37,7 @@ def Von_Mises_sd(kappa): # standard deviation of von Mises distribution
     return 1/np.sqrt(kappa)
 
 def readAxyGPS(filename): # read in AxyTrek GPS data (txt files)
-    df = pd.read_csv(filename, sep = "\t", header = None, usecols = [0,1,2,3],
+    df = pd.read_csv(filename, sep = "\t", usecols = [0,1,2,3],
     names = ['Date','Time','lat','lon'])
     df['DT'] = pd.to_datetime(df['Date'] + " " + df['Time'],format="%d/%m/%Y %H:%M:%S")
     return df
@@ -53,7 +54,7 @@ def nearestInd(items, pivot): # find the nearest index
     return min(range(len(items)), key=lambda i: abs(items[i] - pivot))
 
 def timeRescale(dat,tdiff): # calculated indeces for rescaling time (DT) for regular sampling every tdiff mins
-    return dat.iloc[np.arange(0,len(dat),step=np.timedelta64(tdiff,'m')/np.timedelta64(mode(np.diff(dat['DT'])),'s')).astype(int),:].reset_index()
+    return dat.iloc[np.arange(0,len(dat),step=np.timedelta64(tdiff,'m')/np.timedelta64(mode(np.diff(dat['DT'])),'s')).astype(int),:]
 
 def angles(longitudes,latitudes):
     lon1 = longitudes.values[:-1]                                                                                       
@@ -109,14 +110,17 @@ def gps_speed(longitudes, latitudes, timestamps):
  
     return dist,speed
 
-def prePare(filename, convertToMin: bool = True): # prepare BIP data as per required for Goto original method. Adds columns 'dt' (elapsed time from fix to previous time point in seconds), 'dist' (distance travelled from previous point in m), 'track_speed' (in m/sec), 'track_direction' in rad
-    df = readBIPAxy(filename)
+def prePare(filename, convertToMin: bool = True, isBip: bool = True): # prepare BIP data as per required for Goto original method. Adds columns 'dt' (elapsed time from fix to previous time point in seconds), 'dist' (distance travelled from previous point in m), 'track_speed' (in m/sec), 'track_direction' in rad
+    if isBip:
+        df = readBIPAxy(filename)
+    else:
+        df = readAxyGPS(filename)
     if convertToMin:
         df = timeRescale(df,1)
     df['dt'] = np.append(np.nan,(np.diff(df['DT']) / np.timedelta64(1,'s')).astype(float))
     df['dist'], df['track_speed'] = gps_speed(df['lon'],df['lat'],df['DT'])
     df['track_direction'] = angles(df['lon'],df['lat'])
-    return df
+    return df.dropna().reset_index()[['DT','lon','lat','dt','dist','track_speed','track_direction']]
 
 def A1inv(x):
     # copy of A1inv function from circular package in R
@@ -143,20 +147,33 @@ def A1inv(x):
 #     cutt = ((60 * fs) + error_of_sampling_interval).astype(int)
 #     return list(filter(lambda item: item is not None,[windowFit(dataF,x,cutt,cutv,cutlength,windowlength) for x in range(0,len(dataF)-next(filter(lambda i: i[1] >= windowlength*60, enumerate(np.cumsum(dataF.dt[::-1]))))[0]-1)]))
 
-def windowFit(DF,start,end,cutT,cutV,cutLength,windowlength):
-    # generate windows capable of running the estimation method. Requirements are 51 minutes of data, with 75% of expected samples
+# starting from a center point, search reverse and forward until half the window width is available.
+# as the center point *should* have n seconds of interval in it, we can then subtract fs * 1min from the window width and search for half this new value
+# searchGap = (windowWidth - (fs*1)/2) where windowWidth in minutes
+
+
+def windowFit(DF,start,end,cutT,cutV,cutLength,windowlength): # generate windows capable of running the estimation method. Requirements are 51 minutes of data, with 75% of expected samples
     if sum(((DF.DT[end] - DF.DT[start]) <= np.timedelta64(cutT*windowlength,'s')) & (DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)) >= cutLength:
         return np.array(range(start,end))[(DF.track_speed[start:end] > cutV) & (DF.dt[start:end] < cutT) & (DF.track_direction[start:end] != 100)]
 
-def findWindows(DF,cutv,windowlength=51): 
-    # calculate appropriate windows from datetimes using minimum 
+def rangeGen(DF,cen,wws,cutV,cutT,cutLength): # generate windows of appropriate time durations (wws seconds on either side)
+    st = DF.dt[:cen][::-1].cumsum().gt(wws).idxmax() + 1
+    end = DF.dt[(cen+1):].cumsum().gt(wws).idxmax() + 1
+    if sum((DF.track_speed[st:end] > cutV) & (DF.dt[st:end] < cutT) & (DF.track_direction[st:end] != 100)) > cutLength:
+        return range(st,end),cen
+
+def findWindows(DF,cutv,windowlength=51): # calculate appropriate windows from datetimes using minimum 
     # start from minimum possible point
-    fs = 1/np.abs(np.timedelta64(mode(np.diff(DF.DT)),'m')).astype(int) # in Hz
+    fs = (1/np.abs(np.timedelta64(mode(np.diff(DF.DT)),'m')).astype(int)).astype(int) # in fixes per minute
     expSamp = round(51 * fs) # expected number of samples
     cutlength = round(45/51 * fs * 51)
     error_of_sampling_interval = 5 * fs # give 5 seconds of leeway for samples to be found in
     cutt = ((60 * fs) + error_of_sampling_interval).astype(int)
-    return list(filter(lambda item: item is not None,[windowFit(DF,x,x+expSamp,cutt,cutv,cutlength,windowlength) for x in range(len(DF) - expSamp)]))
+    windwidthsec = ((windowlength * fs)/2) * 60 + (60 / (4*fs))
+    # go through each possible center value
+    centr = DF.dt.cumsum().gt(windwidthsec).idxmax() + 1
+    windows,centers = zip(*filter(lambda item: item is not None,[rangeGen(DF,center,windwidthsec,cutv,cutt,cutlength) for center in range(centr,DF.dt[::-1].cumsum().gt(windwidthsec).idxmax())]))
+    return windows,centers
 
 def initPars(head,spd,hed,cv):
     inita = 0
@@ -255,7 +272,7 @@ def maxLikeWind(r,d,cv):
 
     return answ_best
 
-def windEstimation(file: str,outfile: str,cutv: float=4.1667,cv=34.7/3.6,windowLength: int =51,rescaleTime: bool =True):
+def windEstimation(file,outfile,cutv: float=4.1667,cv=34.7/3.6,windowLength: int =51,rescaleTime: bool =True,isBp: bool = True):
     # wind estimation from bird GPS track
     # filename      - location of BiP formatted file
     # cutv          - minimum ground speed in m/s (default: 4.1667) 
@@ -263,28 +280,29 @@ def windEstimation(file: str,outfile: str,cutv: float=4.1667,cv=34.7/3.6,windowL
     # windowLength  - window size for estimation in mins (default: 51)
     # rescaleTime   - should original data be rescaled to 1 fix/min (default: True)
 
-    dat = prePare(file, rescaleTime)
-
-    # generate windows over which estimation method will be run
-    windows = findWindows(dat,cutv,windowLength)
-
     # write the header of the outfile
     with open(outfile,'w',newline='') as f:
         writer = csv.writer(f, delimiter = ',')
         writer.writerow(['Time','Lat','Lon','MeanHead','X','Y'])
 
+    dat = prePare(file, rescaleTime,isBp)
+
+    # generate windows over which estimation method will be run
+    windows,centers = findWindows(dat,cutv,windowLength)
+
+
     # max likelihood calculations for wind estimation
-    for win in windows:
+    for win in range(len(windows)):
         
-        r = dat.track_speed[win]
-        d = dat.track_direction[win]
+        r = dat.track_speed[windows[win]]
+        d = dat.track_direction[windows[win]]
         answ_best = maxLikeWind(r,d,cv)
 
         if type(answ_best) != float:
             with open(outfile,'a',newline='') as f:
                 writer = csv.writer(f, delimiter = ',')
-                writer.writerow(stringify([(dat.DT[round((np.max(win)+np.min(win))/2)]),dat.lat[round((np.max(win)+np.min(win))/2)],dat.lon[round((np.max(win)+np.min(win))/2)],np.arctan2(answ_best.x[2],answ_best.x[1]),answ_best.x[3],answ_best.x[4]]))
-        
+                writer.writerow(stringify([(dat.DT[centers[win]]),dat.lat[centers[win]],dat.lon[centers[win]],np.arctan2(answ_best.x[2],answ_best.x[1]),answ_best.x[3],answ_best.x[4]]))
+
 def roundTo(x,rn):
     return np.format_float_positional(x, precision=rn, unique=False, fractional=False, trim='k')
 
@@ -332,7 +350,7 @@ else:
 rTestFile = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/Rdataframe.txt"
 
 
-
+dat = prePare(filename)
 
 
 ogDat = pd.read_csv(filename)
@@ -443,6 +461,10 @@ ax.set_ylabel("Bird heading (rad)")
 plt.show()
 
 pyTest = pd.read_csv(outfile)
+
+plt.scatter(RDat.DT,RDat.speed,color='orange')
+plt.scatter(pDat.DT,pDat.track_speed,marker=2)
+plt.show()
 
 
 tdiffs = np.abs(RDat.DT - (pd.to_datetime("2021-08-24 19:43:01",format="%Y-%m-%d %H:%M:%S")))
@@ -801,5 +823,19 @@ makeForGraphText(Xpr.pvalue,3)
 testX = [616346.3,616508.1,616525.7,616662.2,616896.6,617050.6,617262.6,617437.6,617612.4,617790.4,618021.1,618239.4,618275.7,618360.0,618576.5,618828.3,618885.4,619110.2,619296.7,619482.6,619610.9,619581.8,619518.4,619712.1,619792.5,619646.2,619407.5,619359.7,619396.9,619444.6,619466.0,619510.7,619561.4,619692.4,619897.2,620071.4,620258.8,620505.5,620668.4,620898.0,621117.8,621368.8,621660.5,621893.5,622179.5,622476.7,622828.2,623118.4,623291.6,623621.2,623993.0]
 testY = [4374798,4375076,4375051,4375289,4375823,4376271,4376805,4377170,4377545,4378104,4378585,4379094,4379300,4379688,4380082,4380530,4380613,4380917,4381464,4382003,4382205,4382087,4382131,4382434,4383066,4383584,4384243,4384838,4385375,4386066,4386788,4387448,4388163,4388851,4389366,4390033,4390672,4391244,4391853,4392531,4393173,4393849,4394391,4395002,4395622,4396185,4396832,4397508,4398042,4398602,4399149]
 
-plt.plot(combDat.DT[963:1013],combDat.rX)
-len(range(963,1013))
+#################################################################
+
+# Run over all AxyTrek files
+
+#################################################################
+
+fileloc = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/2018Shearwater/AxyTrek/"
+outf = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/TestingData/PythonWinds/"
+# list all files
+files = glob.glob(fileloc + "**/*.txt")
+
+for file in files:
+    tag = re.search(re.escape(fileloc) + r".*/(.*?).txt", file).group(1)
+    outfile = outf + tag + ".csv"
+
+    windEstimation(files[0],outfile,isBp=False)
