@@ -31,23 +31,34 @@ function yrIDGather(dataLocation::String, IDpattern::String, year::Vector{Int64}
     return yrIDs
 end
 # READ IN RAW AXYTREK ACCELERATION
-function readinAxy(yrID::String)
+function readinAxy(yrID::String,withGPS::Bool=false)
+    # tag dictionary
+    recapTags = Dict( (["2018_2017-9","2018_1","2018_3","2018_4","2018_5","2018_6","2018_7","2018_8","2018_9","2018_10","2018_11","2019_1","2019_2","2019_3","2019_4","2019_5","2019_2018-01","2019_2018-03","2019_2018-04","2019_2018-05"][i] => DateTime.(["07/09/2018 13:15:00","09/09/2018 21:31:00","10/09/2018 01:28:00","08/09/2018 22:01:00","07/09/2018 21:51:00","07/09/2018 22:17:00","09/09/2018 22:03:00","08/09/2018 21:43:00","08/09/2018 22:15:00","08/09/2018 01:47:00","07/09/2018 21:29:00","29/08/2019 21:33:00","29/08/2019 23:00:00","31/08/2019 21:15:00","31/08/2019 21:10:00","30/08/2019 22:45:00","04/09/2019 22:54:00","31/08/2019 21:50:00","01/09/2019 02:35:00","02/09/2019 21:15:00"],dateformat"d/m/y H:M:S")[i] for i = 1:20) )
     file=rdir(dataloc,"(?=" * yrID[1:4] * "Shearwater).*AxyTrek.*(?=" * yrID[6:end] * "_...csv)")
-    dat = CSV.read(file[1],DataFrame,header=1,select=[:TagID,:Timestamp,:X,:Y,:Z]  
-    )
+    withGPS ? sel = [:TagID,:Timestamp,:X,:Y,:Z,Symbol("location-lat"),Symbol("location-lon")] : sel = [:TagID,:Timestamp,:X,:Y,:Z]
+    withGPS ? newNames = [:TagID,:Timestamp,:X,:Y,:Z,:lat,:lon] : newNames = [:TagID,:Timestamp,:X,:Y,:Z]
+    dat = CSV.read(file[1],DataFrame,header=1,select=sel)
+    rename!(dat,newNames)
+    dat.Timestamp = DateTime.(dat.Timestamp,dateformat"d/m/y H:M:S.s") .+ Hour(9)
+    # remove data following recapture
+    filter(row -> !(row.Timestamp > recapTags[yrID]), dat)
     # remove missing rows
     dat = dropmissing(dat,:Timestamp)
-    dat.Timestamp = DateTime.(dat.Timestamp,dateformat"d/m/y H:M:S.s") .+ Hour(9)
     return dat
 end
 # READ IN GPS DATA
 function readinGPS(yrID::String)
+    # tag dictionary
+    recapTags = Dict( (["2018_2017-9","2018_1","2018_3","2018_4","2018_5","2018_6","2018_7","2018_8","2018_9","2018_10","2018_11","2019_1","2019_2","2019_3","2019_4","2019_5","2019_2018-01","2019_2018-03","2019_2018-04","2019_2018-05"][i] => DateTime.(["07/09/2018 13:15:00","09/09/2018 21:31:00","10/09/2018 01:28:00","08/09/2018 22:01:00","07/09/2018 21:51:00","07/09/2018 22:17:00","09/09/2018 22:03:00","08/09/2018 21:43:00","08/09/2018 22:15:00","08/09/2018 01:47:00","07/09/2018 21:29:00","29/08/2019 21:33:00","29/08/2019 23:00:00","31/08/2019 21:15:00","31/08/2019 21:10:00","30/08/2019 22:45:00","04/09/2019 22:54:00","31/08/2019 21:50:00","01/09/2019 02:35:00","02/09/2019 21:15:00"],dateformat"d/m/y H:M:S")[i] for i = 1:20) )
     file=rdir(dataloc,"(?=" * yrID[1:4] * "Shearwater).*AxyTrek.*(?=" * yrID[6:end] * "_...csv)")
-    dat = CSV.read(file[1],DataFrame,header=1,select=[:TagID,:Timestamp,Symbol("location-lat"),Symbol("location-lon")])
-    rename!(dat,[:TagID,:Timestamp,:lat,:lon])
+    dat = CSV.read(file[1],DataFrame,header=1,select=[:TagID,:Timestamp,Symbol("location-lat"),Symbol("location-lon")]  )
     # remove missing rows
     dat = dropmissing(dat,:lat)
     dat.Timestamp = DateTime.(dat.Timestamp,dateformat"d/m/y H:M:S.s") .+ Hour(9)
+    # remove data following recapture
+    filter(row -> !(row.Timestamp > recapTags[yrID]), dat)
+    # rename columns
+    rename!(dat,[:TagID,:Timestamp,:lat,:lon])
     return dat
 end
 
@@ -86,8 +97,8 @@ function maxFreqs(outLocation,yrID,fs)
     # take mean max frequencies for each GPS position
     GPSfrec = [mean(maxFrec[x]) for x in mxFrcRanges];
     # create an output
-    namelist = [:yrID,:DT,:lat,:lon,:domFreq]
-    df = DataFrame([repeat([yrID],length(GPSInds)),GPSdat[GPSInds,"Timestamp"],GPSdat[GPSInds,"lat"],GPSdat[GPSInds,"lon"],GPSfrec], namelist);
+    namelist = 
+    df = DataFrame([repeat([yrID],length(GPSInds)),GPSdat[GPSInds,"Timestamp"],GPSdat[GPSInds,"lat"],GPSdat[GPSInds,"lon"],GPSfrec], [:yrID,:DT,:lat,:lon,:domFreq]);
     CSV.write(outLocation * yrID * "domFreq.csv",df);
 end
 # find peaks and troughs of signal (all)
@@ -120,36 +131,26 @@ end
 
 
 # flapping vs gliding rates (minute average)
-function flapglide(outLocation,yrID,fs)
-    dat = readinAxy(yrID) # read in acceleration
+function flapglide(outLocation,yrID,fs,fr)
+    dat = readinAxy(yrID,true) # read in acceleration
     # lowpass filter to separate dynamic and static acceleration
-    Z = dynstat(float.(dat.Z),1.0,1.5,fs)
+    _,Z = dynstat(dat.Z,1.0,1.5,fs)
     pks,trghs = pkstrghs(Z)
     den = kde(Z[pks] .- Z[trghs])
-    plot(den)
-    sep = den.x[findmin(den.density[findmax(den.density)[2]:findmax(den.density[.5 .<= den.x .<= 1])[2] + minimum(findall(den.x .>= .5))])[2]]
-    flapMotion = sort([pks[findall((Z[pks] .- Z[trghs]) .> sep)];trghs[findall((Z[pks] .- Z[trghs]) .> sep)]])
+    sep = den.x[findmax(den.density[.5 .<= den.x .<= 1])[2] + minimum(findall(den.x .>= .5))]
+    flapMotion = sort([pks[findall((DZ[pks] .- DZ[trghs]) .> sep)];trghs[findall((DZ[pks] .- DZ[trghs]) .> sep)]])
     # group flaps by typically flapping frequency
-    flaps = zeros(Int,length(Z))
-    gaps = findall(diff(flapMotion) .> round(.5*fs))
-    for b = eachindex(gaps)
-        if b == 1
-            flaps[flapMotion[1]:flapMotion[gaps[b]]] .= b
-        elseif b == flapMotion[end]
-            flaps[flapMotion[(gaps[b]+1):end]] .= b
-        else
-            flaps[flapMotion[(gaps[b-1]+1):gaps[b]]] .= b
-        end
-    end
-
-    flSt = findall(diff(flaps) .> 0) .+ 1
-    flEd = findall(diff(flaps) .< 0) .+ 1
-    flBdur = (flEd .- flSt) / fs;
-
-    GPSmdur = [mean(flBdur[(GPSdat.Timestamp[x] - Second(30)) .< dat.Timestamp[flSt] .> (GPSdat.Timestamp[x] + Second(30))]) for x in 1:nrow(GPSdat)]
-    GPSstdur = [std(flBdur[(GPSdat.Timestamp[x] - Second(30)) .< dat.Timestamp[flSt] .> (GPSdat.Timestamp[x] + Second(30))]) for x in 1:nrow(GPSdat)]
-    
-    CSV.write(outLocation * yrID * "flapRatio.csv",DataFrame(DT=GPSdat.Timestamp, meanFlapRatio = GPSmdur, sdFlapRatio = GPSstdur)); 
+    gaps = [0;(findall(diff(flapMotion) .> (fr*.5)) .+ 1)]
+    [flaps[flapMotion[gaps[(x-1)] + 1]:flapMotion[gaps[x]]] .= 1 for x in 2:length(gaps)]
+    # create flapping ratio for each GPS position
+    GPSpos = findall(ismissing.(dat.lat) .== false)
+    indRange = round(fs * mode(diff(dat.Timestamp[GPSpos]))/Millisecond(1000)/2)
+    GPSranges = [range(Int(x - indRange),Int(x + indRange)) for x in GPSpos]
+    out = DataFrame()
+    out[!,"TagID"] = dat.TagID[GPSpos]
+    out[!,"DT"] = dat.Timestamp[GPSpos]
+    out[!,"flappingRatio"] = [sum(flaps[x])/length(flaps[x]) for x in GPSranges]
+    CSV.write(outLocation * yrID * "flapRatio.csv",df);
 end
 
 # file locations for raw acceleration data
@@ -171,19 +172,18 @@ for b in yrIDs
     maxFreqs(outloc,b,fs)
 end
 
-# output the flapping duration data
+# output locations for GPS dominant frequencies (dorsoventral)
 if Sys.iswindows()
-    fgoutloc = "I:/My Drive/PD/Data/flappingDurations/"
+    outloc = "E:/My Drive/PhD/Data/flappingDurations/"
 else
-    fgoutloc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/flappingDurations/"
+    outloc = "/Volumes/GoogleDrive-112399531131798335686/My Drive/PhD/Data/flappingDurations/"
+end
+fs = 25
+for b in yrIDs
+    flapglide(outloc,b,fs,4)
 end
 
-[flapglide(fgoutloc,x,25) for x in yrIDs]
-
-length(yrIDs)
-
-
-yrid = yrIDs[14]
+yrid = yrIDs[1]
 dat = readinAxy(yrid) # read in acceleration
 GPSdat = readinGPS(yrid) # read in GPS
 rename!(GPSdat,[:TagID,:Timestamp,:lat,:lon])
