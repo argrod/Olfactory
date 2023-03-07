@@ -403,7 +403,7 @@ for(a in 1:length(files)){
 			if(max_like!="NaN"){
 				outwa<-list(tp[center],lat[center], long[center], atan2(ans_best$par[3],ans_best$par[2]),
 					ans_best$par[4],ans_best$par[5])
-				write.table(outwa,paste(outfile,tags[a],'.csv', sep = ''),quote=F,col.name=F,row.name=F,append=T,sep=", ")
+				write.table(outwa,paste(outfile, sep = ''),quote=F,col.name=F,row.name=F,append=T,sep=", ")
 			}#  else {print('Failed step 10')}
 	}#  else {print('Failed step 2')}
 }

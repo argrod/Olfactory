@@ -33,7 +33,7 @@ library(circular)
 ### Please input following parameter values.  ########################################################
 
 ### Specify the place and name of track data 
-infile <- paste("/Users/arang/OneDrive - The University of Tokyo/PhD/Data/Simulated/Goto2017Simulation/SimTrack.csv")
+infile <- paste(("~/Downloads/1700097_real_track_data.csv")
 # sample data named "Simulation_Track.csv" can be generated #using "Sample_Track_Simulation.R"
 
 ### Specify the place and name of output data 

@@ -1,4 +1,5 @@
-install.packages("Gmisc")
+install.packages("Gmisc",dependencies=T)
+install.packages("circular",dependencies=T)
 install.packages("sf")
 install.packages("rnaturalearth")
 install.packages("rnaturalearthdata")
@@ -20,6 +21,7 @@ install.packages("diagram")
 install.packages("ggthemes")
 install.packages("extrafont")
 install.packages("bpnreg")
+install.packages("geosphere")
 
 library(Gmisc)
 library(sf)
@@ -53,10 +55,10 @@ library(geosphere)
 #################################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # load("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/DatEth2018.RData")
-    load("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/DatEth2019.RData")
-    outloc <- "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/Manuscripts/BehaviourIdentification/Figures/"
+    # load("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
+    load("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/DatEth2018.RData")
+    load("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/DatEth2019.RData")
+    outloc <- "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("I:/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
     load("I:/My Drive/PD/Data/DatEth2018.RData")
@@ -104,8 +106,8 @@ allD$yrID <- paste(format(allD$DT,"%Y"),sub('\\_S.*','',allD$tagID),sep="_")
 ###############################################################################
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # windLoc <- "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/2018Shearwater/WindEst/MinDat/"
-    load("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/WindCalculations1819.RData")
+    # windLoc <- "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/2018Shearwater/WindEst/MinDat/"
+    load("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/WindCalculations1819.RData")
 } else {
     # windLoc <- 'I:/My Drive/PD/Data/2018Shearwater/WindEst/MinDat/'
     load('I:/My Drive/PD/Data/WindCalculations1819.RData')
@@ -139,7 +141,7 @@ for(b in unique(WindDat$seq)){
 }
 
 if(Sys.info()['sysname'] == "Darwin"){
-    fileloc <- "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/GPSDominantFrequencies/"
+    fileloc <- "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/GPSDominantFrequencies/"
 } else {
     fileloc <- "I:/My Drive/PD/Data/GPSDominantFrequencies/"
 }
@@ -257,7 +259,7 @@ for(b in 1:length(wws)){
 #         LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar,LHRp = tstL[2])
 # }
 if(Sys.info()['sysname'] == "Darwin"){
-    load("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/pvalsLS.RData")
+    load("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/pvalsLS.RData")
 } else {
     load('I:/My Drive/PD/Data/pvalsLS.RData')
 }
@@ -662,7 +664,7 @@ ggplot(WindDat, aes(x = WHead, y = BSpd)) +
 # geom_point(aes(x = Lon, y = Lat, col = tFromFor)) +
 # geom_point(data = DatSel[DatSel$Forage == 1,], aes(x = Lon, y = Lat), col = 'red')
 
-sel <- read.delim("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",", header = T)
+sel <- read.delim("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/2018Shearwater/WindEst/WindValidate/gribSelected.csv", sep = ",", header = T)
 sel$EHead <- atan2(sel$X,sel$Y)
 sel$WHead <- atan2(sel$U,sel$V)
 ggplot() +
@@ -673,7 +675,7 @@ ggplot() +
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated headings") +
     scale_x_continuous("JMA headings")
-ggsave("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/Conferences/2021SeabirdSymposium/WindCorr.png", , dpi = 300, height = 6,
+ggsave("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/Conferences/2021SeabirdSymposium/WindCorr.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 library(circular)
@@ -687,7 +689,7 @@ ggplot() +
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)") +
     scale_x_continuous("JMA wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/Conferences/2021SeabirdSymposium/SpeedCorr.png", , dpi = 300, height = 6,
+ggsave("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/Conferences/2021SeabirdSymposium/SpeedCorr.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -700,7 +702,7 @@ ggplot() +
     theme(panel.border = element_blank(), text = element_text(size = 14,
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/Conferences/2021SeabirdSymposium/RelWindCol.png", , dpi = 300, height = 6,
+ggsave("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/Conferences/2021SeabirdSymposium/RelWindCol.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -712,7 +714,7 @@ ggplot() +
     theme(panel.border = element_blank(), text = element_text(size = 14,
         family = "Arial"), axis.text = element_text(size = 14, family = "Arial")) +
     scale_y_continuous("Estimated wind speed (m/s)")
-ggsave("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/Conferences/2021SeabirdSymposium/RelWindBW.png", , dpi = 300, height = 6,
+ggsave("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/Conferences/2021SeabirdSymposium/RelWindBW.png", , dpi = 300, height = 6,
     width = 6, units = "in", family = "Arial")
 dev.off()
 
@@ -831,7 +833,7 @@ plot
 
 # bring in wind and foraging data
 if(Sys.info()['sysname'] == "Darwin"){
-    fileloc <- "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/2019Shearwater/WindEst/YoneMet/"
+    fileloc <- "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
     fileloc <- "I:/My Drive/PD/Data/2019Shearwater/WindEst/YoneMet/"
     forLoc <- "I:/My Drive/PD/Data/2019Shearwater/TxtDat/AxyTrek/AlgorithmOutput/PredictedForage/"
@@ -924,7 +926,7 @@ ggplot(windAll[windAll$distTo < 30,]) +
     geom_point(aes(x = rwh*(pi/180), y = distTo, fill = ID),pch=21, alpha=.3) + coord_polar(start=pi)
 
 
-dloadLoc  = "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/gribs/"
+dloadLoc  = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/gribs/"
 gribFls = list.files(dloadLoc,pattern="*grib2.bin")
 if(any(gribFls == "Z__C_RJTD_20190824150000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"))
 
@@ -934,9 +936,9 @@ if(any(gribFls == "Z__C_RJTD_20190824150000_MSM_GPV_Rjp_Lsurf_FH00-15_grib2.bin"
 
 
 if(Sys.info()['sysname'] == "Darwin"){
-    # load("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
-    load("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/20182019AnalysisDat.RData")
-    outloc <- "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/Manuscripts/BehaviourIdentification/Figures/"
+    # load("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
+    load("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/20182019AnalysisDat.RData")
+    outloc <- "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/Manuscripts/BehaviourIdentification/Figures/"
 } else {
     # load("I:/My Drive/PD/Data/2019Shearwater/2019Dat.RData")
     load("I:/My Drive/PD/Data/20182019AnalysisDat.RData")
@@ -968,7 +970,7 @@ japan <- ne_countries(scale = "medium", country = "Japan", returnclass = "sf")
 
 # CALCULATE RELATIVE WIND CONDITIONS FROM ESTIMATES WITH TIME/DISTANCE TO FORAGING
 if(Sys.info()['sysname'] == "Darwin"){
-    windLoc = "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/2019Shearwater/WindEst/YoneMet/"
+    windLoc = "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/2019Shearwater/WindEst/YoneMet/"
 } else {
     windLoc = "E:/UTokyoDrive/PhD/Data/2019Shearwater/WindEst/YoneMet/"
 }
@@ -1081,7 +1083,7 @@ ggplot() + geom_sf(data = japan, fill = '#969696', colour = '#969696') +
 #     scale_y_continuous(breaks = c(39:44), labels = c("39","40","41","42","43","44"), name = paste("Latitude (","\u00b0N",")", sep = "")) +
 #     scale_x_continuous(labels = c("140", "141", "142", "143", "144","145","146"), name = paste("Longitude (","\u00b0E",")", sep = ""))
 
-# ggsave("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/Admin/AORIPresentation/Animation/Finished.png", device = "png", dpi = 300, height = 5,
+# ggsave("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/Admin/AORIPresentation/Animation/Finished.png", device = "png", dpi = 300, height = 5,
 #     width = 5, units = "in")
 # dev.off()
 # colnames(WindDat)
@@ -1213,7 +1215,7 @@ acf(resid(tst))
 
 # import flapping rates
 if(Sys.info()['sysname'] == "Darwin"){
-    fileloc <- "/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/GPSDominantFrequencies/"
+    fileloc <- "/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/GPSDominantFrequencies/"
 } else {
     fileloc <- "I:/My Drive/PD/Data/GPSDominantFrequencies/"
 }
@@ -1246,7 +1248,7 @@ gamtst <- gam(absRelHead ~ s(distTo) + s(WSpeed) + tripL + s(yrID, bs="re"),
     data = WindU2hr, method = "REML", family = gaussian())
 gamtstk10 <- gam(absRelHead ~ s(distTo, k = 10) + s(WSpeed, k = 10) + s(spTrav, k = 10) + tripL + s(yrID, bs="re"),
     data = WindU2hr, method = "REML")
-gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + year + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
+# gamtstk50 <- gam(absRelHead ~ s(distTo, k = 50) + s(WSpeed, k = 50) + year + s(spTrav, k = 50) + tripL + s(yrID, bs="re"),
     data = WindDat, method = "REML")
 AIC(gamtst,gamtstk10,gamtstk50)
 
@@ -1345,6 +1347,11 @@ forWind <- data.frame(tag=character(),allDIndS=integer(),allDIndE=integer(),
 findNearest <- function(range,n){
     return(min(which(abs(range - n) == min(abs(range - n)))))
 }
+# calculate modal value
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
 # function to calculate linearity
 linearity <- function(lat,lon){
     return(distHaversine(cbind(lon[c(1,length(lon))],lat[c(1,length(lat))]))/
@@ -1354,8 +1361,15 @@ linearity <- function(lat,lon){
 windowLin <- function(DT,n,lat,lon){
     timeRange <- seq(from=DT[1],to=DT[length(DT)],by=n*60)
     # find locations of timeRange in DT
-    inds <- c(sapply(timeRange, function(x) findNearest(DT,x)),length(DT))
-    sapply(2:length(inds), function(x) linearity(lat[inds[(x-1)]:inds[x]],lon[inds[(x-1)]:inds[x]]))
+    inds <- cbind(sapply(timeRange[1:(length(timeRange)-1)], function(x) findNearest(DT,x)),
+        sapply(timeRange[2:(length(timeRange))], function(x) findNearest(DT,x)))
+    # remove where fewer than 80% of expected data are present
+    inds <- inds[(inds[,2] - inds[,1]) > (.8*(5*(60/getmode(diff(DT))))),]
+    if(length(inds) == 2){
+        return(linearity(lat[inds[1]:inds[2]],lon[inds[1]:inds[2]]))
+    } else {
+        return(apply(inds, 1, function(x) linearity(lat[x[1]:x[2]],lon[x[1]:x[2]])))
+    }
 }
 # function to calculate approach speed
 appSpeed <- function(DT,lat,lon){
@@ -1369,8 +1383,8 @@ allD$forage[is.na(allD$forage)] = FALSE
 grouped <- allD %>% group_by(yrID) # group by yrID
 indivs <- group_split(grouped)
 
-groupedStarts <- grouped %>% group_map(~ c(1,which(diff(c(FALSE,.x$forage)) == 1))) # find foraging startpoints for each group
-groupiW <- WindDat %>% group_by(yrID) # group similarly for wind data
+groupedStarts <- grouped %>% group_map(~ unique(c(1,which(diff(c(FALSE,.x$forage)) == 1)))) # find foraging startpoints for each group
+groupW <- WindDat %>% group_by(yrID) # group similarly for wind data
 indivWind <- group_split(groupW)
 # work through each group
 for(b in 1:length(groupedStarts)){
@@ -1415,8 +1429,10 @@ latlonAngle <- function(lat,lon){
     coordinates(xy) <- c("X","Y")
     proj4string(xy) <- CRS("+proj=longlat +datum=WGS84")
     res <- spTransform(xy, CRS("+proj=utm +zone=54 +datum=WGS84"))
-    return(atan2(diff(res$coords.x2),diff(res$coords.x1)))
+    return(atan2(diff(res$Y),diff(res$X)))
 }
+
+
 
 ggplot(forWind) + 
     geom_point(aes(x = aveRelWind, y = linearity)) + 
@@ -1424,34 +1440,40 @@ ggplot(forWind) +
 
 # calculate movement characteristics for each individual prior to foraging
 # look at change in linearity on approach, see if there is a turning point
-moveCharac <- rep(list(approachDet), length(groupedStarts))
+moveCharac <- data.frame(tag=character(),
+    approachSpeed = double(), distTo = double(), step_length = double(), angle = double())
+
 for(b in 1:length(groupedStarts)){
-    approachDet <- data.frame(tag=character(),indivIndS=integer(),indivIndE=integer(),
+    approachDet <- data.frame(tag=character(),
         approachSpeed = double(), distTo = double(), step_length = double(), angle = double())
     for(c in 2:length(groupedStarts[[b]])){
-        approachDet <- min(which(indivs[[b]]$yrID == indivs[[b]]$yrID[groupedStarts[[b]][c]] & 
+
+        if(any(indivs[[b]]$yrID == indivs[[b]]$yrID[groupedStarts[[b]][c]] &
             indivs[[b]]$DT > (indivs[[b]]$DT[groupedStarts[[b]][c]] - 3600) &
-            indivs[[b]]$DT > indivs[[b]]$DT[groupedStarts[[b]][c-1]]))
-        forWind <- rbind(forWind, 
-        data.frame(tag = indivs[[b]]$yrID[groupedStarts[[b]][c]], 
-            indivIndS = allDStart,
-            indivIndE = groupedStarts[[b]][c] - 1,
-            approachSpeed = mean(appSpeed(indivs[[b]]$DT[allDStart:(groupedStarts[[b]][c]-1)],
-                indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c]-1)],
-                indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c]-1)])),
-            distTo = sapply(allDStart:(groupedStarts[[b]][c] - 1), 
-                function(x) distHaversine(indivs[[b]][x,c("lon","lat")], indivs[[b]][groupedStarts[[b]][c],c("lon","lat")]))
+            indivs[[b]]$DT < indivs[[b]]$DT[groupedStarts[[b]][c]])){
+
+            allDStart <- min(which(indivs[[b]]$yrID == indivs[[b]]$yrID[groupedStarts[[b]][c]] & 
+                indivs[[b]]$DT > (indivs[[b]]$DT[groupedStarts[[b]][c]] - 3600) &
+                indivs[[b]]$DT < (indivs[[b]]$DT[groupedStarts[[b]][c]]) &
+                indivs[[b]]$DT > indivs[[b]]$DT[groupedStarts[[b]][c-1]]))
+            moveCharac <- rbind(moveCharac, 
+            data.frame(tag = rep(indivs[[b]]$yrID[groupedStarts[[b]][c]],groupedStarts[[b]][c] - allDStart), 
+                approachSpeed = appSpeed(indivs[[b]]$DT[allDStart:(groupedStarts[[b]][c])],
+                    indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c])],
+                    indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c])]),
+                distTo = sapply(allDStart:(groupedStarts[[b]][c]-1), 
+                    function(x) distHaversine(indivs[[b]][x,c("lon","lat")], indivs[[b]][groupedStarts[[b]][c],c("lon","lat")])),
+                step_length = (distHaversine(cbind(indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c])],
+                    indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c])]))/1000),
+                angle = latlonAngle(indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c])],indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c])])))
             
-            mapply(distHaversine, indivs[[b]][allDStart:(groupedStarts[[b]][c] - 1),c("lon","lat")], indivs[[b]][groupedStarts[[b]][c],c("lon","lat")])
-            sapply(indivs[[b]][allDStart:(groupedStarts[[b]][c] - 1),c("lon","lat")], 
-                function(x) distHaversine(,indivs[[b]][groupedStarts[[b]][c],c("lon","lat")])),
-            step_length = c((distHaversine(cbind(indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c] - 1)],
-                indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c] - 1)]))/1000),NA),
-            angle = latlonAngle(indivs[[b]]$lat[allDStart:(groupedStarts[[b]][c] - 1)],indivs[[b]]$lon[allDStart:(groupedStarts[[b]][c] - 1)])))
+            }
+
     }
-    moveCharac[[b]] <- approachDet
+
 }
-distHaversine(rbind(cbind(indivs[[b]]$lon[allDStart],indivs[[b]]$lat[allDStart]),c(indivs[[b]]$lon[groupedStarts[[b]][c]],indivs[[b]]$lat[groupedStarts[[b]][c]])))
+
+ggplot(moveCharac) + geom_point(aes(y = distTo, x = angle)) + coord_polar()
 
 library(brms)
 # fitbrm <- brm(formula = RelHead ~ distTo + domFreq + WSpeed + (1 + seq|yrID),
@@ -1606,7 +1628,7 @@ for(b in 1:length(distGaps)){
         LRlP = RaylTL$p.value,LRlR = RaylTL$r.bar)
 }
 # if(Sys.info()['sysname'] == "Darwin"){
-#     load("/Volumes/GoogleDrive-102199952889875375671/My Drive/PD/Data/pvalsUniq.RData")
+#     load("/Users/aran/Library/CloudStorage/GoogleDrive-a-garrod@g.ecc.u-tokyo.ac.jp/My Drive/PD/Data/pvalsUniq.RData")
 # } else {
 #     load('I:/My Drive/PD/Data/pvalsUniq.RData')
 # }
