@@ -539,7 +539,7 @@ def windEstimation(file, cutv: float = 4.1667, cv = 34.7/3.6, windowLength: int 
     """        wind estimation from bird GPS track
 
     Args:
-        filename:       location of BiP formatted file
+        filename:       location of AxyTrek data (BiP or X Manager formatted)
         cutv:           minimum ground speed in m/s (default: 4.1667) 
         cv:             mean air speed in m/s (default: 34.7 kph)
         windowLength:   window size for estimation in mins (default: 51)
