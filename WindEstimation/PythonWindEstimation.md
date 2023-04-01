@@ -47,6 +47,7 @@ ax.quiver(out.Lon, out.Lat, out.X, out.Y, np.sqrt(out.X*out.X + out.Y*out.Y),cma
 ax.set_facecolor('grey')
 plt.show()
 ```
+
 <img src="ExampleOutput1_S1.png"
      alt="Output vector plot"
      style="float: left; margin-right: 10px;" />
