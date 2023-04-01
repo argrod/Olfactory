@@ -32,3 +32,21 @@ This function should only require one argument to run, that being the file path.
 | `isBp` | Is the data formatted by BiP or from X Manager (bool, True is BiP) |
 
 The output of this function is a pandas dataframe with column Time (datetime of the center point of the estimation window), Lat and Lon (again at the center of the estimation window), MeanHead (mean heading of the bird during estimation window), X and Y (vector components of estimated wind vector).
+
+Occasional RunTime Errors may be produced due to the optimisation method struggling to converge or running into calculation difficulties. These should not affect the outcome.
+
+Below is an example output I produced using data from 1_S1 recorded in 2022:
+
+```import matplotlib.pyplot as plt
+
+out = windEstimation("C:/Users/arang/Documents/SampleShearwaterData/1/1_S1.txt", isBp = False)
+
+fig = plt.figure()
+ax = fig.add_subplot(1,1,1)
+ax.quiver(out.Lon, out.Lat, out.X, out.Y, np.sqrt(out.X*out.X + out.Y*out.Y),cmap=plt.cm.jet, headwidth=4) 
+ax.set_facecolor('grey')
+plt.show()
+```
+<img src="ExampleOutput1_S1.png"
+     alt="Output vector plot"
+     style="float: left; margin-right: 10px;" />
