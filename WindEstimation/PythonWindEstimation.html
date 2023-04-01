@@ -312,6 +312,7 @@ pre[data-line] .line-highlight[data-end]:after {
 </tbody>
 </table>
 <p>The output of this function is a pandas dataframe with column Time (datetime of the center point of the estimation window), Lat and Lon (again at the center of the estimation window), MeanHead (mean heading of the bird during estimation window), X and Y (vector components of estimated wind vector).</p>
+<<<<<<< HEAD
 <p>Occasional RunTime Errors may be produced due to the optimisation method struggling to converge or running into calculation difficulties. These should not affect the outcome.</p>
 <p>Below is an example output I produced using data from 1_S1 recorded in 2022:</p>
 <pre data-role="codeBlock" data-info="import matplotlib.pyplot as plt" class="language-import"><code>out = windEstimation(&quot;C:/Users/arang/Documents/SampleShearwaterData/1/1_S1.txt&quot;, isBp = False)
@@ -322,6 +323,9 @@ ax.quiver(out.Lon, out.Lat, out.X, out.Y, np.sqrt(out.X*out.X + out.Y*out.Y),cma
 ax.set_facecolor(&apos;grey&apos;)
 plt.show()
 </code></pre><p><img src="ExampleOutput1_S1.png" alt="Output vector plot" style="float: left; margin-right: 10px;"></p>
+=======
+<p><img src="ExampleOutput1_S1.png" alt="Output vector plot" style="float: left; margin-right: 10px;"></p>
+>>>>>>> 1e5902a5afca8502e1d5dc9a82a8d9d33196ece5
 
       </div>
       
