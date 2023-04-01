@@ -114,7 +114,7 @@ def readBIPAxy(filename):
         filename:   full path to file
 
     Returns:
-        Pandas dataframe of all columns from the BIP system. A formatted DateTime column (named DT) is generated)
+        Pandas dataframe of all columns from the BIP system (datetime 'DT', latitude 'lat', and longitude 'lon'). A formatted DateTime column (named DT) is generated)
     """
     
     df = pd.read_csv(filename, sep = ",", header = 0, usecols = [0,1,2], names = ['DT','lat','lon']).dropna().reset_index()
@@ -242,7 +242,7 @@ def gps_speed(longitudes, latitudes, timestamps):
     return dist,speed
 
 def prePare(filename, convertToMin: bool = True, tdiff = 1, units = 'm', isBip: bool = True):
-    """Prepare BIP data as per required for Goto original method. DateTime, distance, track speed and direction is added
+    """Prepare AxyTrek GPS data as per required for Goto original method. DateTime, distance, track speed and direction is added
 
     Args:
         filename:       full path for file to be read in
