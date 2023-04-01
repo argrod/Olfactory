@@ -539,11 +539,12 @@ def windEstimation(file, cutv: float = 4.1667, cv = 34.7/3.6, windowLength: int 
     """        wind estimation from bird GPS track
 
     Args:
-        filename:       location of BiP formatted file
+        filename:       location of AxyTrek data (BiP or X Manager formatted)
         cutv:           minimum ground speed in m/s (default: 4.1667) 
         cv:             mean air speed in m/s (default: 34.7 kph)
         windowLength:   window size for estimation in mins (default: 51)
         rescaleTime:    should original data be rescaled to 1 fix/min (default: True)
+        isBp:           boolean, is data formatted by BiP (T) or X Manager (F)
 
     Returns:
         Pandas dataframe of wind estimation methods. Columns are: centerpoint datetime ('Time'), lat ('Lat'), lon ('Lon'), mean bird heading during window (rad, east is 0. 'MeanHead'), wind vector x ('X'), wind vector y ('Y')
