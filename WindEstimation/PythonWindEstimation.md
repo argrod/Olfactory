@@ -35,6 +35,7 @@ The output of this function is a pandas dataframe with column Time (datetime of 
 
 Occasional RunTime Errors may be produced due to the optimisation method struggling to converge or running into calculation difficulties. These should not affect the outcome.
 
+<<<<<<< HEAD
 Below is an example output I produced using data from 1_S1 recorded in 2022:
 
 ```import matplotlib.pyplot as plt
@@ -47,6 +48,14 @@ ax.quiver(out.Lon, out.Lat, out.X, out.Y, np.sqrt(out.X*out.X + out.Y*out.Y),cma
 ax.set_facecolor('grey')
 plt.show()
 ```
+=======
+Below is an example output I produced using the following method:
+
+`out = windEstimation("C:/Users/arang/Documents/SampleShearwaterData/1/1_S1.txt", isBp = False)`
+
+I then generated the following plot using data within `out`
+
+>>>>>>> 1e5902a5afca8502e1d5dc9a82a8d9d33196ece5
 <img src="ExampleOutput1_S1.png"
      alt="Output vector plot"
      style="float: left; margin-right: 10px;" />
