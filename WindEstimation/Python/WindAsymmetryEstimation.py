@@ -40,7 +40,8 @@ def Likelihoodww(data1: np.ndarray,data2: np.ndarray,cv: np.ndarray):
     return f
 
 def Weibull_sd(a,b):
-    """Calculate the standard deviation of a Weibull distribution
+    """
+    Calculate the standard deviation of a Weibull distribution
     
     Args:
 
@@ -57,7 +58,8 @@ def Weibull_sd(a,b):
     return b*np.sqrt(sp.special.gamma(1+2/a) - sp.special.gamma(1+1/a)*sp.special.gamma(1+1/a))
 
 def Weibull_mean(a,b):
-    """Mean of Weibull distribution
+    """
+    Mean of Weibull distribution
 
     Args:
 
@@ -74,7 +76,8 @@ def Weibull_mean(a,b):
     return b*sp.special.gamma(1+1/a)
 
 def Von_Mises_sd(kappa):
-    """Standard deviation of von Mises distribution
+    """
+    Standard deviation of von Mises distribution
 
     Args:
         kappa:  concentration parameter
@@ -89,7 +92,8 @@ def Von_Mises_sd(kappa):
     return 1/np.sqrt(kappa)
 
 def readAxyGPS(filename, delim = "\t", cols = [0,1,2,3], colnames = ['Date', 'Time', 'lat', 'lon'], dtFormat = "%d/%m/%Y %H:%M:%S"): 
-    """Read in AxyTrek GPS data (txt files) as output by X Manager
+    """
+    Read in AxyTrek GPS data (txt files) as output by X Manager
 
     Args:
 
@@ -106,7 +110,8 @@ def readAxyGPS(filename, delim = "\t", cols = [0,1,2,3], colnames = ['Date', 'Ti
     return df
 
 def readBIPAxy(filename):
-    """Read in AxyTrek data as formatted by the BIP system
+    """
+    Read in AxyTrek data as formatted by the BIP system
 
     Args:
 
@@ -121,7 +126,8 @@ def readBIPAxy(filename):
     return df
 
 def nearest(items, pivot):
-    """Find the nearest value within an array
+    """
+    Find the nearest value within an array
 
     Args:
 
@@ -138,7 +144,8 @@ def nearest(items, pivot):
     return min(items, key=lambda x: abs(x - pivot))
 
 def nearestInd(items, pivot):
-    """Find the nearest index within an array
+    """
+    Find the nearest index within an array
 
     Args:
     
@@ -156,7 +163,8 @@ def nearestInd(items, pivot):
     return min(range(len(items)), key=lambda i: abs(items[i] - pivot))
 
 def timeRescale(dat,tdiff,units='m'):
-    """Calculated indeces for rescaling time for regular sampling interevals. No interpolation is used, only extracting the nearest values in time.
+    """
+    Calculated indeces for rescaling time for regular sampling interevals. No interpolation is used, only extracting the nearest values in time.
 
     Args:
 
@@ -171,7 +179,8 @@ def timeRescale(dat,tdiff,units='m'):
     return dat.iloc[np.arange(0,len(dat),step=np.timedelta64(tdiff,units)/np.timedelta64(mode(np.diff(dat['DT'])),'s')).astype(int),:]
 
 def angles(longitudes,latitudes):
-    """Angular differences between subsequent in latitude and longitude arrays
+    """
+    Angular differences between subsequent in latitude and longitude arrays
 
     Args:
 
@@ -241,7 +250,8 @@ def gps_speed(longitudes, latitudes, timestamps):
     return dist,speed
 
 def prePare(filename, convertToMin: bool = True, tdiff = 1, units = 'm', isBip: bool = True):
-    """Prepare AxyTrek GPS data as per required for Goto original method. DateTime, distance, track speed and direction is added
+    """
+    Prepare AxyTrek GPS data as per required for Goto original method. DateTime, distance, track speed and direction is added
 
     Args:
         filename:       full path for file to be read in
@@ -266,7 +276,8 @@ def prePare(filename, convertToMin: bool = True, tdiff = 1, units = 'm', isBip: 
     return df.dropna().reset_index()[['DT','lon','lat','dt','dist','track_speed','track_direction']]
 
 def A1inv(x):
-    """Copy of A1inv function from circular package in R. Inverse function of the ratio of the first and zeroth order Bessel functions of the first kind. This function is used to compute the maximum likelihood estimate of the concentration parameter of a von Mises distribution.
+    """
+    Copy of A1inv function from circular package in R. Inverse function of the ratio of the first and zeroth order Bessel functions of the first kind. This function is used to compute the maximum likelihood estimate of the concentration parameter of a von Mises distribution.
 
     Args:
 
@@ -284,7 +295,8 @@ def A1inv(x):
             return 1/(pow(x,3) - 4 * pow(x,2) + 3 * x)
 
 def rangeGen(DF,cen,wws,cutV,cutT,cutLength):
-    """Test window for 
+    """
+    Test window for wind estimation using window duration, minimum flight speed, maximum time gap between GPS fixes, minimum samples
 
     Args:
 
@@ -304,7 +316,8 @@ def rangeGen(DF,cen,wws,cutV,cutT,cutLength):
         return range(st,end),cen
 
 def findWindows(DF,cutv = 4.1667,windowlength = 51):
-    """Calculate appropriate data windows for application of wind model
+    """
+    Calculate appropriate data windows for application of wind model
 
     Args:  
 
@@ -329,7 +342,8 @@ def findWindows(DF,cutv = 4.1667,windowlength = 51):
     return windows,centers
 
 def initPars(head,spd,hed,cv = 34.7/3.6):
-    """Generate initial parameters for log-likelihood testing
+    """
+    Generate initial parameters for log-likelihood testing
 
     Args:
         head:   heading direction (this value will range between -3:3 in testing)
@@ -354,7 +368,8 @@ def initPars(head,spd,hed,cv = 34.7/3.6):
     return meangd,initkappa,[inita,initmux,initmuy,initwx,initwy]
 
 def windOptims(spd,hed,cv,pars):
-    """Optimisation for log-likelihood function produced by Likelihoodww() using Nelder-Mead methods
+    """
+    Optimisation for log-likelihood function produced by Likelihoodww() using Nelder-Mead methods
 
     Args:
         spd:    array of window track speeds
@@ -368,7 +383,8 @@ def windOptims(spd,hed,cv,pars):
     return minimize(Likelihoodww(spd,hed,cv),pars,bounds=([0.01,None],[None,None],[None,None],[None,None],[None,None]),method="L-BFGS-B")
 
 def yokoTate(optimAns,cv):
-    """Calculates von Mises SD and mean product along with Weibull standard deviation
+    """
+    Calculates von Mises SD and mean product along with Weibull standard deviation
 
     Args:
         optimAns:   output of windOptims for calculation of von Mises and Weibull characteristics
@@ -382,7 +398,8 @@ def yokoTate(optimAns,cv):
     return yoko, tate
 
 def ensureOptimConv(optimAns,spd,hed,cv):
-    """Repeat maximum likelihood estimation to ensure convergence
+    """
+    Repeat maximum likelihood estimation to ensure convergence
 
     Args:
 
@@ -405,7 +422,8 @@ def ensureOptimConv(optimAns,spd,hed,cv):
         return optimAns, yokoTate(optimAns.x,cv)
 
 def windOptim(initHead,spd,head,cv):
-    """Full run of MLE for wind optimisation for suitable data window
+    """
+    Full run of MLE for suitable data window
 
     Args:
         initHead:   initial value for heading
@@ -430,7 +448,8 @@ def windOptim(initHead,spd,head,cv):
         return np.nan,np.nan,np.nan
 
 def headSpdDir(spd,hed,answ):
-    """Calculate speed and direction of heading from x and y components
+    """
+    Calculate speed and direction of heading from x and y components
 
     Args:
         spd:    window track speeds (m/s)
@@ -448,7 +467,11 @@ def headSpdDir(spd,hed,answ):
     return nr,nd
 
 def GOFtests(hed,nr,nd,answ,yoko,tate,cv):
-    """Test model output from windOptim()
+    """
+    GOF tests of model output from windOptim() to fit three conditions:
+    1. heading probability density is anisotropic
+    2. angle between mean heading and mean track vectors is less than 90 deg
+    3. direction and speed of heading vector are not correlated (pearson test)
 
     Args:
         hed:    window track headings (rad)
@@ -479,7 +502,8 @@ def GOFtests(hed,nr,nd,answ,yoko,tate,cv):
     return [cond1,cond2,cond3]
     
 def stringify(vars):
-    """Turn array into string array
+    """
+    Turn array into string array
 
     Args:
 
@@ -497,7 +521,8 @@ def stringify(vars):
     return [str(x) for x in vars]
 
 def maxLikeWind(r,d,cv):
-    """Generate optimal MLE estimation and return estimates if all three conditions are met
+    """
+    Generate optimal MLE estimation and return estimates if all three conditions are met
 
     Args:
 
@@ -535,7 +560,8 @@ def maxLikeWind(r,d,cv):
     return answ_best
 
 def windEstimation(file, cutv: float = 4.1667, cv = 34.7/3.6, windowLength: int = 51, rescaleTime: bool = True, isBp: bool = True):
-    """        wind estimation from bird GPS track
+    """
+    Full wind estimation from bird GPS track
 
     Args:
         filename:       location of AxyTrek data (BiP or X Manager formatted)
@@ -589,7 +615,8 @@ def makeForGraphText(num,rn):
 
 # taken from 'https://gist.github.com/kn1cht/89dc4f877a90ab3de4ddef84ad91124e', circular python package by kn1cht
 def Circcorrcoef(x, y, deg=True, test=False):
-    '''Circular correlation coefficient of two angle data(default to degree)
+    ''''
+    Circular correlation coefficient of two angle data(default to degree)
     Set `test=True` to perform a significance test.
     '''
     convert = np.pi / 180.0 if deg else 1
@@ -605,7 +632,8 @@ def Circcorrcoef(x, y, deg=True, test=False):
     return round(r, 7)
 
 def Circmean(angles, deg=True):
-    '''Circular mean of angle data(default to degree)
+    '''
+    Circular mean of angle data(default to degree)
     '''
     a = np.deg2rad(angles) if deg else np.array(angles)
     angles_complex = np.frompyfunc(cmath.exp, 1, 1)(a * 1j)
