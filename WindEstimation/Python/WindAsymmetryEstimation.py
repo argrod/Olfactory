@@ -355,11 +355,11 @@ def findWindows(DF,cutv = 4.1667,windowlength = 51):
     """
 
     # start from minimum possible point
-    fs = (1/np.abs(np.timedelta64(mode(np.diff(DF.DT)),'m')).astype(int)).astype(int) # in fixes per minute
+    fs = int(np.timedelta64(1,'m')/np.abs(mode(np.diff(DF.DT)))) # in fixes per minute
     expSamp = round(51 * fs) # expected number of samples
     cutlength = round(45/51 * expSamp)
     error_of_sampling_interval = 5 * fs # give 5 seconds of leeway for samples to be found in
-    cutt = ((60 * fs) + error_of_sampling_interval).astype(int)
+    cutt = ((60 * fs) + error_of_sampling_interval)
     windwidthsec = ((windowlength * fs)/2) * 60 + (60 / (4*fs))
     # go through each possible center value
     centr = DF.dt.cumsum().gt(windwidthsec).idxmax() + 1
@@ -610,7 +610,10 @@ def windEstimation(file, cutv: float = 4.1667, cv = 34.7/3.6, windowLength: int 
     dat = prePare(file, convertToMin = rescaleTime, isBip = isBp)
 
     # generate windows over which estimation method will be run
-    windows,centers = findWindows(dat,cutv,windowLength)
+    try:
+        windows,centers = findWindows(dat,cutv,windowLength)
+    except:
+        return
 
     # max likelihood calculations for wind estimation
     for win in range(len(windows)):
