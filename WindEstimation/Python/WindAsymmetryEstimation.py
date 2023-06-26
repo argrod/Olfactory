@@ -2,6 +2,7 @@ import cmath
 import math
 from functools import partial
 from statistics import mode
+import re
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -91,6 +92,26 @@ def Von_Mises_sd(kappa):
 
     return 1/np.sqrt(kappa)
 
+def dtFormat(x):
+    """
+    Format incoming datetimes from BiP system. Typically datetimes are brought in the format YYYY-mm-dd HH:MM:SS+00:00, however, SS can contain decimal values or not. This function returns the same datetime in string format with a decimal place added if none is originally present and removes '+00:' from the string so that datetimes can be converted to datetime format in Pandas.
+
+    Args:
+    
+        x:  datetime in string format
+
+    Returns:
+        String of x in correct datetime foramt %Y-%m-%d %H:%M:%S.%f
+    """
+    # first, test if decimal place already present
+    if bool(re.search('[.]',x)):
+        x = re.sub('[+]','',x)
+    else:
+        x = re.sub('[+]','.',x)
+    x = re.sub(':00$','',x)
+
+    return x
+
 def readAxyGPS(filename, delim = "\t", cols = [0,1,2,3], colnames = ['Date', 'Time', 'lat', 'lon'], dtFormat = "%d/%m/%Y %H:%M:%S"): 
     """
     Read in AxyTrek GPS data (txt files) as output by X Manager
@@ -106,6 +127,7 @@ def readAxyGPS(filename, delim = "\t", cols = [0,1,2,3], colnames = ['Date', 'Ti
     """
     df = pd.read_csv(filename, sep = delim, usecols = cols,
     names = colnames)
+    df.DT = [dtFormat(x) for x in df.DT] # ensure correct datetime formats
     df['DT'] = pd.to_datetime(df['Date'] + " " + df['Time'], format = dtFormat)
     return df
 
@@ -122,7 +144,8 @@ def readBIPAxy(filename):
     """
     
     df = pd.read_csv(filename, sep = ",", header = 0, usecols = [0,1,2], names = ['DT','lat','lon']).dropna().reset_index()
-    df['DT'] = pd.to_datetime(df['DT'].str[0:-6], format = "%Y-%m-%d %H:%M:%S")
+    df.DT = [dtFormat(x) for x in df.DT] # ensure correct datetime formats
+    df['DT'] = pd.to_datetime(df['DT'], format = "%Y-%m-%d %H:%M:%S.%f")
     return df
 
 def nearest(items, pivot):
