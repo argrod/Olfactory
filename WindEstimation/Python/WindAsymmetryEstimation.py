@@ -143,7 +143,8 @@ def readBIPAxy(filename):
         Pandas dataframe of all columns from the BIP system (datetime 'DT', latitude 'lat', and longitude 'lon'). A formatted DateTime column (named DT) is generated)
     """
     
-    df = pd.read_csv(filename, sep = ",", header = 0, usecols = [0,1,2], names = ['DT','lat','lon']).dropna().reset_index()
+    df = pd.read_csv(filename, sep = ",", header = 0).dropna().reset_index()
+    df = df[['time','latitude','longitude']].rename(columns={'time':'DT','latitude':'lat','longitude':'lon'})
     df.DT = [dtFormat(x) for x in df.DT] # ensure correct datetime formats
     df['DT'] = pd.to_datetime(df['DT'], format = "%Y-%m-%d %H:%M:%S.%f")
     return df
@@ -199,7 +200,8 @@ def timeRescale(dat,tdiff,units='m'):
         Pandas dataframe resampled to desired regular sampling interval
     """
 
-    return dat.iloc[np.arange(0,len(dat),step=np.timedelta64(tdiff,units)/np.timedelta64(mode(np.diff(dat['DT'])),'s')).astype(int),:]
+    dRange = np.arange(dat.DT[0],dat.DT.iloc[-1],step=np.timedelta64(tdiff,units))
+    return dat.loc[np.unique([nearestInd(dat.DT,x) for x in dRange]),:]
 
 def angles(longitudes,latitudes):
     """
