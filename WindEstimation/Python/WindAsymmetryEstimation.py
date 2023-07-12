@@ -112,7 +112,7 @@ def dtFormat(x):
 
     return x
 
-def readAxyGPS(filename, delim = "\t", cols = [0,1,2,3], colnames = ['Date', 'Time', 'lat', 'lon'], dtFormat = "%d/%m/%Y %H:%M:%S"): 
+def readAxyGPS(filename, delim = "\t", cols = [0,1,2,3], colnames = ['Date', 'Time', 'lat', 'lon'], datetimeFormat = "%d/%m/%Y %H:%M:%S"): 
     """
     Read in AxyTrek GPS data (txt files) as output by X Manager
 
@@ -128,7 +128,7 @@ def readAxyGPS(filename, delim = "\t", cols = [0,1,2,3], colnames = ['Date', 'Ti
     df = pd.read_csv(filename, sep = delim, usecols = cols,
     names = colnames)
     df.DT = [dtFormat(x) for x in df.DT] # ensure correct datetime formats
-    df['DT'] = pd.to_datetime(df['Date'] + " " + df['Time'], format = dtFormat)
+    df['DT'] = pd.to_datetime(df['Date'] + " " + df['Time'], format = datetimeFormat)
     return df
 
 def readBIPAxy(filename):
@@ -186,22 +186,22 @@ def nearestInd(items, pivot):
 
     return min(range(len(items)), key=lambda i: abs(items[i] - pivot))
 
-def timeRescale(dat,tdiff,units='m'):
+def timeRescale(dat,tdiff,units='T'):
     """
-    Calculated indeces for rescaling time for regular sampling interevals. No interpolation is used, only extracting the nearest values in time.
-
+    Subset dataframe to reflect desired regular sampling interval. Nearest time values are used, `dat` must have datetime column 'DT'
     Args:
 
-        dat:            pandas dataframe with datetime column correctly formatted
+        dat:            pandas dataframe with datetime column'DT'  correctly formatted
         tdiff:          desired regular sampling interval
-        units:          units of desired sampling intervals using NumPy timedelta64 conventions. Defaults to 'm'.
+        units:          units of desired sampling intervals using pandas time/date conventions. Defaults to 'T'.
 
     Returns:
         Pandas dataframe resampled to desired regular sampling interval
     """
 
-    dRange = np.arange(dat.DT[0],dat.DT.iloc[-1],step=np.timedelta64(tdiff,units))
-    return dat.loc[np.unique([nearestInd(dat.DT,x) for x in dRange]),:]
+    # change indexing to datetime
+    out = dat.set_index('DT', drop = False).resample(str(tdiff) + units).nearest().dropna()
+    return out.set_index(pd.Index(range(len(out))))
 
 def angles(longitudes,latitudes):
     """
@@ -249,11 +249,6 @@ def gps_speed(longitudes, latitudes, timestamps):
     Example:                                                                                                            
         >>> df['gpsSpeed'] = gps_speed(df.longitude, df.latitude, df.recordedAt)
     """                                                                                                                 
- 
-    assert longitudes.shape[0] > 1                                                                                      
-    assert latitudes.shape[0] > 1                                                                                       
-    assert timestamps.shape[0] > 1                                                                                      
- 
     lon1 = longitudes[:-1].reset_index(drop = True)                                                                                       
     lat1 = latitudes[:-1].reset_index(drop = True)                                                                                 
     lon2 = longitudes[1:].reset_index(drop = True)                                                                                       
@@ -274,7 +269,7 @@ def gps_speed(longitudes, latitudes, timestamps):
     dist = np.insert(dist, 0, np.nan, axis=0)                                                                         
     return dist,speed
 
-def prePare(filename, convertToMin: bool = True, tdiff = 1, units = 'm', isBip: bool = True):
+def prePare(filename, convertToMin: bool = True, tdiff = 1, units = 'min', isBip: bool = True):
     """
     Prepare AxyTrek GPS data as per required for Goto original method. DateTime, distance, track speed and direction is added
 
@@ -282,7 +277,7 @@ def prePare(filename, convertToMin: bool = True, tdiff = 1, units = 'm', isBip: 
         filename:       full path for file to be read in
         convertToMin:   boolean for whether data should be resampled to regular time intervals
         tdiff:          resample time interval. Defaults to 1
-        units:          resample time interval unit. Defaults to 'm'
+        units:          resample time interval unit. Defaults to 'min'
         isBip:          boolean stating whether data is in BiP format
 
     Returns:
