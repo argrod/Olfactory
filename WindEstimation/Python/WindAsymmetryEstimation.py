@@ -199,8 +199,9 @@ def timeRescale(dat,tdiff,units='T'):
         Pandas dataframe resampled to desired regular sampling interval
     """
 
-    # change indexing to datetime
+    # change indexing to datetime and resample
     out = dat.set_index('DT', drop = False).resample(str(tdiff) + units).nearest().dropna()
+    # return resampled data with original times and standard indexing
     return out.set_index(pd.Index(range(len(out))))
 
 def angles(longitudes,latitudes):
